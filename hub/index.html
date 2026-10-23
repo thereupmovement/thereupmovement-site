@@ -467,29 +467,86 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .tdecided p{margin:0 0 4px;font-weight:700}
 .tdecided .small{color:#3F3D3A}
 .tmsg{min-height:1.2em;font-size:14px;color:var(--muted);margin:14px 0 0}
+.t-ops{--tc:#1D5E8C;--ts:#E1ECF5}
+.t-admin{--tc:#6B3FA0;--ts:#ECE4F5}
+.t-media{--tc:#B0306A;--ts:#F7E1EB}
+.t-events{--tc:#B35400;--ts:#FBE9D6}
+.t-grants{--tc:#2E7D4F;--ts:#DFF0E5}
+.t-none,.t-all{--tc:#4A4744;--ts:#ECEAE6}
 .st.ws-todo{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
-.st.ws-doing{background:var(--k-dead-soft);color:var(--k-dead)}
+.st.ws-doing{background:#E1ECF5;color:#1D5E8C}
 .st.ws-stuck{background:#F6DEDC;color:#B3261E}
 .st.ws-done{background:#DDEFE3;color:#1E5C38}
 .tseg .ws-todo[aria-pressed="true"]{background:#5D5A57}
-.tseg .ws-doing[aria-pressed="true"]{background:#A45A00}
+.tseg .ws-doing[aria-pressed="true"]{background:#1D5E8C}
 .tseg .ws-stuck[aria-pressed="true"]{background:#B3261E}
 .tseg .ws-done[aria-pressed="true"]{background:#1E5C38}
 .wtitle{display:block;width:100%;box-sizing:border-box;font-family:var(--display);font-size:26px;line-height:1.1;text-transform:uppercase;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
-.freelist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
-.freelist span{font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px;background:#DDEFE3;color:#1E5C38}
+.whello{margin:16px 2px 4px}
+.whello h2{font-family:var(--display);font-weight:400;font-size:34px;line-height:1;text-transform:uppercase;margin:0 0 6px}
+.whello p{margin:0 0 6px;font-size:18px}
+.whello .small{font-size:14px}
+.late{color:#B3261E;font-weight:800}
+.ok{color:#1E5C38;font-weight:700}
+.wgroup{margin-top:18px}
+.wgroup h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.wgroup h3::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--gc)}
+.wgroup h3 b{font-size:13px;background:var(--gc);color:#fff;border-radius:999px;padding:1px 8px}
+.wgroup .wnote{margin:-2px 2px 10px;font-size:14px;color:var(--muted)}
+.g-stuck{--gc:#B3261E}.g-late{--gc:#B3261E}.g-week{--gc:#A45A00}.g-later{--gc:#5D5A57}.g-help{--gc:#1D5E8C}.g-nobody{--gc:#6B3FA0}
+.wcard{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--tc);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.wcard.s-stuck{border-color:#B3261E;border-left-color:#B3261E;background:#FFF8F7}
+.wmain{display:grid;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:12px 14px;cursor:pointer}
+.wmain:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
+.wtop{display:flex;gap:6px;flex-wrap:wrap}
+.wteam{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:var(--ts);color:var(--tc);border-radius:6px;padding:2px 8px}
+.wst{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:6px;padding:2px 8px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.s-doing .wst{background:#E1ECF5;color:#1D5E8C;border-color:#E1ECF5}
+.s-stuck .wst{background:#B3261E;color:#fff;border-color:#B3261E}
+.s-done .wst{background:#DDEFE3;color:#1E5C38;border-color:#DDEFE3}
+.wname{font-size:17px;font-weight:800;line-height:1.3}
+.wmeta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:14px;color:var(--muted)}
+.wdue{font-weight:700;color:var(--ink)}
+.wdue.late{color:#B3261E}
+.wdue.soon{color:#A45A00}
+.wacts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;padding:0 12px 12px}
+.wacts button{font:inherit;font-weight:800;font-size:14.5px;padding:10px 6px;border-radius:10px;border:2px solid transparent;cursor:pointer}
+.qa-doing{background:#E1ECF5;color:#1D5E8C;border-color:#1D5E8C !important}
+.qa-done{background:#1E5C38;color:#fff}
+.qa-stuck{background:var(--surface);color:#B3261E;border-color:#B3261E !important}
+.wacts button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.tpick{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tpick button{font:inherit;font-weight:800;font-size:15px;padding:9px 14px;border-radius:999px;border:2px solid var(--tc);background:var(--surface);color:var(--tc);cursor:pointer}
+.tpick button[aria-pressed="true"]{background:var(--tc);color:#fff}
+.tsum{margin-top:14px;border-radius:16px;padding:14px 16px;background:var(--ts);border:1.5px solid var(--tc)}
+.tsum h2{font-family:var(--display);font-weight:400;font-size:28px;line-height:1;text-transform:uppercase;margin:0 0 10px;color:var(--tc)}
+.tnums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.tnums div{background:var(--surface);border-radius:10px;padding:8px 6px;text-align:center}
+.tnums b{display:block;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1}
+.tnums span{font-size:12px;color:var(--muted);font-weight:700}
+.tnums .bad b{color:#B3261E}
+.tnums .good b{color:#1E5C38}
+.wpeople{margin:22px 2px 8px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
 .pcards{display:grid;gap:8px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .pcard.flag{border-color:#B3261E}
-.phead{display:grid;gap:3px;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:12px 14px;cursor:pointer}
+.pcard .wcard{margin:0 10px 10px}
+.phead{display:grid;gap:4px;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:12px 14px;cursor:pointer}
 .phead:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
-.pname{font-weight:800;font-size:16px}
-.pname em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--bg);border-radius:5px;padding:1px 6px;margin-left:4px;vertical-align:2px}
-.pteams{font-size:12.5px;color:var(--muted)}
-.pnums{font-size:14px}
-.pbar{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px}
-.pbar i{display:block;height:100%;background:#2E7D4F}
-.pcard .list{border-radius:0;border-left:0;border-right:0;border-bottom:0}
+.prow{display:flex;align-items:center;gap:8px}
+.pname{font-weight:800;font-size:17px}
+.prow em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--bg);border-radius:5px;padding:1px 6px}
+.prow em.lead{background:var(--red)}
+.pchev{margin-left:auto;font-size:22px;line-height:1;color:var(--muted);font-weight:700}
+.pnums{font-size:14.5px}
+.pbar{display:flex;height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:4px}
+.pbar i{display:block;height:100%}
+.b-done{background:#2E7D4F}.b-doing{background:#1D5E8C}.b-bad{background:#B3261E}.b-todo{background:#B9B5AF}
+.key{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 3px 0 8px;vertical-align:-1px}
+.wlock{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:6px;padding:2px 8px;background:var(--ink);color:var(--bg)}
+
+.wlockbar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#FFF7E0;border:1px solid #F0D68A;border-radius:12px;padding:10px 12px;margin:0 0 14px;font-size:14px;line-height:1.35;color:#3D3418}
+.wlockbar .btn{flex:none;padding:8px 12px;font-size:14px;min-height:0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -809,7 +866,7 @@ function go(tab) {
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
   if ((tab === "ops" || tab === "goals") && typeof openLeader === "function") openLeader(tab);
-  if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3)) loadWork();
+  if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
 $("toSchedule").addEventListener("click", () => go("schedule"));
@@ -1067,13 +1124,26 @@ function fillTask(keep) {
 }
 
 /* ============ WORK: everyday tasks for the whole team ============ */
-let WORK = null, workAt = 0, workView = "mine", workTeam = "All", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false;
-const WSTAT = [["todo", "To do"], ["doing", "Doing"], ["stuck", "Stuck"], ["done", "Done"]];
+let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false;
+const WSTAT = [["todo", "To do"], ["doing", "Working on it"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
+const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants" };
 const wOpen = t => t.status !== "done";
 const wLate = t => wOpen(t) && t.due && daysAway(t.due) < 0;
 const wRecentDone = (t, days) => t.status === "done" && t.doneAt && (Date.now() - new Date(t.doneAt)) < days * 864e5;
 const onTask = (t, n) => t.owners.includes(n) || t.helpers.includes(n);
+const isLeader = n => ((WORK && WORK.people) || []).some(p => p.name === n && (p.leader || p.coordinator));
+const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + "s")}`;
+function dueWords(due, done) {
+  if (!due) return ["No due date", ""];
+  const n = daysAway(due), d = dt(due);
+  if (done) return ["Was due " + d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), ""];
+  if (n < 0) return [plural(-n, "day") + " late", "late"];
+  if (n === 0) return ["Due today", "soon"];
+  if (n === 1) return ["Due tomorrow", "soon"];
+  if (n < 7) return ["Due " + d.toLocaleDateString("en-US", { weekday: "long" }), "soon"];
+  return ["Due " + d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }), ""];
+}
 function wSort(a, b) {
   const rank = t => t.status === "stuck" ? 0 : wLate(t) ? 1 : t.status === "doing" ? 2 : 3;
   return rank(a) - rank(b) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || a.title.localeCompare(b.title);
@@ -1081,67 +1151,106 @@ function wSort(a, b) {
 async function loadWork(quiet) {
   if (loadingWork) return;
   loadingWork = true;
-  if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading the team's work...</p>`;
-  try { WORK = await run("getWork", KEY); workAt = Date.now(); if (!(openWorkId !== null && quiet)) drawWork(); }
-  catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading your work...</p>`;
+  try {
+    WORK = await run("getWork", KEY, TOK); workAt = Date.now();
+    if (!workTeam) { const me = (WORK.people || []).find(p => p.name === WORK.me); workTeam = WORK.canManage ? "Everyone" : ((me && me.teams && me.teams[0]) || "Everyone"); }
+    if (!(openWorkId !== null && quiet)) drawWork();
+  } catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
   loadingWork = false;
 }
-function wrow(t) {
-  const meta = [t.owners.length ? esc(t.owners.join(", ")) : "<b>No one assigned</b>", t.helpers.length ? "helping: " + esc(t.helpers.join(", ")) : "", t.team ? esc(t.team) : "",
-    dueTxt(t.due, t.status === "done"), (t.updates || []).length ? `${t.updates.length} update${t.updates.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" &middot; ");
-  return `<button class="trow" type="button" data-work="${esc(t.id)}"><span class="st ws-${t.status}">${WLABEL[t.status] || "To do"}</span><span class="it">${esc(t.title)}</span><span class="own">${meta}</span><span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
+function wcard(t, opts) {
+  opts = opts || {};
+  const me = WORK.me, mine = WORK.canManage || onTask(t, me);
+  const [dw, dc] = dueWords(t.due, t.status === "done");
+  const who = opts.hideWho ? "" : (t.owners.length ? t.owners.join(", ") : "Nobody yet");
+  const acts = mine && t.status !== "done" && !opts.noActs ? `<div class="wacts">
+      ${t.status === "todo" || t.status === "stuck" ? `<button type="button" class="qa-doing" data-q="doing" data-id="${esc(t.id)}">Start</button>` : ""}
+      <button type="button" class="qa-done" data-q="done" data-id="${esc(t.id)}">Done</button>
+      ${t.status !== "stuck" ? `<button type="button" class="qa-stuck" data-q="stuck" data-id="${esc(t.id)}">I'm stuck</button>` : ""}</div>` : "";
+  return `<div class="wcard ${TEAMCLS[t.team] || "t-none"} s-${t.status}">
+    <button type="button" class="wmain" data-work="${esc(t.id)}">
+      <span class="wtop"><span class="wteam">${esc(t.team || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
+      <span class="wname">${esc(t.title)}</span>
+      <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
+    </button>${acts}</div>`;
 }
-const wlist = (title, list, note) => list.length ? `<div class="month">${title} &middot; ${list.length}</div>${note ? `<p class="small" style="margin:-4px 2px 8px">${note}</p>` : ""}<div class="list">${list.map(wrow).join("")}</div>` : "";
+const wgroup = (title, cls, list, opts, note) => list.length ? `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}${list.map(t => wcard(t, opts)).join("")}</section>` : "";
 function drawWork() {
   const W = WORK, box = $("work");
   if (!W) return;
   const me = W.me, all = W.tasks || [];
   let html = `<div class="seg" role="group" aria-label="Work view">
       <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
-      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Team</button></div>
-    ${W.canManage ? `<button class="btn" type="button" id="wnew" style="margin:12px 0 0">New task</button>` : ""}`;
+      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button></div>`;
+  if (W.canManage && !W.unlocked) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
   if (workView === "mine") {
-    const mine = all.filter(t => onTask(t, me));
+    const mine = all.filter(t => t.owners.includes(me));
     const open = mine.filter(wOpen).sort(wSort);
-    const soon = open.filter(t => t.due && daysAway(t.due) <= 7).length;
-    html += `<div class="glance"><div><b>${open.length}</b><span>open</span></div><div class="${open.some(t => t.status === "stuck") ? "warn" : ""}"><b>${open.filter(t => t.status === "stuck").length}</b><span>stuck</span></div><div><b>${soon}</b><span>due in 7 days</span></div></div>`;
-    html += wlist("Your tasks", open.filter(t => t.owners.includes(me)));
-    html += wlist("You're helping", open.filter(t => !t.owners.includes(me) && t.helpers.includes(me)));
-    if (!open.length) {
-      const help = all.filter(t => t.status === "stuck" && !onTask(t, me));
-      html += `<div class="empty">You're all caught up.${help.length ? " These need a hand:" : ""}</div>${help.length ? `<div class="list">${help.sort(wSort).map(wrow).join("")}</div>` : ""}`;
-    }
+    const stuck = open.filter(t => t.status === "stuck"), late = open.filter(t => t.status !== "stuck" && wLate(t));
+    const rest = open.filter(t => t.status !== "stuck" && !wLate(t));
+    const week = rest.filter(t => t.due && daysAway(t.due) <= 7), later = rest.filter(t => t.due && daysAway(t.due) > 7), nodate = rest.filter(t => !t.due);
+    const helping = all.filter(t => wOpen(t) && !t.owners.includes(me) && t.helpers.includes(me)).sort(wSort);
+    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${open.length ? `You have <b>${plural(open.length, "thing")}</b> to do.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
+      <p class="small">Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
+    html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
+    html += wgroup("Late", "g-late", late, { hideWho: true });
+    html += wgroup("Due this week", "g-week", week, { hideWho: true });
+    html += wgroup("Coming up", "g-later", later, { hideWho: true });
+    html += wgroup("No due date", "g-later", nodate, { hideWho: true });
+    html += wgroup("You're helping", "g-help", helping);
     const done = mine.filter(t => wRecentDone(t, 14));
-    if (done.length) html += `<details class="dhist"><summary>Done in the last 2 weeks (${done.length})</summary><div class="list">${done.map(wrow).join("")}</div></details>`;
+    if (done.length) html += `<details class="dhist"><summary>Finished in the last 2 weeks (${done.length})</summary>${done.map(t => wcard(t, { hideWho: true, noActs: true })).join("")}</details>`;
+    if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   } else {
-    const teams = ["All", ...(W.teams || [])];
-    const inTeam = t => workTeam === "All" || t.team === workTeam;
-    const people = (W.people || []).filter(p => workTeam === "All" || (p.teams || []).includes(workTeam));
-    const tasks = all.filter(inTeam);
-    const attention = tasks.filter(t => t.status === "stuck" || wLate(t)).sort(wSort);
-    const unassigned = tasks.filter(t => wOpen(t) && !t.owners.length);
-    const free = people.filter(p => !all.some(t => wOpen(t) && onTask(t, p.name)));
-    html += `<div class="filters" role="group" aria-label="Team" style="margin-top:12px">${teams.map(t => `<button class="chip" type="button" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(t)}</button>`).join("")}</div>`;
-    html += wlist("Needs attention", attention, "Stuck or past due. Ask someone who is free to help.");
-    if (free.length) html += `<div class="month">Free to help &middot; ${free.length}</div><div class="freelist">${free.map(p => `<span>${esc(p.name)}</span>`).join("")}</div>`;
-    html += wlist("Not assigned yet", unassigned);
-    html += `<div class="month">People</div><div class="pcards">${people.map(p => {
-      const mineAll = all.filter(t => onTask(t, p.name)), open = mineAll.filter(wOpen);
-      const stuck = open.filter(t => t.status === "stuck").length, late = open.filter(wLate).length, done = mineAll.filter(t => wRecentDone(t, 7)).length;
-      const pct = (open.length + done) ? Math.round(100 * done / (open.length + done)) : 0;
+    const teams = ["Everyone", ...(W.teams || [])];
+    if (!teams.includes(workTeam)) workTeam = "Everyone";
+    const allTeams = workTeam === "Everyone";
+    const tasks = all.filter(t => allTeams || t.team === workTeam);
+    const open = tasks.filter(wOpen);
+    const people = (W.people || []).filter(p => allTeams || (p.teams || []).includes(workTeam));
+    const stuck = open.filter(t => t.status === "stuck").sort(wSort), late = open.filter(t => t.status !== "stuck" && wLate(t)).sort(wSort);
+    const nobody = open.filter(t => !t.owners.length).sort(wSort);
+    const doneWeek = tasks.filter(t => wRecentDone(t, 7)).length;
+    const lateOrStuck = n => all.some(t => wOpen(t) && t.owners.includes(n) && (t.status === "stuck" || wLate(t)));
+    const leaders = (W.people || []).filter(p => (p.leader || p.coordinator) && !lateOrStuck(p.name))
+      .map(p => ({ name: p.name, n: all.filter(t => wOpen(t) && t.owners.includes(p.name)).length })).sort((a, b) => a.n - b.n).slice(0, 3);
+    html += `<div class="tpick" role="group" aria-label="Pick a team">${teams.map(t => `<button type="button" class="${TEAMCLS[t] || "t-all"}" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(t)}</button>`).join("")}</div>
+      <div class="tsum ${TEAMCLS[workTeam] || "t-all"}"><h2>${allTeams ? "The whole team" : esc(workTeam)}</h2>
+        <div class="tnums"><div><b>${open.length}</b><span>to do</span></div><div class="${stuck.length ? "bad" : ""}"><b>${stuck.length}</b><span>stuck</span></div><div class="${late.length ? "bad" : ""}"><b>${late.length}</b><span>late</span></div><div class="good"><b>${doneWeek}</b><span>done this week</span></div></div></div>`;
+    if (stuck.length || late.length) html += wgroup("Needs help now", "g-stuck", stuck.concat(late), {}, leaders.length ? `Leaders with the most room to help: <b>${leaders.map(l => `${esc(l.name)} (${l.n})`).join(", ")}</b>. Open a task and add a helper.` : "");
+    html += wgroup("Nobody is on these yet", "g-nobody", nobody, {}, W.canManage ? "Open one and pick who owns it." : "");
+    html += `<h3 class="wpeople">${allTeams ? "Everyone" : "Who's on " + esc(workTeam)}</h3><div class="pcards">${people.map(p => {
+      const theirs = tasks.filter(t => t.owners.includes(p.name));
+      const o = theirs.filter(wOpen), st = o.filter(t => t.status === "stuck").length, lt = o.filter(t => t.status !== "stuck" && wLate(t)).length;
+      const bad = st + lt, wk = o.filter(t => t.status === "doing" && !wLate(t)).length, td = o.length - bad - wk;
+      const dn = theirs.filter(t => wRecentDone(t, 7)).length, total = o.length + dn;
+      const seg = (n, c) => total && n ? `<i class="${c}" style="width:${(100 * n / total).toFixed(1)}%"></i>` : "";
       const isOpen = workPerson === p.name;
-      return `<div class="pcard${stuck || late ? " flag" : ""}"><button type="button" class="phead" data-wp="${esc(p.name)}" aria-expanded="${isOpen}">
-          <span class="pname">${esc(p.name)}${p.coordinator ? ` <em>Coordinator</em>` : ""}</span><span class="pteams">${esc((p.teams || []).join(", ") || "No team yet")}</span>
-          <span class="pnums"><b>${open.length}</b> open${stuck ? ` &middot; <strong class="due late">${stuck} stuck</strong>` : ""}${late ? ` &middot; <strong class="due late">${late} late</strong>` : ""} &middot; ${done} done this week</span>
-          <span class="pbar" aria-hidden="true"><i style="width:${pct}%"></i></span></button>
-        ${isOpen ? (open.length ? `<div class="list">${open.sort(wSort).map(wrow).join("")}</div>` : `<p class="small" style="margin:8px 4px">Nothing open.</p>`) : ""}</div>`;
-    }).join("") || `<div class="empty">Nobody on this team yet. Add teams in the Access tab.</div>`}</div>`;
+      return `<div class="pcard${st || lt ? " flag" : ""}"><button type="button" class="phead" data-wp="${esc(p.name)}" aria-expanded="${isOpen}">
+          <span class="prow"><span class="pname">${esc(p.name)}</span>${p.coordinator ? `<em>Coordinator</em>` : p.leader ? `<em class="lead">Leader</em>` : ""}<span class="pchev" aria-hidden="true">${isOpen ? "&minus;" : "+"}</span></span>
+          <span class="pnums">${o.length ? `<b>${plural(o.length, "task")}</b> to do` : "Nothing to do here"}${st ? ` &middot; <span class="late">${st} stuck</span>` : ""}${lt ? ` &middot; <span class="late">${lt} late</span>` : ""}${dn ? ` &middot; <span class="ok">${dn} done this week</span>` : ""}</span>
+          <span class="pbar" aria-hidden="true">${seg(dn, "b-done")}${seg(wk, "b-doing")}${seg(bad, "b-bad")}${seg(td, "b-todo")}</span></button>
+        ${isOpen ? (theirs.filter(wOpen).length ? theirs.filter(wOpen).sort(wSort).map(t => wcard(t, { hideWho: false })).join("") : `<p class="small" style="margin:6px 14px 12px">Nothing open${allTeams ? "" : " on " + esc(workTeam)}.</p>`) : ""}</div>`;
+    }).join("") || `<div class="empty">Nobody is on this team yet.</div>`}</div>
+      <p class="small" style="margin-top:10px">Bar colors: <span class="key b-done"></span> done <span class="key b-doing"></span> working on it <span class="key b-bad"></span> stuck or late <span class="key b-todo"></span> to do</p>`;
+    if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; drawWork(); }));
-  box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; drawWork(); }));
+  box.querySelectorAll("[data-wunlock]").forEach(b => b.addEventListener("click", () => { if (TOK) loadWork(); else go("goals"); }));
+  box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
   box.querySelectorAll("[data-wp]").forEach(b => b.addEventListener("click", () => { workPerson = workPerson === b.dataset.wp ? null : b.dataset.wp; drawWork(); }));
   box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  box.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", async () => {
+    const id = b.dataset.id, q = b.dataset.q;
+    if (q === "stuck") { workStuckOpen = true; openWork(id); return; }
+    if (workBusy) return;
+    workBusy = true; b.disabled = true; b.textContent = "Saving...";
+    try { WORK = await run("saveWork", KEY, id, { status: q }, TOK); workAt = Date.now(); toast(q === "done" ? "Nice work. Marked done." : "Marked as working on it."); }
+    catch (e) { toast("That didn't save. Check your connection and try again."); }
+    workBusy = false; drawWork();
+  }));
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
 }
 function openWork(id) {
@@ -1154,19 +1263,21 @@ function fillWork(keep) {
   const W = WORK, box = $("wbody");
   if (!W || !box) return;
   const isNew = !openWorkId;
-  const t = isNew ? { id: "", title: "", team: workTeam !== "All" ? workTeam : "", owners: [], helpers: [], status: "todo", due: "", details: "", updates: [], files: [] } : (W.tasks || []).find(x => x.id === openWorkId);
+  const t = isNew ? { id: "", title: "", team: TEAMCLS[workTeam] ? workTeam : "", owners: [], helpers: [], status: "todo", due: "", details: "", updates: [], files: [] } : (W.tasks || []).find(x => x.id === openWorkId);
   if (!t) { box.innerHTML = `<p class="lead">This task is gone.</p>`; return; }
   const me = W.me, manage = W.canManage, mine = manage || onTask(t, me);
   const names = (W.people || []).map(p => p.name);
-  const chips = (kind, chosen) => `<div class="wchips">${names.map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
+  const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
+  const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
   box.innerHTML = `<div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${isNew || manage ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
-      <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? The coordinator sees this." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
+      <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
+    ${manage && WORK.unlocked ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
     ${manage ? `<div class="tsec"><div class="tl">Team</div><div class="wchips">${(W.teams || []).map(x => `<button type="button" data-wteam="${esc(x)}" aria-pressed="${t.team === x}">${esc(x)}</button>`).join("")}</div></div>
       <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners)}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
-    ${isNew ? "" : `<div class="tsec"><div class="tl">Helping</div>${manage ? chips("whelp", t.helpers) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
-      ${!t.owners.includes(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I can help with this</button>`) : ""}</div>`}
+    ${isNew ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
+      ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
     <div class="tsec"><div class="tl">Details</div>${isNew || mine ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div><p class="tmsg" id="wmsg" role="status"></p>` : `
@@ -1184,7 +1295,7 @@ function fillWork(keep) {
     const k = { upd: ($("wupd") || {}).value || "", det: $("wdet") ? $("wdet").value : null };
     if (skip) k[skip] = skip === "det" ? null : "";
     try {
-      const r = await run(fn, KEY, ...args);
+      const r = await run(fn, KEY, ...args, TOK);
       if (r) { WORK = r; workAt = Date.now(); if (r.savedId) openWorkId = r.savedId; }
       fillWork(k); msg(ok);
     } catch (e) { msg(/^(That|Only) /.test(String(e.message)) ? e.message : "That didn't save. Check your connection and try again."); }
@@ -1192,23 +1303,26 @@ function fillWork(keep) {
   };
   $("wclose").addEventListener("click", () => sheet.close());
   if (isNew) {
-    let pickTeam = t.team, pickOwners = [];
+    let pickTeam = t.team, pickOwners = [], pickPrivate = false;
+    box.querySelectorAll("[data-wvis]").forEach(b => b.addEventListener("click", () => { pickPrivate = b.dataset.wvis === "1"; box.querySelectorAll("[data-wvis]").forEach(x => x.setAttribute("aria-pressed", (x.dataset.wvis === "1") === pickPrivate)); }));
     box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => { pickTeam = pickTeam === b.dataset.wteam ? "" : b.dataset.wteam; box.querySelectorAll("[data-wteam]").forEach(x => x.setAttribute("aria-pressed", x.dataset.wteam === pickTeam)); }));
     box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; pickOwners = pickOwners.includes(n) ? pickOwners.filter(x => x !== n) : pickOwners.concat(n); b.setAttribute("aria-pressed", pickOwners.includes(n)); }));
     $("wcreate").addEventListener("click", () => {
       const title = $("wtitle").value.trim();
       if (!title) { msg("Give the task a title first."); $("wtitle").focus(); return; }
-      save("saveWork", ["", { title, team: pickTeam, owners: pickOwners, due: $("wdue").value, details: $("wdet").value }], "Task created.");
+      save("saveWork", ["", { title, team: pickTeam, owners: pickOwners, due: $("wdue").value, details: $("wdet").value, private: pickPrivate }], "Task created.");
     });
     setTimeout(() => $("wtitle").focus(), 60);
     return;
   }
+  if (workStuckOpen && $("wstuck")) { workStuckOpen = false; $("wstuck").hidden = false; setTimeout(() => $("wwhy").focus(), 60); }
   const ti = $("wtitle"); if (ti) ti.addEventListener("change", () => { const v = ti.value.trim(); if (v && v !== t.title) save("saveWork", [t.id, { title: v }], "Title saved."); });
   box.querySelectorAll("[data-ws]").forEach(b => b.addEventListener("click", () => {
     if (b.dataset.ws === "stuck" && t.status !== "stuck") { $("wstuck").hidden = false; $("wwhy").focus(); return; }
     save("saveWork", [t.id, { status: b.dataset.ws }], "Status saved.");
   }));
   const ss = $("wstucksave"); if (ss) ss.addEventListener("click", () => save("saveWork", [t.id, { status: "stuck", why: $("wwhy").value }], "Marked stuck. The coordinator can see it."));
+  box.querySelectorAll("[data-wvis]").forEach(b => b.addEventListener("click", () => save("saveWork", [t.id, { private: b.dataset.wvis === "1" }], b.dataset.wvis === "1" ? "Only leaders can see this now." : "The whole team can see this now.")));
   box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => save("saveWork", [t.id, { team: t.team === b.dataset.wteam ? "" : b.dataset.wteam }], "Team saved.")));
   box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; save("saveWork", [t.id, { owners: t.owners.includes(n) ? t.owners.filter(x => x !== n) : t.owners.concat(n) }], "Owners saved."); }));
   box.querySelectorAll("[data-whelp]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.whelp; save("saveWork", [t.id, { helpers: t.helpers.includes(n) ? t.helpers.filter(x => x !== n) : t.helpers.concat(n) }], "Helpers saved."); }));
