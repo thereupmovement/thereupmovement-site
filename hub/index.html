@@ -467,6 +467,29 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .tdecided p{margin:0 0 4px;font-weight:700}
 .tdecided .small{color:#3F3D3A}
 .tmsg{min-height:1.2em;font-size:14px;color:var(--muted);margin:14px 0 0}
+.st.ws-todo{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.st.ws-doing{background:var(--k-dead-soft);color:var(--k-dead)}
+.st.ws-stuck{background:#F6DEDC;color:#B3261E}
+.st.ws-done{background:#DDEFE3;color:#1E5C38}
+.tseg .ws-todo[aria-pressed="true"]{background:#5D5A57}
+.tseg .ws-doing[aria-pressed="true"]{background:#A45A00}
+.tseg .ws-stuck[aria-pressed="true"]{background:#B3261E}
+.tseg .ws-done[aria-pressed="true"]{background:#1E5C38}
+.wtitle{display:block;width:100%;box-sizing:border-box;font-family:var(--display);font-size:26px;line-height:1.1;text-transform:uppercase;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.freelist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.freelist span{font-weight:700;font-size:14px;padding:6px 12px;border-radius:999px;background:#DDEFE3;color:#1E5C38}
+.pcards{display:grid;gap:8px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pcard.flag{border-color:#B3261E}
+.phead{display:grid;gap:3px;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:12px 14px;cursor:pointer}
+.phead:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
+.pname{font-weight:800;font-size:16px}
+.pname em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--ink);color:var(--bg);border-radius:5px;padding:1px 6px;margin-left:4px;vertical-align:2px}
+.pteams{font-size:12.5px;color:var(--muted)}
+.pnums{font-size:14px}
+.pbar{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px}
+.pbar i{display:block;height:100%;background:#2E7D4F}
+.pcard .list{border-radius:0;border-left:0;border-right:0;border-bottom:0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -498,6 +521,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div class="hsec"><h3>ReUp merch</h3><a class="hlink" href="https://the-reup-shop.fourthwall.com/" target="_blank" rel="noopener">Open the shop</a></div>
       <p class="hsub">Wear it at events, and send the shop link to supporters.</p>
       <div class="strip shoprow" id="shopgrid" tabindex="0" aria-label="ReUp merch"></div>
+    </section>
+
+    <section class="view" id="v-work" hidden>
+      <div class="banner" data-pic="0"><div><h2>Work</h2><p>What's on your plate, and how the team is doing.</p></div></div>
+      <div id="work"><p class="lead">Loading...</p></div>
     </section>
 
     <section class="view" id="v-schedule" hidden>
@@ -759,6 +787,7 @@ const ICONS = {
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
   eventday: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11l2 2 4-4M8 17h8"/></svg>',
   goals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
 };
 const TABS = [["home", "Home"], ["schedule", "Schedule"], ["eventday", "Event day"], ["forms", "Forms"]];
@@ -775,11 +804,12 @@ drawTabs();
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab)) tab = "home";
-  ["home", "schedule", "eventday", "forms", "ops", "goals"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "schedule", "eventday", "forms", "ops", "goals"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   $("tabs").querySelectorAll("[data-tab]").forEach(b => b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
   if ((tab === "ops" || tab === "goals") && typeof openLeader === "function") openLeader(tab);
+  if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3)) loadWork();
 }
 
 $("toSchedule").addEventListener("click", () => go("schedule"));
@@ -1035,6 +1065,171 @@ function fillTask(keep) {
   const ro = $("treopen"); if (ro) ro.addEventListener("click", () => save("saveTask", [{ reopen: true }], "Reopened."));
   $("tclose").addEventListener("click", () => sheet.close());
 }
+
+/* ============ WORK: everyday tasks for the whole team ============ */
+let WORK = null, workAt = 0, workView = "mine", workTeam = "All", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false;
+const WSTAT = [["todo", "To do"], ["doing", "Doing"], ["stuck", "Stuck"], ["done", "Done"]];
+const WLABEL = Object.fromEntries(WSTAT);
+const wOpen = t => t.status !== "done";
+const wLate = t => wOpen(t) && t.due && daysAway(t.due) < 0;
+const wRecentDone = (t, days) => t.status === "done" && t.doneAt && (Date.now() - new Date(t.doneAt)) < days * 864e5;
+const onTask = (t, n) => t.owners.includes(n) || t.helpers.includes(n);
+function wSort(a, b) {
+  const rank = t => t.status === "stuck" ? 0 : wLate(t) ? 1 : t.status === "doing" ? 2 : 3;
+  return rank(a) - rank(b) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || a.title.localeCompare(b.title);
+}
+async function loadWork(quiet) {
+  if (loadingWork) return;
+  loadingWork = true;
+  if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading the team's work...</p>`;
+  try { WORK = await run("getWork", KEY); workAt = Date.now(); if (!(openWorkId !== null && quiet)) drawWork(); }
+  catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  loadingWork = false;
+}
+function wrow(t) {
+  const meta = [t.owners.length ? esc(t.owners.join(", ")) : "<b>No one assigned</b>", t.helpers.length ? "helping: " + esc(t.helpers.join(", ")) : "", t.team ? esc(t.team) : "",
+    dueTxt(t.due, t.status === "done"), (t.updates || []).length ? `${t.updates.length} update${t.updates.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" &middot; ");
+  return `<button class="trow" type="button" data-work="${esc(t.id)}"><span class="st ws-${t.status}">${WLABEL[t.status] || "To do"}</span><span class="it">${esc(t.title)}</span><span class="own">${meta}</span><span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
+}
+const wlist = (title, list, note) => list.length ? `<div class="month">${title} &middot; ${list.length}</div>${note ? `<p class="small" style="margin:-4px 2px 8px">${note}</p>` : ""}<div class="list">${list.map(wrow).join("")}</div>` : "";
+function drawWork() {
+  const W = WORK, box = $("work");
+  if (!W) return;
+  const me = W.me, all = W.tasks || [];
+  let html = `<div class="seg" role="group" aria-label="Work view">
+      <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
+      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Team</button></div>
+    ${W.canManage ? `<button class="btn" type="button" id="wnew" style="margin:12px 0 0">New task</button>` : ""}`;
+  if (workView === "mine") {
+    const mine = all.filter(t => onTask(t, me));
+    const open = mine.filter(wOpen).sort(wSort);
+    const soon = open.filter(t => t.due && daysAway(t.due) <= 7).length;
+    html += `<div class="glance"><div><b>${open.length}</b><span>open</span></div><div class="${open.some(t => t.status === "stuck") ? "warn" : ""}"><b>${open.filter(t => t.status === "stuck").length}</b><span>stuck</span></div><div><b>${soon}</b><span>due in 7 days</span></div></div>`;
+    html += wlist("Your tasks", open.filter(t => t.owners.includes(me)));
+    html += wlist("You're helping", open.filter(t => !t.owners.includes(me) && t.helpers.includes(me)));
+    if (!open.length) {
+      const help = all.filter(t => t.status === "stuck" && !onTask(t, me));
+      html += `<div class="empty">You're all caught up.${help.length ? " These need a hand:" : ""}</div>${help.length ? `<div class="list">${help.sort(wSort).map(wrow).join("")}</div>` : ""}`;
+    }
+    const done = mine.filter(t => wRecentDone(t, 14));
+    if (done.length) html += `<details class="dhist"><summary>Done in the last 2 weeks (${done.length})</summary><div class="list">${done.map(wrow).join("")}</div></details>`;
+  } else {
+    const teams = ["All", ...(W.teams || [])];
+    const inTeam = t => workTeam === "All" || t.team === workTeam;
+    const people = (W.people || []).filter(p => workTeam === "All" || (p.teams || []).includes(workTeam));
+    const tasks = all.filter(inTeam);
+    const attention = tasks.filter(t => t.status === "stuck" || wLate(t)).sort(wSort);
+    const unassigned = tasks.filter(t => wOpen(t) && !t.owners.length);
+    const free = people.filter(p => !all.some(t => wOpen(t) && onTask(t, p.name)));
+    html += `<div class="filters" role="group" aria-label="Team" style="margin-top:12px">${teams.map(t => `<button class="chip" type="button" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(t)}</button>`).join("")}</div>`;
+    html += wlist("Needs attention", attention, "Stuck or past due. Ask someone who is free to help.");
+    if (free.length) html += `<div class="month">Free to help &middot; ${free.length}</div><div class="freelist">${free.map(p => `<span>${esc(p.name)}</span>`).join("")}</div>`;
+    html += wlist("Not assigned yet", unassigned);
+    html += `<div class="month">People</div><div class="pcards">${people.map(p => {
+      const mineAll = all.filter(t => onTask(t, p.name)), open = mineAll.filter(wOpen);
+      const stuck = open.filter(t => t.status === "stuck").length, late = open.filter(wLate).length, done = mineAll.filter(t => wRecentDone(t, 7)).length;
+      const pct = (open.length + done) ? Math.round(100 * done / (open.length + done)) : 0;
+      const isOpen = workPerson === p.name;
+      return `<div class="pcard${stuck || late ? " flag" : ""}"><button type="button" class="phead" data-wp="${esc(p.name)}" aria-expanded="${isOpen}">
+          <span class="pname">${esc(p.name)}${p.coordinator ? ` <em>Coordinator</em>` : ""}</span><span class="pteams">${esc((p.teams || []).join(", ") || "No team yet")}</span>
+          <span class="pnums"><b>${open.length}</b> open${stuck ? ` &middot; <strong class="due late">${stuck} stuck</strong>` : ""}${late ? ` &middot; <strong class="due late">${late} late</strong>` : ""} &middot; ${done} done this week</span>
+          <span class="pbar" aria-hidden="true"><i style="width:${pct}%"></i></span></button>
+        ${isOpen ? (open.length ? `<div class="list">${open.sort(wSort).map(wrow).join("")}</div>` : `<p class="small" style="margin:8px 4px">Nothing open.</p>`) : ""}</div>`;
+    }).join("") || `<div class="empty">Nobody on this team yet. Add teams in the Access tab.</div>`}</div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; drawWork(); }));
+  box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; drawWork(); }));
+  box.querySelectorAll("[data-wp]").forEach(b => b.addEventListener("click", () => { workPerson = workPerson === b.dataset.wp ? null : b.dataset.wp; drawWork(); }));
+  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
+}
+function openWork(id) {
+  openWorkId = id;
+  openSheet(`<div id="wbody"></div>`);
+  sheet.addEventListener("close", () => { openWorkId = null; drawWork(); }, { once: true });
+  fillWork();
+}
+function fillWork(keep) {
+  const W = WORK, box = $("wbody");
+  if (!W || !box) return;
+  const isNew = !openWorkId;
+  const t = isNew ? { id: "", title: "", team: workTeam !== "All" ? workTeam : "", owners: [], helpers: [], status: "todo", due: "", details: "", updates: [], files: [] } : (W.tasks || []).find(x => x.id === openWorkId);
+  if (!t) { box.innerHTML = `<p class="lead">This task is gone.</p>`; return; }
+  const me = W.me, manage = W.canManage, mine = manage || onTask(t, me);
+  const names = (W.people || []).map(p => p.name);
+  const chips = (kind, chosen) => `<div class="wchips">${names.map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
+  box.innerHTML = `<div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
+    ${isNew || manage ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
+    ${isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
+      <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? The coordinator sees this." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
+    ${manage ? `<div class="tsec"><div class="tl">Team</div><div class="wchips">${(W.teams || []).map(x => `<button type="button" data-wteam="${esc(x)}" aria-pressed="${t.team === x}">${esc(x)}</button>`).join("")}</div></div>
+      <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners)}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
+    ${isNew ? "" : `<div class="tsec"><div class="tl">Helping</div>${manage ? chips("whelp", t.helpers) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
+      ${!t.owners.includes(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I can help with this</button>`) : ""}</div>`}
+    <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
+    <div class="tsec"><div class="tl">Details</div>${isNew || mine ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
+    ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div><p class="tmsg" id="wmsg" role="status"></p>` : `
+    <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
+      <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
+    <div class="tsec"><div class="tl">Updates</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
+      ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${esc(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
+    <p class="tmsg" id="wmsg" role="status"></p>
+    <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
+  if (keep) { if (keep.upd && $("wupd")) $("wupd").value = keep.upd; if (keep.det != null && $("wdet")) $("wdet").value = keep.det; }
+  const msg = s => { const m = $("wmsg"); if (m) m.textContent = s; };
+  const save = async (fn, args, ok, skip) => {
+    if (workBusy) return;
+    workBusy = true; msg(fn === "workUpload" ? "Uploading..." : "Saving...");
+    const k = { upd: ($("wupd") || {}).value || "", det: $("wdet") ? $("wdet").value : null };
+    if (skip) k[skip] = skip === "det" ? null : "";
+    try {
+      const r = await run(fn, KEY, ...args);
+      if (r) { WORK = r; workAt = Date.now(); if (r.savedId) openWorkId = r.savedId; }
+      fillWork(k); msg(ok);
+    } catch (e) { msg(/^(That|Only) /.test(String(e.message)) ? e.message : "That didn't save. Check your connection and try again."); }
+    workBusy = false;
+  };
+  $("wclose").addEventListener("click", () => sheet.close());
+  if (isNew) {
+    let pickTeam = t.team, pickOwners = [];
+    box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => { pickTeam = pickTeam === b.dataset.wteam ? "" : b.dataset.wteam; box.querySelectorAll("[data-wteam]").forEach(x => x.setAttribute("aria-pressed", x.dataset.wteam === pickTeam)); }));
+    box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; pickOwners = pickOwners.includes(n) ? pickOwners.filter(x => x !== n) : pickOwners.concat(n); b.setAttribute("aria-pressed", pickOwners.includes(n)); }));
+    $("wcreate").addEventListener("click", () => {
+      const title = $("wtitle").value.trim();
+      if (!title) { msg("Give the task a title first."); $("wtitle").focus(); return; }
+      save("saveWork", ["", { title, team: pickTeam, owners: pickOwners, due: $("wdue").value, details: $("wdet").value }], "Task created.");
+    });
+    setTimeout(() => $("wtitle").focus(), 60);
+    return;
+  }
+  const ti = $("wtitle"); if (ti) ti.addEventListener("change", () => { const v = ti.value.trim(); if (v && v !== t.title) save("saveWork", [t.id, { title: v }], "Title saved."); });
+  box.querySelectorAll("[data-ws]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.ws === "stuck" && t.status !== "stuck") { $("wstuck").hidden = false; $("wwhy").focus(); return; }
+    save("saveWork", [t.id, { status: b.dataset.ws }], "Status saved.");
+  }));
+  const ss = $("wstucksave"); if (ss) ss.addEventListener("click", () => save("saveWork", [t.id, { status: "stuck", why: $("wwhy").value }], "Marked stuck. The coordinator can see it."));
+  box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => save("saveWork", [t.id, { team: t.team === b.dataset.wteam ? "" : b.dataset.wteam }], "Team saved.")));
+  box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; save("saveWork", [t.id, { owners: t.owners.includes(n) ? t.owners.filter(x => x !== n) : t.owners.concat(n) }], "Owners saved."); }));
+  box.querySelectorAll("[data-whelp]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.whelp; save("saveWork", [t.id, { helpers: t.helpers.includes(n) ? t.helpers.filter(x => x !== n) : t.helpers.concat(n) }], "Helpers saved."); }));
+  const hm = $("whelpme"); if (hm) hm.addEventListener("click", () => save("saveWork", [t.id, { helpMe: true }], "You're on it as a helper."));
+  const uh = $("wunhelp"); if (uh) uh.addEventListener("click", () => save("saveWork", [t.id, { stopHelping: true }], "Removed you as a helper."));
+  const wd = $("wdue"); if (wd) wd.addEventListener("change", e => save("saveWork", [t.id, { due: e.target.value }], "Due date saved."));
+  const wc = $("wdueclear"); if (wc) wc.addEventListener("click", () => save("saveWork", [t.id, { due: "" }], "Due date removed."));
+  const ds = $("wdetsave"); if (ds) ds.addEventListener("click", () => save("saveWork", [t.id, { details: $("wdet").value }], "Details saved.", "det"));
+  const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
+  $("wupdpost").addEventListener("click", post);
+  $("wupd").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); post(); } });
+  $("wfile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { msg("That file is over 10 MB. Try a smaller one."); return; }
+    const r = new FileReader();
+    r.onload = () => save("workUpload", [t.id, f.name, f.type || "application/octet-stream", String(r.result).split(",")[1] || ""], "File added.");
+    r.readAsDataURL(f);
+  });
+}
+setInterval(() => { if (!document.hidden && WORK && $("v-work") && !$("v-work").hidden && openWorkId === null) loadWork(true); }, 120e3);
 
 /* ============ OPS (protected): requests from families and storage ============
    Lives in the database under "ops", which only Editors can read. Viewers never receive it
@@ -1366,6 +1561,7 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOK && !$("v-ops").hidden && Date.now() - opsAt > 60e3) loadOps(true); });
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
+if (BOOT.work) { TABS.splice(1, 0, ["work", "Work"]); drawTabs(); if (start === "work") go("work"); }
 if (BOOT.ops || BOOT.leader) {
   TABS.push(["ops", "Ops"]);
   if (BOOT.leader) TABS.push(["goals", "Goals"]);
@@ -1396,7 +1592,7 @@ if (BOOT.ops || BOOT.leader) {
   if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
     document.getElementById("boot").remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
