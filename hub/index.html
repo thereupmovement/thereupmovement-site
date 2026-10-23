@@ -1148,22 +1148,35 @@ function relock() {
 }
 function pinCard(tab) {
   const box = tab === "ops" ? $("ops") : $("leaders");
+  const choose = !BOOT.pinSet;
+  const where = BOOT.leader ? "Ops and Goals" : "Ops";
+  let first = "";
   box.innerHTML = `<div class="pinbox"><div class="pinic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-    <h3>Leadership only</h3><p>Enter your 4-digit PIN. This phone stays unlocked for 30 days.</p>
-    <form id="pinf" autocomplete="off"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="Your 4-digit PIN" placeholder="&bull;&bull;&bull;&bull;"><button class="btn" type="submit" id="pinbtn">Unlock</button></form>
-    <p class="pinmsg" id="pinmsg" role="alert"></p><p class="small" style="margin:6px 0 0">Forgot your PIN? Ask Dasia.</p></div>`;
-  const f = $("pinf"), inp = $("pin");
+    <h3>${choose ? "Choose your PIN" : "Enter your PIN"}</h3>
+    <p id="pinlead">${choose ? `Pick 4 numbers you'll remember. You'll use them to open ${where}. Nobody else sees it, not even Dasia.` : "This phone stays unlocked for 30 days."}</p>
+    <form id="pinf" autocomplete="off"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="${choose ? "Choose a 4-digit PIN" : "Your 4-digit PIN"}" placeholder="&bull;&bull;&bull;&bull;"><button class="btn" type="submit" id="pinbtn">${choose ? "Next" : "Unlock"}</button></form>
+    <p class="pinmsg" id="pinmsg" role="alert"></p><p class="small" style="margin:6px 0 0">${choose ? "Not all the same number, and not 4 in a row like 1234." : "Forgot your PIN? Ask Dasia to reset it, then choose a new one."}</p></div>`;
+  const f = $("pinf"), inp = $("pin"), msg = $("pinmsg"), btn = $("pinbtn");
+  const done = token => { TOK = token; BOOT.pinSet = true; try { localStorage.setItem(TOKK, TOK); } catch (e) {} openLeader(tab, true); };
   const submit = async () => {
     const pin = inp.value.trim();
-    if (!/^\d{4}$/.test(pin)) { $("pinmsg").textContent = "Your PIN is 4 numbers."; return; }
-    $("pinbtn").disabled = true; $("pinmsg").textContent = "Checking...";
+    if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your PIN is 4 numbers."; return; }
+    if (choose && !first) {
+      if (/^(\d)\1{3}$/.test(pin) || "01234567890".includes(pin) || "09876543210".includes(pin)) { msg.textContent = "That one is too easy to guess. Try another."; inp.value = ""; inp.focus(); return; }
+      first = pin; inp.value = ""; msg.textContent = "";
+      $("pinlead").textContent = "Type the same 4 numbers again to confirm."; btn.textContent = "Save my PIN"; inp.focus(); return;
+    }
+    if (choose && pin !== first) {
+      first = ""; inp.value = ""; msg.textContent = "Those didn't match. Start again.";
+      $("pinlead").textContent = `Pick 4 numbers you'll remember. You'll use them to open ${where}.`; btn.textContent = "Next"; inp.focus(); return;
+    }
+    btn.disabled = true; msg.textContent = choose ? "Saving..." : "Checking...";
     try {
-      const r = await run("unlock", KEY, pin);
-      if (r && r.ok) {
-        TOK = r.token; try { localStorage.setItem(TOKK, TOK); } catch (e) {}
-        openLeader(tab, true);
-      } else { $("pinmsg").textContent = (r && r.msg) || "That didn't work."; inp.value = ""; $("pinbtn").disabled = !!(r && r.locked); if (!(r && r.locked)) inp.focus(); }
-    } catch (e) { $("pinmsg").textContent = "Couldn't check that. Check your connection and try again."; $("pinbtn").disabled = false; }
+      const r = await run(choose ? "setPin" : "unlock", KEY, pin);
+      if (r && r.ok) done(r.token);
+      else if (r && r.needSet) { BOOT.pinSet = false; pinCard(tab); }
+      else { msg.textContent = (r && r.msg) || "That didn't work."; inp.value = ""; btn.disabled = !!(r && r.locked); if (choose) { BOOT.pinSet = /already set/i.test((r && r.msg) || ""); if (BOOT.pinSet) setTimeout(() => pinCard(tab), 1800); } if (!(r && r.locked)) inp.focus(); }
+    } catch (e) { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; }
   };
   f.addEventListener("submit", e => { e.preventDefault(); submit(); });
   inp.addEventListener("input", () => { inp.value = inp.value.replace(/\D/g, "").slice(0, 4); if (inp.value.length === 4) submit(); });
@@ -1233,7 +1246,7 @@ if (BOOT.ops || BOOT.leader) {
   if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
     document.getElementById("boot").remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
