@@ -1156,7 +1156,11 @@ async function loadWork(quiet) {
   loadingWork = true;
   if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading your work...</p>`;
   try {
-    WORK = await run("getWork", KEY, TOK); workAt = Date.now();
+    const gen = wGen;
+    const r = await run("getWork", KEY, TOK);
+    /* A tap while this was loading wins: this copy was read before the save, so drop it. */
+    if (gen !== wGen || wqRunning || wq.length) { loadingWork = false; return; }
+    WORK = r; workAt = Date.now();
     if (!workTeam) { const me = (WORK.people || []).find(p => p.name === WORK.me); workTeam = WORK.canManage ? "Everyone" : ((me && me.teams && me.teams[0]) || "Everyone"); }
     if (!(openWorkId !== null && quiet)) drawWork();
   } catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
@@ -1164,7 +1168,7 @@ async function loadWork(quiet) {
 }
 /* Saving: every tap shows its result right away, and the save goes to the server in the background, one at a time,
    so a second tap is never lost while the first is still saving. */
-let wq = [], wqRunning = false, wqNote = "";
+let wq = [], wqRunning = false, wqNote = "", wGen = 0;
 function wApply(id, patch) {
   const t = WORK && (WORK.tasks || []).find(x => x.id === id);
   if (!t || !patch) return;
@@ -1182,6 +1186,7 @@ function wNote(text) {
   if (!$("wmsg") || !sheet.open) toast(text);
 }
 function wQueue(fn, args, ok, after) {
+  wGen++;
   if (fn === "saveWork" && args[0]) wApply(args[0], args[1]);
   if (fn === "workUpdate" && WORK) { const t = (WORK.tasks || []).find(x => x.id === args[0]); if (t) t.updates = [{ at: new Date().toISOString(), who: WORK.me, text: args[1] }].concat(t.updates || []); }
   wq.push({ fn, args, ok, after });
