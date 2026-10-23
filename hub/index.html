@@ -547,6 +547,9 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 
 .wlockbar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#FFF7E0;border:1px solid #F0D68A;border-radius:12px;padding:10px 12px;margin:0 0 14px;font-size:14px;line-height:1.35;color:#3D3418}
 .wlockbar .btn{flex:none;padding:8px 12px;font-size:14px;min-height:0}
+
+.wsticky{position:sticky;top:-1px;z-index:3;margin:0 0 6px;min-height:0;background:var(--surface);font-weight:700}
+.wsticky:empty{display:none}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -1149,7 +1152,7 @@ function wSort(a, b) {
   return rank(a) - rank(b) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || a.title.localeCompare(b.title);
 }
 async function loadWork(quiet) {
-  if (loadingWork) return;
+  if (loadingWork || wqRunning) return;
   loadingWork = true;
   if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading your work...</p>`;
   try {
@@ -1158,6 +1161,61 @@ async function loadWork(quiet) {
     if (!(openWorkId !== null && quiet)) drawWork();
   } catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
   loadingWork = false;
+}
+/* Saving: every tap shows its result right away, and the save goes to the server in the background, one at a time,
+   so a second tap is never lost while the first is still saving. */
+let wq = [], wqRunning = false, wqNote = "";
+function wApply(id, patch) {
+  const t = WORK && (WORK.tasks || []).find(x => x.id === id);
+  if (!t || !patch) return;
+  ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title"].forEach(k => { if (k in patch) t[k] = patch[k]; });
+  if (patch.status === "done" && !t.doneAt) t.doneAt = new Date().toISOString();
+  if (patch.status && patch.status !== "done") t.doneAt = "";
+  if (patch.helpMe && !t.helpers.includes(WORK.me)) t.helpers = t.helpers.concat(WORK.me);
+  if (patch.stopHelping) t.helpers = t.helpers.filter(n => n !== WORK.me);
+  if (patch.decide) { t.decision = patch.decide; t.status = "done"; t.decidedBy = WORK.me; t.decidedAt = new Date().toISOString(); }
+  if (patch.reopen) { t.decision = ""; t.status = "todo"; }
+}
+function wNote(text) {
+  wqNote = text;
+  const m = $("wmsg"); if (m) m.textContent = text;
+  if (!$("wmsg") || !sheet.open) toast(text);
+}
+function wQueue(fn, args, ok, after) {
+  if (fn === "saveWork" && args[0]) wApply(args[0], args[1]);
+  if (fn === "workUpdate" && WORK) { const t = (WORK.tasks || []).find(x => x.id === args[0]); if (t) t.updates = [{ at: new Date().toISOString(), who: WORK.me, text: args[1] }].concat(t.updates || []); }
+  wq.push({ fn, args, ok, after });
+  wNote(fn === "workUpload" ? "Uploading..." : "Saving...");
+  wRun();
+}
+async function wRun() {
+  if (wqRunning) return;
+  wqRunning = true;
+  let reload = false;
+  while (wq.length) {
+    const j = wq.shift();
+    try {
+      const r = await run(j.fn, KEY, ...j.args, TOK);
+      if (r && !wq.length) { WORK = r; workAt = Date.now(); }
+      if (r && r.savedId && openWorkId === "") openWorkId = r.savedId;
+      if (!wq.length) wNote(j.ok);
+      if (j.after) j.after(r);
+    } catch (e) {
+      wq = [];
+      wNote(/^(That|Only) /.test(String(e.message)) ? e.message : "That didn't save. Check your connection and try again.");
+      reload = true;
+    }
+  }
+  wqRunning = false;
+  if (reload) await loadWork(true);
+  wRefresh();
+}
+function wKeep() {
+  const v = id => { const el = $(id); return el ? el.value : null; };
+  return { upd: v("wupd") || "", det: v("wdet"), notes: v("wnotes"), decide: v("wdecide"), why: v("wwhy") };
+}
+function wRefresh(keep) {
+  if (sheet.open && openWorkId !== null && $("wbody")) fillWork(keep || wKeep()); else drawWork();
 }
 function wcard(t, opts) {
   opts = opts || {};
@@ -1245,11 +1303,8 @@ function drawWork() {
   box.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", async () => {
     const id = b.dataset.id, q = b.dataset.q;
     if (q === "stuck") { workStuckOpen = true; openWork(id); return; }
-    if (workBusy) return;
-    workBusy = true; b.disabled = true; b.textContent = "Saving...";
-    try { WORK = await run("saveWork", KEY, id, { status: q }, TOK); workAt = Date.now(); toast(q === "done" ? "Nice work. Marked done." : "Marked as working on it."); }
-    catch (e) { toast("That didn't save. Check your connection and try again."); }
-    workBusy = false; drawWork();
+    wQueue("saveWork", [id, { status: q }], q === "done" ? "Nice work. Marked done." : "Marked as working on it.");
+    drawWork();
   }));
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
 }
@@ -1274,7 +1329,7 @@ function fillWork(keep) {
   const names = (W.people || []).map(p => p.name);
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
   const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
-  box.innerHTML = `<div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
+  box.innerHTML = `<p class="tmsg wsticky" id="wmsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
     ${GD ? decisionHtml : isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
@@ -1286,26 +1341,26 @@ function fillWork(keep) {
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
     ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew || (mine && !G) ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
-    ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div><p class="tmsg" id="wmsg" role="status"></p>` : `
+    ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
     <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
       <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
     <div class="tsec"><div class="tl">Updates</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
       ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${esc(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
-    <p class="tmsg" id="wmsg" role="status"></p>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
-  if (keep) { if (keep.upd && $("wupd")) $("wupd").value = keep.upd; if (keep.det != null && $("wdet")) $("wdet").value = keep.det; }
+  if (keep) {
+    if (keep.upd && $("wupd")) $("wupd").value = keep.upd;
+    if (keep.det != null && $("wdet")) $("wdet").value = keep.det;
+    if (keep.notes != null && $("wnotes")) $("wnotes").value = keep.notes;
+    if (keep.decide && $("wdecide")) $("wdecide").value = keep.decide;
+  }
+  if (wqNote && $("wmsg")) $("wmsg").textContent = wqNote;
   const msg = s => { const m = $("wmsg"); if (m) m.textContent = s; };
-  const save = async (fn, args, ok, skip) => {
-    if (workBusy) return;
-    workBusy = true; msg(fn === "workUpload" ? "Uploading..." : "Saving...");
-    const k = { upd: ($("wupd") || {}).value || "", det: $("wdet") ? $("wdet").value : null };
-    if (skip) k[skip] = skip === "det" ? null : "";
-    try {
-      const r = await run(fn, KEY, ...args, TOK);
-      if (r) { WORK = r; workAt = Date.now(); if (r.savedId) openWorkId = r.savedId; }
-      fillWork(k); msg(ok);
-    } catch (e) { msg(/^(That|Only) /.test(String(e.message)) ? e.message : "That didn't save. Check your connection and try again."); }
-    workBusy = false;
+  const save = (fn, args, ok, skip) => {
+    const k = wKeep();
+    if (skip) k[skip] = skip === "det" || skip === "notes" ? null : "";
+    const creating = fn === "saveWork" && !args[0];
+    wQueue(fn, args, ok);
+    if (!creating) fillWork(k);
   };
   $("wclose").addEventListener("click", () => sheet.close());
   if (isNew) {
@@ -1338,7 +1393,7 @@ function fillWork(keep) {
   const wc = $("wdueclear"); if (wc) wc.addEventListener("click", () => save("saveWork", [t.id, { due: "" }], "Due date removed."));
   const dsv = $("wdecidesave"); if (dsv) dsv.addEventListener("click", () => { const v = $("wdecide").value.trim(); if (!v) { msg("Write what was decided first."); return; } save("saveWork", [t.id, { decide: v }], "Decision recorded."); });
   const ro = $("wreopen"); if (ro) ro.addEventListener("click", () => save("saveWork", [t.id, { reopen: true }], "Decision reopened."));
-  const ns = $("wnotessave"); if (ns) ns.addEventListener("click", () => save("saveWork", [t.id, { notes: $("wnotes").value }], "Notes saved."));
+  const ns = $("wnotessave"); if (ns) ns.addEventListener("click", () => save("saveWork", [t.id, { notes: $("wnotes").value }], "Notes saved.", "notes"));
   const ds = $("wdetsave"); if (ds) ds.addEventListener("click", () => save("saveWork", [t.id, { details: $("wdet").value }], "Details saved.", "det"));
   const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
   $("wupdpost").addEventListener("click", post);
