@@ -452,8 +452,6 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div class="qa" id="quick"></div>
       <div class="hsec"><h3>Team meeting</h3></div>
       <div class="list" id="meetings"></div>
-      <div class="hsec"><h3>ReUp in action</h3></div>
-      <div class="strip" id="photos" tabindex="0" aria-label="Photos from ReUp distributions"></div>
       <div class="hsec"><h3>ReUp merch</h3><a class="hlink" href="https://the-reup-shop.fourthwall.com/" target="_blank" rel="noopener">Open the shop</a></div>
       <p class="hsub">Wear it at events, and send the shop link to supporters.</p>
       <div class="strip shoprow" id="shopgrid" tabindex="0" aria-label="ReUp merch"></div>
@@ -764,7 +762,6 @@ const SHOP = [
 ];
 document.querySelectorAll(".banner[data-pic]").forEach(b => { const p = PHOTOS[+b.dataset.pic] || PHOTOS[0]; if (p) b.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.1) 0%, rgba(0,0,0,.78) 100%), url("${p.src}")`; });
 if (PHOTOS[0]) $("poster").style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.88) 100%), url("${PHOTOS[0].src}")`;
-$("photos").innerHTML = PHOTOS.map(p => `<figure><img src="${p.src}" alt="${esc(p.alt)}" loading="lazy"><figcaption>${esc(p.caption)}</figcaption></figure>`).join("");
 $("shopgrid").innerHTML = SHOP.map(i => `<a class="prod" href="${i.url}" target="_blank" rel="noopener"><div class="img"><img src="${i.img}" alt="${esc(i.name)}" loading="lazy"></div><div class="meta"><span class="pn">${esc(i.name)}</span><span class="pp">${i.price}</span></div></a>`).join("");
 $("toForms").addEventListener("click", () => go("forms"));
 
