@@ -424,6 +424,49 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 #pin:focus{outline:3px solid var(--red);outline-offset:2px}
 #pinf .btn{width:auto;margin:0;padding:0 18px}
 .pinmsg{min-height:1.4em;margin:12px 0 0 !important;color:var(--red) !important;font-weight:600}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:0;border-top:1px solid var(--line);padding:12px 12px 12px 14px;cursor:pointer}
+.trow:first-child{border-top:0}
+.trow .it{font-weight:700;line-height:1.3}
+.trow .it em{font-style:normal;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:#7B2121;color:#fff;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.trow .own{grid-column:2;font-size:13px;color:var(--muted)}
+.trow .chev{grid-column:3;grid-row:1 / span 2;font-size:24px;line-height:1;color:var(--muted)}
+.trow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
+.due.late{color:#B3261E;font-weight:700}
+.due.soon{color:var(--k-dead);font-weight:700}
+.dhist{margin-top:10px}
+.dhist summary{cursor:pointer;font-weight:700;color:var(--muted);padding:8px 2px}
+.tsec{margin-top:16px}
+.tl{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.tseg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.tseg button{font:inherit;font-size:14.5px;font-weight:800;padding:11px 6px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.tseg button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.tseg .ts-open[aria-pressed="true"]{background:#5D5A57}
+.tseg .ts-progress[aria-pressed="true"]{background:#A45A00}
+.tseg .ts-blocked[aria-pressed="true"]{background:#7B2121}
+.tseg .ts-done[aria-pressed="true"]{background:#1E5C38}
+.tseg button:focus-visible,.wchips button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.wchips button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tdue{display:flex;gap:14px;align-items:center}
+.tdue input{font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.tinfo{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14.5px}
+.tinfo summary{font-weight:700;cursor:pointer}
+.tinfo ol{padding-left:20px;margin:8px 0}
+.tarea{display:block;width:100%;box-sizing:border-box;min-height:84px;font:inherit;font-size:16px;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.tbtn{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;font:inherit;font-weight:700;font-size:14.5px;padding:9px 16px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.tbtn.ghost{background:var(--surface);color:var(--ink)}
+.tadd{display:flex;gap:8px}
+.tadd input{flex:1;min-width:0;font:inherit;font-size:16px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.tadd .tbtn{margin-top:0}
+.tlog{list-style:none;margin:10px 0 0;padding:0}
+.tlog li{padding:9px 0;border-top:1px solid var(--line);font-size:14.5px;overflow-wrap:anywhere}
+.tlog li span{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.tfiles{display:grid;gap:6px;margin-bottom:4px}
+.tfiles a{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);background:var(--bg);overflow-wrap:anywhere}
+.tfiles a span{display:block;font-size:12px;color:var(--muted)}
+.tdecided{margin-top:14px;padding:12px 14px;border-radius:12px;background:#DDEFE3;color:#121212;border:1.5px solid #1E5C38}
+.tdecided p{margin:0 0 4px;font-weight:700}
+.tdecided .small{color:#3F3D3A}
+.tmsg{min-height:1.2em;font-size:14px;color:var(--muted);margin:14px 0 0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -838,49 +881,159 @@ function drawLeaders(d) {
   const list = (a) => Array.isArray(a) ? a : [];
   const goals = list(d.goals).map(goalCard).join("");
   const stats = goals ? "" : list(d.numbers).map(n => `<div class="stat"><b>${esc(n.value || "")}</b><span>${esc(n.label || "")}</span>${n.sub ? `<span>${esc(n.sub)}</span>` : ""}</div>`).join("");
-  const decs = list(d.decisions).map(x => `<div class="dec"><b>${esc(x.title || "")}</b>${x.detail ? `<p>${esc(x.detail)}</p>` : ""}${x.who ? `<span class="who">${esc(x.who)}</span>` : ""}</div>`).join("");
   const links = list(d.links).filter(l => /^https:\/\//.test(l.url || "")).map(l => `<a class="linkrow" href="${esc(l.url)}" target="_blank" rel="noopener"><div><b>${esc(l.title || "")}</b>${l.sub ? `<span>${esc(l.sub)}</span>` : ""}</div><div class="chev" aria-hidden="true">&rsaquo;</div></a>`).join("");
   $("leaders").innerHTML =
     (d.updated ? `<p class="small" style="margin:0 0 10px">Updated ${esc(d.updated)}</p>` : "") +
     (goals ? `<h2>Where we are against the goals</h2><p class="lead">Green is on pace, amber needs a push, red is behind. Lines on a bar are the milestones.</p>${goals}` : "") +
     (stats ? `<h2>Where we are</h2><div class="stats">${stats}</div>` : "") +
-    (list(d.checklist).length ? `<h2>Grant readiness</h2><div id="grant"></div>` : "") +
-    (decs ? `<h2>Decisions waiting</h2><div class="card">${decs}</div>` : "") +
+    (list(d.checklist).length ? `<h2>Eligibility and grant readiness</h2><div id="grant"></div>` : "") +
+    (list(d.decisions).length ? `<h2>Decisions</h2><div id="decs"></div>` : "") +
     (links ? `<h2>Key docs</h2><div class="list">${links}</div>` : "");
   LEAD = d;
   if (list(d.checklist).length) drawGrant();
+  drawDecisions();
 }
 
 /* Grant checklist: tap an item to see how to start and where to go */
 let LEAD = null, ownerFilter = "All";
 const ST = { done: ["Done", "st-done"], progress: ["In progress", "st-prog"], open: ["Not started", "st-open"], blocked: ["Waiting", "st-block"] };
 function drawGrant() {
-  const items = LEAD.checklist, gates = LEAD.gates || { 1: "Eligibility", 2: "Proof", 3: "Application packet" };
+  const items = LEAD.checklist || [], gates = LEAD.gates || { 1: "Eligibility", 2: "Proof", 3: "Application packet" };
   const done = items.filter(i => i.status === "done").length, prog = items.filter(i => i.status === "progress").length;
-  const people = ["All", ...new Set(items.flatMap(i => String(i.owner || "").split(" + ")).filter(Boolean))];
-  const shown = items.filter(i => ownerFilter === "All" || String(i.owner).split(" + ").includes(ownerFilter));
-  const pct = n => (100 * n / items.length).toFixed(1) + "%";
-  let html = `<div class="meter-card"><div class="meter-top"><b>${done} of ${items.length}</b><span>done, ${prog} in progress</span></div>
+  const people = ["All", ...new Set(items.flatMap(i => String(i.owner || "").split(/\s*\+\s*/)).filter(Boolean))];
+  if (!people.includes(ownerFilter)) ownerFilter = "All";
+  const shown = items.filter(i => ownerFilter === "All" || String(i.owner || "").split(/\s*\+\s*/).includes(ownerFilter));
+  const late = items.filter(i => i.due && i.status !== "done" && daysAway(i.due) < 0).length;
+  const pct = n => (100 * n / Math.max(1, items.length)).toFixed(1) + "%";
+  let html = `<div class="meter-card"><div class="meter-top"><b>${done} of ${items.length}</b><span>done, ${prog} in progress${late ? `, <strong class="due late">${late} overdue</strong>` : ""}</span></div>
     <div class="meter" role="img" aria-label="${done} of ${items.length} done, ${prog} in progress"><i style="width:${pct(done)}"></i><i class="p" style="width:${pct(prog)}"></i></div>
-    <p class="small" style="margin:8px 0 0">Tap any item to see how to start.</p></div>
+    <p class="small" style="margin:8px 0 0">Tap any item to update it, add notes or files, or see how to start.</p></div>
     <div class="filters" role="group" aria-label="Whose items" style="margin-top:12px">${people.map(p => `<button class="chip" type="button" data-own="${esc(p)}" aria-pressed="${p === ownerFilter}">${esc(p)}</button>`).join("")}</div>`;
   Object.keys(gates).forEach(g => {
     const inGate = items.filter(i => String(i.gate) === String(g));
     const vis = shown.filter(i => String(i.gate) === String(g));
     if (!vis.length) return;
-    html += `<div class="month">${g}. ${esc(gates[g])} &middot; ${inGate.filter(i => i.status === "done").length} of ${inGate.length} done</div><div class="list">` +
-      vis.map(i => {
-        const [lbl, cls] = ST[i.status] || ST.open;
-        const steps = Array.isArray(i.steps) ? i.steps : [], lk = (Array.isArray(i.links) ? i.links : []).filter(l => /^https:\/\//.test(l.url || ""));
-        return `<details class="item"><summary><span class="st ${cls}">${lbl}</span><span class="it">${esc(i.title)}${i.first ? `<em>Start here</em>` : ""}</span><span class="own">${esc(i.owner || "")}</span></summary>
-          <div class="ibody"><p>${esc(i.detail || "")}</p>
-          ${i.unlocks ? `<p class="unl"><b>Unlocks:</b> ${esc(i.unlocks)}</p>` : ""}
-          ${steps.length ? `<b class="hs">How to start</b><ol>${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
-          ${lk.length ? `<div class="ilinks">${lk.map(l => `<a class="btn ghost" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}</div>` : ""}</div></details>`;
-      }).join("") + `</div>`;
+    html += `<div class="month">${g}. ${esc(gates[g])} &middot; ${inGate.filter(i => i.status === "done").length} of ${inGate.length} done</div><div class="list">${vis.map(trow).join("")}</div>`;
   });
   $("grant").innerHTML = html;
   $("grant").querySelectorAll("[data-own]").forEach(b => b.addEventListener("click", () => { ownerFilter = b.dataset.own; drawGrant(); }));
+  wireTasks($("grant"));
+}
+
+/* ============ GOALS: each item and decision works like a small project tracker ============ */
+const TSTAT = [["open", "Not started", "st-open"], ["progress", "In progress", "st-prog"], ["blocked", "Waiting", "st-block"], ["done", "Done", "st-done"]];
+const TS = Object.fromEntries(TSTAT.map(([k, l, c]) => [k, [l, c]]));
+const stamp = iso => { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); };
+function dueTxt(due, finished) {
+  if (!due) return "";
+  const n = daysAway(due), lbl = "Due " + dt(due).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `<span class="due ${!finished && n < 0 ? "late" : !finished && n <= 3 ? "soon" : ""}">${lbl}${!finished && n < 0 ? ", overdue" : ""}</span>`;
+}
+function trow(i) {
+  const dec = i.kind === "decision";
+  const [lbl, cls] = dec ? (i.decision ? ["Decided", "st-done"] : ["Open", "st-open"]) : (TS[i.status] || TS.open);
+  const nu = (i.updates || []).length, nf = (i.files || []).length;
+  const meta = [i.owner ? esc(i.owner) : "No owner yet", dueTxt(i.due, i.status === "done" || !!i.decision),
+    nu ? `${nu} update${nu === 1 ? "" : "s"}` : "", nf ? `${nf} file${nf === 1 ? "" : "s"}` : ""].filter(Boolean).join(" &middot; ");
+  return `<button class="trow" type="button" data-task="${esc(i.id)}"><span class="st ${cls}">${lbl}</span><span class="it">${esc(i.title)}${i.first ? "<em>Start here</em>" : ""}</span><span class="own">${meta}</span><span class="chev" aria-hidden="true">&rsaquo;</span></button>`;
+}
+function drawDecisions() {
+  const box = $("decs");
+  if (!box) return;
+  const all = LEAD.decisions || [], open = all.filter(x => !x.decision), done = all.filter(x => x.decision);
+  box.innerHTML = (open.length ? `<div class="list">${open.map(trow).join("")}</div>` : `<div class="empty">Nothing is waiting on a decision.</div>`) +
+    (done.length ? `<details class="dhist"><summary>Decided (${done.length})</summary><div class="list">${done.slice().sort((a, b) => String(b.decidedAt).localeCompare(String(a.decidedAt))).map(trow).join("")}</div></details>` : "");
+  wireTasks(box);
+}
+function wireTasks(root) { root.querySelectorAll("[data-task]").forEach(b => b.addEventListener("click", () => openTask(b.dataset.task))); }
+const findTask = id => (LEAD.checklist || []).concat(LEAD.decisions || []).find(x => x.id === id);
+let openTaskId = null, taskBusy = false;
+function openTask(id) {
+  openTaskId = id;
+  openSheet(`<div id="tbody"></div>`);
+  sheet.addEventListener("close", () => { openTaskId = null; }, { once: true });
+  fillTask();
+}
+function decisionBlock(i) {
+  return i.decision
+    ? `<div class="tdecided"><div class="tl">Decided</div><p>${esc(i.decision)}</p><span class="small">${esc(i.decidedBy || "")}${i.decidedAt ? ", " + stamp(i.decidedAt) : ""}</span> <button type="button" class="linkish" id="treopen">Reopen</button></div>`
+    : `<div class="tsec"><div class="tl">The decision</div><textarea id="tdec" class="tarea" placeholder="What did leadership decide?"></textarea><button type="button" class="tbtn" id="tdecsave">Record the decision</button></div>`;
+}
+function fillTask(keep) {
+  const i = findTask(openTaskId), box = $("tbody");
+  if (!i || !box) return;
+  const dec = i.kind === "decision";
+  const team = (LEAD.team && LEAD.team.length) ? LEAD.team : ["Walter", "Charles", "Janay", "Dasia"];
+  const owners = String(i.owner || "").split(/\s*(?:\+|,|\band\b)\s*/).map(s => s.trim()).filter(Boolean);
+  const extra = owners.filter(o => !team.includes(o));
+  const gate = !dec && LEAD.gates ? LEAD.gates[i.gate] : "";
+  const steps = Array.isArray(i.steps) ? i.steps : [], lk = (Array.isArray(i.links) ? i.links : []).filter(l => /^https:\/\//.test(l.url || ""));
+  box.innerHTML = `<div class="k">${dec ? "Decision" : esc(gate || "Eligibility")}${i.updatedBy ? ` &middot; changed by ${esc(i.updatedBy)}, ${stamp(i.updatedAt)}` : ""}</div>
+    <h3 id="sheetTitle">${esc(i.title)}</h3>
+    ${dec ? decisionBlock(i) : `<div class="tsec"><div class="tl">Status</div><div class="tseg">${TSTAT.map(([k, l]) => `<button type="button" class="ts-${k}" data-ts="${k}" aria-pressed="${(i.status || "open") === k}">${l}</button>`).join("")}</div></div>`}
+    <div class="tsec"><div class="tl">${dec ? "Who's on it" : "Owner"}</div><div class="wchips">${team.map(n => `<button type="button" data-own2="${esc(n)}" aria-pressed="${owners.includes(n)}">${esc(n)}</button>`).join("")}</div>${extra.length ? `<p class="small" style="margin:6px 0 0">Also: ${esc(extra.join(", "))}</p>` : ""}</div>
+    <div class="tsec"><div class="tl">Due date</div><div class="tdue"><input type="date" id="tdue" value="${esc(i.due || "")}" aria-label="Due date">${i.due ? `<button type="button" class="linkish" id="tdueclear">Clear</button>` : ""}</div></div>
+    ${(i.detail || i.unlocks || steps.length || lk.length) ? `<details class="tinfo"><summary>${dec ? "What this is about" : "What it is and how to start"}</summary>
+      ${i.detail ? `<p>${esc(i.detail)}</p>` : ""}${i.unlocks ? `<p><b>Unlocks:</b> ${esc(i.unlocks)}</p>` : ""}
+      ${steps.length ? `<ol>${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+      ${lk.length ? `<div class="ilinks">${lk.map(l => `<a class="btn ghost" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}</div>` : ""}</details>` : ""}
+    <div class="tsec"><div class="tl">Notes</div><textarea id="tnotes" class="tarea" data-orig="${esc(i.notes || "")}" placeholder="Anything the next person should know.">${esc(i.notes || "")}</textarea><button type="button" class="tbtn" id="tnotesave">Save notes</button></div>
+    <div class="tsec"><div class="tl">Files</div>${(i.files || []).length ? `<div class="tfiles">${i.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
+      <label class="tbtn ghost tup">Add a file<input type="file" id="tfile" hidden></label>
+      <p class="small" style="margin:6px 0 0">Up to 10 MB. It saves to the ReUp Drive folder. Never upload Social Security numbers or full bank or card numbers.</p></div>
+    <div class="tsec"><div class="tl">Updates</div><div class="tadd"><input type="text" id="tupd" placeholder="Add an update" aria-label="Add an update" maxlength="2000"><button type="button" class="tbtn" id="tupdpost">Post</button></div>
+      ${(i.updates || []).length ? `<ul class="tlog">${i.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${esc(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
+    <p class="tmsg" id="tmsg" role="status"></p>
+    <div class="btns"><button class="btn ghost" type="button" id="tclose">Close</button></div>`;
+  if (keep) {
+    if (keep.notes != null) $("tnotes").value = keep.notes;
+    if (keep.upd) $("tupd").value = keep.upd;
+    if (keep.dec && $("tdec")) $("tdec").value = keep.dec;
+  }
+  const dirtyNotes = () => { const t = $("tnotes"); return t && t.value !== (t.dataset.orig || "") ? t.value : null; };
+  const save = async (fn, args, ok, skip) => {
+    if (taskBusy) return;
+    taskBusy = true;
+    const m = $("tmsg");
+    if (m) m.textContent = fn === "uploadFile" ? "Uploading..." : "Saving...";
+    const k = { notes: dirtyNotes(), upd: ($("tupd") || {}).value || "", dec: ($("tdec") || {}).value || "" };
+    if (skip) k[skip] = skip === "notes" ? null : "";
+    try {
+      const g = await run(fn, KEY, TOK, openTaskId, ...args);
+      if (g) { goalsAt = Date.now(); drawLeaders(g); }
+      fillTask(k);
+      const m2 = $("tmsg"); if (m2) m2.textContent = ok;
+    } catch (e) {
+      if (isAuth(e)) { sheet.close(); relock(); }
+      else { const m2 = $("tmsg"); if (m2) m2.textContent = /^That /.test(String(e.message)) ? e.message : "That didn't save. Check your connection and try again."; }
+    }
+    taskBusy = false;
+  };
+  box.querySelectorAll("[data-ts]").forEach(b => b.addEventListener("click", () => save("saveTask", [{ status: b.dataset.ts }], "Status saved.")));
+  box.querySelectorAll("[data-own2]").forEach(b => b.addEventListener("click", () => {
+    const set = new Set(owners);
+    set.has(b.dataset.own2) ? set.delete(b.dataset.own2) : set.add(b.dataset.own2);
+    const next = team.filter(n => set.has(n)).concat(extra.filter(n => set.has(n)));
+    save("saveTask", [{ owner: next.join(" + ") }], "Owner saved.");
+  }));
+  $("tdue").addEventListener("change", e => save("saveTask", [{ due: e.target.value }], "Due date saved."));
+  const dc = $("tdueclear"); if (dc) dc.addEventListener("click", () => save("saveTask", [{ due: "" }], "Due date removed."));
+  $("tnotesave").addEventListener("click", () => save("saveTask", [{ notes: $("tnotes").value }], "Notes saved.", "notes"));
+  const post = () => { const v = $("tupd").value.trim(); if (v) save("addUpdate", [v], "Update posted.", "upd"); };
+  $("tupdpost").addEventListener("click", post);
+  $("tupd").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); post(); } });
+  $("tfile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { $("tmsg").textContent = "That file is over 10 MB. Try a smaller one."; return; }
+    const r = new FileReader();
+    r.onload = () => save("uploadFile", [f.name, f.type || "application/octet-stream", String(r.result).split(",")[1] || ""], "File added.");
+    r.onerror = () => { $("tmsg").textContent = "Couldn't read that file."; };
+    r.readAsDataURL(f);
+  });
+  const ds = $("tdecsave"); if (ds) ds.addEventListener("click", () => { const v = $("tdec").value.trim(); if (!v) { $("tmsg").textContent = "Write what was decided first."; return; } save("saveTask", [{ decide: v }], "Decision recorded.", "dec"); });
+  const ro = $("treopen"); if (ro) ro.addEventListener("click", () => save("saveTask", [{ reopen: true }], "Reopened."));
+  $("tclose").addEventListener("click", () => sheet.close());
 }
 
 /* ============ OPS (protected): requests from families and storage ============
