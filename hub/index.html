@@ -1164,13 +1164,13 @@ function wcard(t, opts) {
   const me = WORK.me, mine = WORK.canManage || onTask(t, me);
   const [dw, dc] = dueWords(t.due, t.status === "done");
   const who = opts.hideWho ? "" : (t.owners.length ? t.owners.join(", ") : "Nobody yet");
-  const acts = mine && t.status !== "done" && !opts.noActs ? `<div class="wacts">
+  const acts = mine && t.status !== "done" && !opts.noActs && t.goal !== "decision" ? `<div class="wacts">
       ${t.status === "todo" || t.status === "stuck" ? `<button type="button" class="qa-doing" data-q="doing" data-id="${esc(t.id)}">Start</button>` : ""}
       <button type="button" class="qa-done" data-q="done" data-id="${esc(t.id)}">Done</button>
       ${t.status !== "stuck" ? `<button type="button" class="qa-stuck" data-q="stuck" data-id="${esc(t.id)}">I'm stuck</button>` : ""}</div>` : "";
   return `<div class="wcard ${TEAMCLS[t.team] || "t-none"} s-${t.status}">
     <button type="button" class="wmain" data-work="${esc(t.id)}">
-      <span class="wtop"><span class="wteam">${esc(t.team || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
+      <span class="wtop"><span class="wteam">${esc(t.team || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.goal ? `<span class="wlock">${t.goal === "decision" ? "Decision" : "Grant readiness"}</span>` : t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
       <span class="wname">${esc(t.title)}</span>
       <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
     </button>${acts}</div>`;
@@ -1266,20 +1266,26 @@ function fillWork(keep) {
   const t = isNew ? { id: "", title: "", team: TEAMCLS[workTeam] ? workTeam : "", owners: [], helpers: [], status: "todo", due: "", details: "", updates: [], files: [] } : (W.tasks || []).find(x => x.id === openWorkId);
   if (!t) { box.innerHTML = `<p class="lead">This task is gone.</p>`; return; }
   const me = W.me, manage = W.canManage, mine = manage || onTask(t, me);
+  const G = !!t.goal, GD = t.goal === "decision";
+  const teamHtml = `<div class="tsec"><div class="tl">Team</div><div class="wchips">${(W.teams || []).map(x => `<button type="button" data-wteam="${esc(x)}" aria-pressed="${t.team === x}">${esc(x)}</button>`).join("")}</div></div>`;
+  const decisionHtml = !GD ? "" : `<div class="tsec"><div class="tl">Decision</div>${t.decision ? `<p style="margin:0 0 4px;white-space:pre-wrap"><b>${esc(t.decision)}</b></p><p class="small" style="margin:0 0 8px">Decided by ${esc(t.decidedBy || "")}, ${stamp(t.decidedAt)}</p>${manage ? `<button type="button" class="tbtn ghost" id="wreopen">Reopen</button>` : ""}` : (manage ? `<textarea id="wdecide" class="tarea" placeholder="What did leadership decide?" style="min-height:60px"></textarea><button type="button" class="tbtn" id="wdecidesave">Record the decision</button>` : `<p style="margin:0">Not decided yet.</p>`)}</div>`;
+  const goalDetHtml = !G ? "" : `<div class="tsec"><div class="tl">What this is</div><p style="margin:0;white-space:pre-wrap">${esc(t.details || "")}</p></div>
+    <div class="tsec"><div class="tl">Notes</div>${manage ? `<textarea id="wnotes" class="tarea" placeholder="Anything leaders should know.">${esc(t.notes || "")}</textarea><button type="button" class="tbtn" id="wnotessave">Save notes</button>` : `<p style="margin:0;white-space:pre-wrap">${esc(t.notes || "None yet.")}</p>`}</div>`;
   const names = (W.people || []).map(p => p.name);
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
   const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
   box.innerHTML = `<div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
-    ${isNew || manage ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
-    ${isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
+    ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
+    ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
+    ${GD ? decisionHtml : isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
       <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
-    ${manage && WORK.unlocked ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
-    ${manage ? `<div class="tsec"><div class="tl">Team</div><div class="wchips">${(W.teams || []).map(x => `<button type="button" data-wteam="${esc(x)}" aria-pressed="${t.team === x}">${esc(x)}</button>`).join("")}</div></div>
-      <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners)}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
-    ${isNew ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
+    ${manage && WORK.unlocked && !G ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
+    ${manage ? `${G ? "" : teamHtml}
+      <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
+    ${isNew || G ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
-    <div class="tsec"><div class="tl">Details</div>${isNew || mine ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
+    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew || (mine && !G) ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div><p class="tmsg" id="wmsg" role="status"></p>` : `
     <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
       <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
@@ -1330,6 +1336,9 @@ function fillWork(keep) {
   const uh = $("wunhelp"); if (uh) uh.addEventListener("click", () => save("saveWork", [t.id, { stopHelping: true }], "Removed you as a helper."));
   const wd = $("wdue"); if (wd) wd.addEventListener("change", e => save("saveWork", [t.id, { due: e.target.value }], "Due date saved."));
   const wc = $("wdueclear"); if (wc) wc.addEventListener("click", () => save("saveWork", [t.id, { due: "" }], "Due date removed."));
+  const dsv = $("wdecidesave"); if (dsv) dsv.addEventListener("click", () => { const v = $("wdecide").value.trim(); if (!v) { msg("Write what was decided first."); return; } save("saveWork", [t.id, { decide: v }], "Decision recorded."); });
+  const ro = $("wreopen"); if (ro) ro.addEventListener("click", () => save("saveWork", [t.id, { reopen: true }], "Decision reopened."));
+  const ns = $("wnotessave"); if (ns) ns.addEventListener("click", () => save("saveWork", [t.id, { notes: $("wnotes").value }], "Notes saved."));
   const ds = $("wdetsave"); if (ds) ds.addEventListener("click", () => save("saveWork", [t.id, { details: $("wdet").value }], "Details saved.", "det"));
   const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
   $("wupdpost").addEventListener("click", post);
