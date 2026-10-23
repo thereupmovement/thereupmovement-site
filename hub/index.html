@@ -1203,11 +1203,12 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOK && !$("v-ops").hidden && Date.now() - opsAt > 60e3) loadOps(true); });
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
-if (BOOT.leader) {
-  TABS.push(["ops", "Ops"], ["goals", "Goals"]);
+if (BOOT.ops || BOOT.leader) {
+  TABS.push(["ops", "Ops"]);
+  if (BOOT.leader) TABS.push(["goals", "Goals"]);
   drawTabs();
   const want = start === "leaders" ? "goals" : start;
-  go(["ops", "goals"].includes(want) ? want : "home");
+  go(TABS.some(([k]) => k === want) ? want : "home");
 }
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
@@ -1232,7 +1233,7 @@ if (BOOT.leader) {
   if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.BOOT = { key: k, name: r.name, leader: r.leader, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, asset: r.asset, home: r.home };
     document.getElementById("boot").remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
