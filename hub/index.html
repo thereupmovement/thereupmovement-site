@@ -1127,7 +1127,7 @@ function fillTask(keep) {
 }
 
 /* ============ WORK: everyday tasks for the whole team ============ */
-let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false;
+let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 const WSTAT = [["todo", "To do"], ["doing", "Working on it"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants" };
@@ -1227,7 +1227,9 @@ function wcard(t, opts) {
   const me = WORK.me, mine = WORK.canManage || onTask(t, me);
   const [dw, dc] = dueWords(t.due, t.status === "done");
   const who = opts.hideWho ? "" : (t.owners.length ? t.owners.join(", ") : "Nobody yet");
-  const acts = mine && t.status !== "done" && !opts.noActs && t.goal !== "decision" ? `<div class="wacts">
+  const acts = mine && t.status !== "done" && !opts.noActs && t.goal === "decision" ? `<div class="wacts">
+      <button type="button" class="qa-done" data-q="decide" data-id="${esc(t.id)}">Record the decision</button></div>`
+    : mine && t.status !== "done" && !opts.noActs ? `<div class="wacts">
       ${t.status === "todo" || t.status === "stuck" ? `<button type="button" class="qa-doing" data-q="doing" data-id="${esc(t.id)}">Start</button>` : ""}
       <button type="button" class="qa-done" data-q="done" data-id="${esc(t.id)}">Done</button>
       ${t.status !== "stuck" ? `<button type="button" class="qa-stuck" data-q="stuck" data-id="${esc(t.id)}">I'm stuck</button>` : ""}</div>` : "";
@@ -1308,6 +1310,7 @@ function drawWork() {
   box.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", async () => {
     const id = b.dataset.id, q = b.dataset.q;
     if (q === "stuck") { workStuckOpen = true; openWork(id); return; }
+    if (q === "decide") { workDecideOpen = true; openWork(id); return; }
     wQueue("saveWork", [id, { status: q }], q === "done" ? "Nice work. Marked done." : "Marked as working on it.");
     drawWork();
   }));
@@ -1381,6 +1384,7 @@ function fillWork(keep) {
     setTimeout(() => $("wtitle").focus(), 60);
     return;
   }
+  if (workDecideOpen) { workDecideOpen = false; const dd = $("wdecide"); if (dd) setTimeout(() => { dd.scrollIntoView({ block: "center" }); dd.focus(); }, 60); }
   if (workStuckOpen && $("wstuck")) { workStuckOpen = false; $("wstuck").hidden = false; setTimeout(() => $("wwhy").focus(), 60); }
   const ti = $("wtitle"); if (ti) ti.addEventListener("change", () => { const v = ti.value.trim(); if (v && v !== t.title) save("saveWork", [t.id, { title: v }], "Title saved."); });
   box.querySelectorAll("[data-ws]").forEach(b => b.addEventListener("click", () => {
