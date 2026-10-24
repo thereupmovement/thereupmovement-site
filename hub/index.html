@@ -814,6 +814,7 @@ form.vs>.vs-btn{width:100%}
 .opshead{margin:2px 0 10px}
 .opsqa{margin-bottom:18px}
 a.qab{text-decoration:none}
+#ops .invbox{margin:0 0 14px}
 .qab.wide{grid-column:1/-1}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
@@ -2762,7 +2763,7 @@ function drawInventory(d) {
         <div class="list">${shown.slice(0, limit).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em></div>`).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
         ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
   // 1. Actions first, one tap straight into the form
-  let html = "";
+  let html = listHtml; // What's in storage sits at the top, folded into its drop-down
   // 3. Status at a glance
   html += `<div class="glance">
       <div><b>${(+oh.units || 0).toLocaleString()}</b><span>units in storage</span></div>
@@ -2781,7 +2782,6 @@ function drawInventory(d) {
       ${p.notOnLog ? `<div class="rq-meta" style="margin-top:4px">Sorted, but missing from the pickup log.</div>` : ""}
     </div>`; }).join("")}</div>
     ${pickups.length > 3 ? `<button class="more" type="button" id="morePk">${invAllPickups ? "Show fewer" : `Show all ${pickups.length} pickups`}</button>` : ""}`;
-  html += `<h2>In storage</h2>` + listHtml;
   // 5. Activity and history
   html += `<h2>Sorting, last two weeks</h2>
     <div class="card" style="padding:12px 14px"><div class="dbars">${days.slice(-14).map(([day, r]) => `<div title="${esc(day)}: ${r} items"><i style="height:${(100 * r / maxDay).toFixed(0)}%"></i><span>${dt(day).toLocaleDateString("en-US", { weekday: "narrow" })}</span></div>`).join("")}</div>
@@ -3568,7 +3568,7 @@ window.__rcRefresh = () => {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024073613";
+  var BUILD = "20261024140800";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
