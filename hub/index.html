@@ -711,6 +711,7 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .appt span{font-size:14px;color:var(--muted)}
 .appbtns{display:flex;gap:8px;margin-top:6px}
 .appbtns .tbtn{width:auto}
+.appsteps{margin:0 0 12px;padding-left:22px;display:grid;gap:8px;font-size:15.5px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -1970,8 +1971,10 @@ const MORE_SUB = { vol: "Who is signed up, orientation, reminder texts and hours
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
   openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
+    ${typeof appStandalone === "function" && !appStandalone() ? `<button type="button" class="moreitem" id="moreapp"><img src="${A}app-192.png" alt="" width="24" height="24" style="border-radius:6px"><span><b>Add to home screen</b><em>Open the Hub like an app, full screen.</em></span></button>` : ""}
     <div class="btns"><button class="btn ghost" type="button" id="moreclose">Close</button></div>`);
   document.querySelectorAll("[data-more]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.more; sheet.close(); go(k); }));
+  const ma = $("moreapp"); if (ma) ma.addEventListener("click", () => appInstall());
   $("moreclose").addEventListener("click", () => sheet.close());
 }
 /* ============ ADMIN: people, schedule and forms, for the Hub admin (coordinator) ============ */
@@ -2295,22 +2298,65 @@ function volPerson(id) {
 }
 setInterval(() => { if (!document.hidden && TOK && VOL && $("v-vol") && !$("v-vol").hidden && !volBusy && !(sheet && sheet.open)) loadVol(true); }, 120e3);
 /* ============ HOME SCREEN APP ============ */
+/* Every phone and browser adds to the home screen differently, and most never show an install button,
+   so the card always offers step-by-step help. "Not now" hides it for 3 days; More always has it. */
+let appAsk = null;
+const appStandalone = () => !!((window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone);
+function appDevice() {
+  const ua = navigator.userAgent;
+  const ios = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  const inApp = /FBAN|FBAV|Instagram|Line\/|GSA\/|Snapchat|; wv\)/i.test(ua);
+  if (inApp) return "inapp";
+  if (ios) return /CriOS/i.test(ua) ? "ios-chrome" : /FxiOS|EdgiOS/i.test(ua) ? "ios-other" : "ios-safari";
+  if (/android/i.test(ua)) return /SamsungBrowser/i.test(ua) ? "samsung" : /Firefox/i.test(ua) ? "android-firefox" : "android-chrome";
+  return "computer";
+}
+function appSteps() {
+  const link = location.origin + location.pathname + "?k=" + encodeURIComponent(KEY);
+  const d = appDevice();
+  const S = {
+    "ios-safari": ["Tap the Share button at the bottom of the screen: the square with an arrow pointing up. (On an iPad it is at the top.)", "Scroll down the list and tap Add to Home Screen.", "Tap Add in the top corner. The ReUp Hub icon appears on your home screen."],
+    "ios-chrome": ["Tap the Share button next to the web address at the top: the square with an arrow pointing up.", "Tap Add to Home Screen. If you do not see it, scroll down or tap More.", "Tap Add. The ReUp Hub icon appears on your home screen."],
+    "ios-other": ["Open this page in Safari: tap the copy button below, open Safari, and paste it into the address bar.", "In Safari, tap the Share button (the square with an arrow pointing up).", "Tap Add to Home Screen, then Add."],
+    "android-chrome": ["Tap the menu button at the top right: three dots.", "Tap Add to Home screen or Install app.", "Tap Install or Add. The ReUp Hub icon appears on your home screen."],
+    "samsung": ["Tap the menu button at the bottom right: three lines.", "Tap Add page to, then Home screen.", "Tap Add. The ReUp Hub icon appears on your home screen."],
+    "android-firefox": ["Tap the menu button: three dots.", "Tap Install or Add to Home screen.", "Tap Add."],
+    "inapp": ["This page is open inside another app (like a text, email or social app), which cannot add it to your home screen.", "Tap the copy button below, then open Safari (iPhone) or Chrome (Android) and paste it into the address bar.", "Then come back to this card and tap Show me how again."],
+    "computer": ["In Chrome or Edge, click the install icon at the right end of the address bar (a small screen with an arrow), or open the menu and choose Install ReUp Hub.", "On a phone, open your Hub link and use Show me how there."]
+  };
+  return { link: link, steps: S[d] || S.computer, needsCopy: d === "inapp" || d === "ios-other" };
+}
+function openAppHelp() {
+  const h = appSteps();
+  openSheet(`<div class="k">Home screen</div><h3 id="sheetTitle">Put the Hub on your home screen</h3>
+    <p class="small" style="margin:0 0 10px">It opens like an app, full screen, with your own link, and works with a weak signal.</p>
+    ${appAsk ? `<button class="btn" type="button" id="appyes2" style="margin-bottom:12px">Add it now</button>` : ""}
+    <ol class="appsteps">${h.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>
+    ${h.needsCopy ? `<button class="btn" type="button" id="appcopy">Copy my Hub link</button>` : ""}
+    <p class="small" style="margin:10px 0 0">This is your own link. Do not share it with anyone.</p>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  const c = $("appcopy"); if (c) c.addEventListener("click", () => copyText(h.link));
+  const y = $("appyes2"); if (y) y.addEventListener("click", appInstall);
+}
+async function appInstall() {
+  if (!appAsk) { openAppHelp(); return; }
+  try { appAsk.prompt(); const c = await appAsk.userChoice; if (c && c.outcome === "accepted") { const b = $("homeapp"); if (b) b.innerHTML = ""; try { sheet.close(); } catch (e) {} } } catch (e) {}
+  appAsk = null;
+}
 (function () {
   const box = $("homeapp");
-  if (!box) return;
-  const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
-  let off = false;
-  try { off = localStorage.getItem("reupHubAppHint") === "no"; } catch (e) {}
-  if (standalone || off) return;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-  let ask = null;
+  if (!box || appStandalone()) return;
+  let until = 0;
+  try { until = +localStorage.getItem("reupHubAppHint2") || 0; } catch (e) {}
   const draw = () => {
-    box.innerHTML = `<div class="appcard"><img src="${A}app-192.png" alt="" width="44" height="44"><div class="appt"><b>Put the Hub on your home screen</b><span>${ask ? "It opens like an app, full screen, with your own link." : ios ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu, then tap Add to Home screen or Install app."}</span>
-      <div class="appbtns">${ask ? `<button class="tbtn" type="button" id="appyes">Add it</button>` : ""}<button class="tbtn ghost" type="button" id="appno">Not now</button></div></div></div>`;
-    const y = $("appyes"); if (y) y.addEventListener("click", async () => { try { ask.prompt(); const c = await ask.userChoice; if (c && c.outcome === "accepted") box.innerHTML = ""; } catch (e) {} ask = null; });
-    $("appno").addEventListener("click", () => { try { localStorage.setItem("reupHubAppHint", "no"); } catch (e) {} box.innerHTML = ""; });
+    if (Date.now() < until) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="appcard"><img src="${A}app-192.png" alt="" width="44" height="44"><div class="appt"><b>Put the Hub on your home screen</b><span>It opens like an app, full screen, with your own link.</span>
+      <div class="appbtns">${appAsk ? `<button class="tbtn" type="button" id="appyes">Add it</button>` : `<button class="tbtn" type="button" id="apphow">Show me how</button>`}<button class="tbtn ghost" type="button" id="appno">Not now</button></div></div></div>`;
+    const y = $("appyes"); if (y) y.addEventListener("click", appInstall);
+    const w = $("apphow"); if (w) w.addEventListener("click", openAppHelp);
+    $("appno").addEventListener("click", () => { until = Date.now() + 3 * 864e5; try { localStorage.setItem("reupHubAppHint2", String(until)); } catch (e) {} box.innerHTML = ""; toast("Find it any time under More."); });
   };
-  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); ask = e; draw(); });
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); appAsk = e; draw(); });
   window.addEventListener("appinstalled", () => { box.innerHTML = ""; });
   draw();
 })();
@@ -2761,7 +2807,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024032136";
+  var BUILD = "20261024032655";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
