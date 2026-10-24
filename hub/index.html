@@ -3449,6 +3449,13 @@ function drawRcCard() {
   c.innerHTML = n > 0 ? `<button type="button" class="rchome" id="rchome"><b>${n} ${n === 1 ? "receipt or trip" : "receipts and trips"} to review</b><span>Approve them and the Hub adds them to the budget.</span></button>` : "";
   const b = $("rchome"); if (b) b.addEventListener("click", openReview);
 }
+
+/* The fresh sign-in check can bring a newer approvals count than the copy this phone opened with. */
+window.__rcRefresh = () => {
+  drawRcCard();
+  const ops = $("ops");
+  if (ops && ops.querySelector(".opsqa") && !ops.querySelector("[data-openreview]") && (+BOOT.rc) >= 0) { try { drawOps(); } catch (e) {} }
+};
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
 <script>
@@ -3526,7 +3533,7 @@ function drawRcCard() {
     }
   }
   function launch(r) {
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, asset: r.asset, home: r.home };
     var b = document.getElementById("boot"); if (b) b.remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -3545,6 +3552,7 @@ function drawRcCard() {
       var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol"].some(function (f) { return !!r[f] !== !!cached[f]; });
       if (changed) { location.reload(); return; }
       window.BOOT.pinSet = !!r.pinSet;
+      window.BOOT.rc = typeof r.rc === "number" ? r.rc : -1; if (window.__rcRefresh) window.__rcRefresh();
       if (JSON.stringify(r.home) !== JSON.stringify(cached.home) && window.__applyHome) window.__applyHome(r.home);
     }).catch(function (e) { window.__startErr = String((e && e.message) || e); });
   } else {
@@ -3560,7 +3568,7 @@ function drawRcCard() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024072753";
+  var BUILD = "20261024073613";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
