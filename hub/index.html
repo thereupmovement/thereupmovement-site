@@ -573,6 +573,15 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .wtext{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .wlink{display:inline-block;font-weight:700;color:var(--red);text-decoration:underline;text-underline-offset:3px;padding:4px 0;min-height:24px}
 #wdetbox{margin-top:8px}
+
+.tmore{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.tmore>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:12px 14px;min-height:44px}
+.tmore>summary::-webkit-details-marker{display:none}
+.tmore>summary span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tmore>summary span::after{content:" +";}
+.tmore[open]>summary span::after{content:" \2212";}
+.tmore>summary em{font-style:normal;font-weight:700}
+.tmore>.tsec{margin:0 14px 14px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -1151,6 +1160,7 @@ function fillTask(keep) {
 }
 
 /* ============ WORK: everyday tasks for the whole team ============ */
+let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
@@ -1330,7 +1340,7 @@ function drawWork() {
     html += wgroup("Late", "g-late", late, { hideWho: true });
     html += wgroup("Due this week", "g-week", week, { hideWho: true });
     html += wgroup("Quick ones", "g-quick", quick, { hideWho: true }, "Each of these takes a call or a few minutes. Knock them out when you have a gap.");
-    html += wgroup("Next 30 days", "g-soon", soon, { hideWho: true });
+    html += wlist("Next 30 days", "g-soon", soon, "Tap one to open it.");
     html += wlist("Ongoing", "g-prog", ongoing, "Started, and due further out. Keep these moving a little at a time.");
     html += wlist("Later", "g-later", later, "", true);
     html += wgroup("You're helping", "g-help", helping);
@@ -1388,6 +1398,7 @@ function drawWork() {
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
 }
 function openWork(id) {
+  if (id !== openWorkId) wMoreOpen = false;
   openWorkId = id;
   openSheet(`<div id="wbody"></div>`);
   sheet.addEventListener("close", () => {
@@ -1424,8 +1435,12 @@ function fillWork(keep) {
   box.innerHTML = `<p class="tmsg wsticky" id="wmsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "New task" : esc(t.team || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
+    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
+      : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
+      <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
     ${GD ? decisionHtml : isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
       <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
+    <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueTxt(t.due, t.status === "done") : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
     ${manage && WORK.unlocked && !G ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
     ${manage ? `${G ? "" : teamHtml}
       <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
@@ -1434,9 +1449,7 @@ function fillWork(keep) {
     ${isNew || G || !(mine || manage) ? "" : `<div class="tsec"><div class="tl">Size</div><div class="wchips"><button type="button" data-wquick="1" aria-pressed="${!!t.quick}">Quick one</button><button type="button" data-wquick="0" aria-pressed="${!t.quick}">Takes longer</button></div></div>`}
     ${isNew || G || !manage ? "" : `<div class="tsec"><div class="tl">Shows up on</div><div class="tdue"><input type="date" id="wopens" value="${esc(t.opens || "")}" aria-label="Shows up on">${t.opens ? `<button type="button" class="linkish" id="wopensclear">Show it now</button>` : ""}</div><p class="small" style="margin:6px 0 0">Leave empty to show it right away. Set a date to keep it out of the way until then.</p></div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
-    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
-      : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
-      <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
+    </details>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
     <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
       <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
@@ -1452,6 +1465,7 @@ function fillWork(keep) {
   }
   if (wqNote && $("wmsg")) $("wmsg").textContent = wqNote;
   const msg = s => { const m = $("wmsg"); if (m) m.textContent = s; };
+  const wm = $("wmore"); if (wm && !isNew) wm.addEventListener("toggle", () => { wMoreOpen = wm.open; });
   const save = (fn, args, ok, skip) => {
     const k = wKeep();
     if (skip) k[skip] = skip === "det" || skip === "notes" ? null : "";
@@ -1886,7 +1900,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024004525";
+  var BUILD = "20261024004731";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
