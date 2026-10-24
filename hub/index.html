@@ -603,6 +603,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
         <div class="poster" id="poster"></div>
         <div id="impact"></div>
       </div>
+      <div id="homework"></div>
       <div id="impactmap"></div>
       <div class="hsec"><h3>Coming up</h3><button class="hlink" type="button" id="toSchedule">Full schedule</button></div>
       <div class="list" id="soon"></div>
@@ -926,6 +927,7 @@ const SHOP = [
   { name: "New Beginning Tote", price: "$22", url: "https://the-reup-shop.fourthwall.com/products/new-beginning-tote", img: A + "img10.jpg" }
 ];
 const COVERS = { work: "img11", schedule: "img3b", eventday: "img2b", forms: "img12", ops: "img4b", goals: "img13" };
+setTimeout(() => Object.values(COVERS).forEach(c => { const i = new Image(); i.src = A + c + ".webp"; }), 2500);
 document.querySelectorAll(".banner[data-cover]").forEach(b => { const c = COVERS[b.dataset.cover]; if (c) b.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.72) 100%), url("${A}${c}.webp")`; });
 if (PHOTOS[0]) $("poster").style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.88) 100%), url("${A}img1.webp")`;
 $("shopgrid").innerHTML = SHOP.map(i => `<a class="prod" href="${i.url}" target="_blank" rel="noopener"><div class="img"><img src="${i.img}" alt="${esc(i.name)}" loading="lazy"></div><div class="meta"><span class="pn">${esc(i.name)}</span><span class="pp">${i.price}</span></div></a>`).join("");
@@ -1188,13 +1190,17 @@ function wSort(a, b) {
 async function loadWork(quiet) {
   if (loadingWork || wqRunning) return;
   loadingWork = true;
+  if (!WORK) { try { const c = JSON.parse(localStorage.getItem("reupHubWork_" + KEY) || "null"); if (c && c.me) { WORK = c; drawWork(); } } catch (e) {} }
   if (!WORK && !quiet) $("work").innerHTML = `<p class="lead">Loading your work...</p>`;
   try {
     const gen = wGen;
-    const r = await run("getWork", KEY, TOK);
+    const pre = window.__workP && Date.now() - (window.__workT || 0) < 60e3 ? window.__workP : null; window.__workP = null;
+    const r = pre && !workAt ? await pre.catch(() => run("getWork", KEY, TOK)) : await run("getWork", KEY, TOK);
     /* A tap while this was loading wins: this copy was read before the save, so drop it. */
     if (gen !== wGen || wqRunning || wq.length) { loadingWork = false; return; }
     WORK = r; workAt = Date.now();
+    /* Keep a copy on this phone so the list shows instantly next time. Leaders-only tasks are never stored. */
+    try { localStorage.setItem("reupHubWork_" + KEY, JSON.stringify(Object.assign({}, r, { stale: true, tasks: (r.tasks || []).filter(t => !t.private) }))); } catch (e) {}
     if (!workTeam) { const me = (WORK.people || []).find(p => p.name === WORK.me); workTeam = WORK.canManage ? "Everyone" : ((me && me.teams && me.teams[0]) || "Everyone"); }
     if (!(openWorkId !== null && quiet)) drawWork();
   } catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
@@ -1314,7 +1320,7 @@ function drawWork() {
   let html = `<div class="seg" role="group" aria-label="Work view">
       <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
       <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button></div>`;
-  if (W.canManage && !W.unlocked) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
+  if (W.canManage && !W.unlocked && !W.stale) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
   if (workView === "mine") {
     const mine = all.filter(t => t.owners.includes(me));
     const open = mine.filter(wOpen).sort(wSort);
@@ -1383,6 +1389,7 @@ function drawWork() {
     if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   }
   box.innerHTML = html;
+  drawHomeWork();
   box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; drawWork(); }));
   box.querySelectorAll("[data-wunlock]").forEach(b => b.addEventListener("click", () => { if (TOK) loadWork(); else go("goals"); }));
   box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
@@ -1396,6 +1403,21 @@ function drawWork() {
     drawWork();
   }));
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
+}
+/* Home shows the top of your list, so most people never need to open the Work tab to know what's next. */
+function drawHomeWork() {
+  const box = $("homework");
+  if (!box || !WORK) return;
+  const me = WORK.me, d = t => t.due ? daysAway(t.due) : 9999;
+  const rank = t => t.status === "stuck" ? 0 : wLate(t) ? 1 : d(t) <= 7 ? 2 : t.quick ? 3 : 4;
+  const list = (WORK.tasks || []).filter(t => t.owners.includes(me) && wOpen(t) && !wNotYet(t)).sort((x, y) => rank(x) - rank(y) || d(x) - d(y));
+  if (!list.length) { box.innerHTML = ""; return; }
+  const top = list.slice(0, 3), week = list.filter(t => rank(t) <= 2).length;
+  box.innerHTML = `<div class="hsec"><h3>Your work</h3><button class="hlink" type="button" id="toWork">See all ${list.length}</button></div>
+    <p class="hsub">${week ? `${plural(week, "thing")} need${week === 1 ? "s" : ""} you this week.` : "Nothing due this week."} Most urgent first.</p>
+    <div class="wrows">${top.map(t => wrow(t, t.status === "stuck" ? "Stuck" : wLate(t) ? dueWords(t.due, false)[0] : t.quick && d(t) > 7 ? "Quick one" : "")).join("")}</div>`;
+  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  $("toWork").addEventListener("click", () => go("work"));
 }
 function openWork(id) {
   if (id !== openWorkId) wMoreOpen = false;
@@ -1856,7 +1878,7 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOK && !$("v-ops").hidden && Date.now() - opsAt > 60e3) loadOps(true); });
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
-if (BOOT.work) { TABS.push(["work", "Work"]); drawTabs(); if (start === "work") go("work"); }
+if (BOOT.work) { TABS.push(["work", "Work"]); drawTabs(); if (start === "work") go("work"); else loadWork(true); }
 if (BOOT.ops || BOOT.leader) {
   TABS.push(["ops", "Ops"]);
   if (BOOT.leader) TABS.push(["goals", "Goals"]);
@@ -1885,6 +1907,8 @@ if (BOOT.ops || BOOT.leader) {
   try { k = new URLSearchParams(location.search).get("k") || ""; } catch (e) {}
   try { if (k) localStorage.setItem("reupHubKey", k); else k = localStorage.getItem("reupHubKey") || ""; } catch (e) {}
   if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
+  /* Ask for the task list at the same time as the sign-in check, so the Work tab is ready sooner. */
+  try { var tk = localStorage.getItem("reupHubTok_" + k) || ""; window.__workT = Date.now(); window.__workP = window.api("getWork", [k, tk]); window.__workP.catch(function () {}); } catch (e) {}
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
     window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
@@ -1900,7 +1924,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024004731";
+  var BUILD = "20261024005204";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
