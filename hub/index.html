@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121212">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="ReUp Hub">
+<link rel="apple-touch-icon" href="app-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="app-192.png">
+<link rel="manifest" id="mf" href="manifest.json">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <title>ReUp Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -694,6 +704,13 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .t-volunteers{--tc:#7A5A00;--ts:#F5EDCF}
 @media (min-width:640px){.vglance{grid-template-columns:repeat(4,1fr)}}
 .vglance{margin-top:0}
+.appcard{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 12px}
+.appcard img{border-radius:10px;flex:none}
+.appt{display:grid;gap:3px;min-width:0}
+.appt b{font-size:15.5px}
+.appt span{font-size:14px;color:var(--muted)}
+.appbtns{display:flex;gap:8px;margin-top:6px}
+.appbtns .tbtn{width:auto}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -715,6 +732,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
         <div class="poster" id="poster"></div>
         <div id="impact"></div>
       </div>
+      <div id="homeapp"></div>
       <div id="homeinbox"></div>
       <div id="homework"></div>
       <div id="impactmap"></div>
@@ -1053,6 +1071,22 @@ function go(tab) {
 
 $("toSchedule").addEventListener("click", () => go("schedule"));
 drawMeetings(); drawHome(); drawSchedule(); drawForms();
+window.__applyHome = function (h) {
+  if (!h) return;
+  const put = (arr, v) => arr.splice(0, arr.length, ...(Array.isArray(v) ? v : []));
+  put(EVENTS, h.events); put(MEETINGS, h.meetings); put(FORMS, h.forms);
+  put(upcoming, EVENTS.filter(e => daysAway(e.date) >= 0).sort((a, b) => a.date.localeCompare(b.date)));
+  BOOT.home = h;
+  drawMeetings(); drawHome(); drawSchedule(); drawForms(); drawImpact(h.impact || null);
+};
+setInterval(() => {
+  if (document.hidden || (typeof sheet !== "undefined" && sheet.open)) return;
+  window.api("getHome", [KEY]).then(h => {
+    if (!h || JSON.stringify(h) === JSON.stringify(BOOT.home)) return;
+    window.__applyHome(h);
+    try { const k = "reupHubBoot_" + KEY, c = JSON.parse(localStorage.getItem(k) || "null"); if (c) { c.home = h; localStorage.setItem(k, JSON.stringify(c)); } } catch (e) {}
+  }).catch(() => {});
+}, 600e3);
 const start = (location.hash || "").slice(1);
 go(TABS.some(([k]) => k === start) ? start : "home");
 
@@ -1794,7 +1828,10 @@ async function loadInbox(quiet) {
   if (loadingInbox || inboxSending) return;
   loadingInbox = true;
   if (!INBOX && !quiet && $("inbox")) $("inbox").innerHTML = `<p class="lead">Loading messages...</p>`;
-  try { INBOX = await run("getInbox", KEY); inboxAt = Date.now(); drawInbox(); }
+  try {
+    const pre = window.__inboxP && Date.now() - (window.__inboxT || 0) < 60e3 && !inboxAt ? window.__inboxP : null; window.__inboxP = null;
+    INBOX = await (pre ? pre.catch(() => run("getInbox", KEY)) : run("getInbox", KEY)); inboxAt = Date.now(); drawInbox();
+  }
   catch (e) { if (!INBOX && $("inbox")) $("inbox").innerHTML = `<p class="lead">Couldn't load messages right now. Try again in a minute.</p>`; }
   loadingInbox = false;
 }
@@ -2242,6 +2279,26 @@ function volPerson(id) {
   const off = () => { volSheet = null; sheet.removeEventListener("close", off); }; sheet.addEventListener("close", off);
 }
 setInterval(() => { if (!document.hidden && TOK && VOL && $("v-vol") && !$("v-vol").hidden && !volBusy && !(sheet && sheet.open)) loadVol(true); }, 120e3);
+/* ============ HOME SCREEN APP ============ */
+(function () {
+  const box = $("homeapp");
+  if (!box) return;
+  const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
+  let off = false;
+  try { off = localStorage.getItem("reupHubAppHint") === "no"; } catch (e) {}
+  if (standalone || off) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  let ask = null;
+  const draw = () => {
+    box.innerHTML = `<div class="appcard"><img src="${A}app-192.png" alt="" width="44" height="44"><div class="appt"><b>Put the Hub on your home screen</b><span>${ask ? "It opens like an app, full screen, with your own link." : ios ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu, then tap Add to Home screen or Install app."}</span>
+      <div class="appbtns">${ask ? `<button class="tbtn" type="button" id="appyes">Add it</button>` : ""}<button class="tbtn ghost" type="button" id="appno">Not now</button></div></div></div>`;
+    const y = $("appyes"); if (y) y.addEventListener("click", async () => { try { ask.prompt(); const c = await ask.userChoice; if (c && c.outcome === "accepted") box.innerHTML = ""; } catch (e) {} ask = null; });
+    $("appno").addEventListener("click", () => { try { localStorage.setItem("reupHubAppHint", "no"); } catch (e) {} box.innerHTML = ""; });
+  };
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); ask = e; draw(); });
+  window.addEventListener("appinstalled", () => { box.innerHTML = ""; });
+  draw();
+})();
 /* ============ OPS (protected): requests from families and storage ============
    Lives in the database under "ops", which only Editors can read. Viewers never receive it
    and never see the tab, so names, phone numbers and addresses are safe here and nowhere else. */
@@ -2621,25 +2678,75 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   try { k = new URLSearchParams(location.search).get("k") || ""; } catch (e) {}
   try { if (k) localStorage.setItem("reupHubKey", k); else k = localStorage.getItem("reupHubKey") || ""; } catch (e) {}
   if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
-  /* Ask for the task list at the same time as the sign-in check, so the Work tab is ready sooner. */
-  try { var tk = localStorage.getItem("reupHubTok_" + k) || ""; window.__workT = Date.now(); window.__workP = window.api("getWork", [k, tk]); window.__workP.catch(function () {}); } catch (e) {}
-  window.api("boot", [k]).then(function (r) {
-    if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.__bootAt = Date.now(); window.__bootVol = r.vol;
+  /* Home screen app: a manifest that opens this person's own link. */
+  try {
+    var base = location.origin + location.pathname;
+    var mf = { name: "ReUp Team Hub", short_name: "ReUp Hub", description: "The ReUp Movement team app", start_url: base + "?k=" + encodeURIComponent(k),
+      scope: base, display: "standalone", background_color: "#121212", theme_color: "#121212",
+      icons: [{ src: base + "app-192.png", sizes: "192x192", type: "image/png" }, { src: base + "app-512.png", sizes: "512x512", type: "image/png" },
+        { src: base + "app-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" }] };
+    var ml = document.getElementById("mf");
+    if (ml) ml.href = URL.createObjectURL(new Blob([JSON.stringify(mf)], { type: "application/manifest+json" }));
+  } catch (e) {}
+  if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {} }
+
+  var BK = "reupHubBoot_" + k, cached = null, tk = "";
+  try { cached = JSON.parse(localStorage.getItem(BK) || "null"); tk = localStorage.getItem("reupHubTok_" + k) || ""; } catch (e) {}
+  /* One request opens the Hub: the link check, Work and the Inbox together. */
+  var startP = window.api("start", [k, tk]);
+  window.__workT = window.__inboxT = Date.now();
+  window.__workP = startP.then(function (r) { if (!r || !r.boot || !r.boot.ok || !r.work) throw new Error((r && r.workErr) || "auth"); return r.work; });
+  window.__inboxP = startP.then(function (r) { if (!r || !r.inbox) throw new Error("inbox"); return r.inbox; });
+  window.__workP.catch(function () {}); window.__inboxP.catch(function () {});
+  function keep(r) { try { localStorage.setItem(BK, JSON.stringify(r)); } catch (e) {} }
+  function closed(r) {
+    try { localStorage.removeItem(BK); localStorage.removeItem("reupHubKey"); } catch (e) {}
+    var msg = (r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link.";
+    if (document.getElementById("boot")) note(msg);
+    else {
+      /* The page was already open from this phone's saved copy: cover it and hide everything behind it. */
+      window.__closed = true;
+      document.querySelectorAll("main, nav, .tabs, header, .wrap.top").forEach(function (el) { el.style.display = "none"; });
+      var d = document.createElement("div"); d.className = "bootmsg"; d.setAttribute("role", "status");
+      d.innerHTML = "<p>" + msg + "</p>"; document.body.appendChild(d);
+      try { document.getElementById("sheet").close(); } catch (e) {}
+    }
+  }
+  function launch(r) {
     window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, asset: r.asset, home: r.home };
-    document.getElementById("boot").remove();
+    var b = document.getElementById("boot"); if (b) b.remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
     s.textContent = document.getElementById("app").textContent;
     document.body.appendChild(s);
-  }).catch(function () { note("The Hub couldn't load. Check your connection.", true); });
+  }
+  if (cached && cached.ok) {
+    /* Open at once with what this phone saw last time; check the link and refresh in the background.
+       A link that was switched off closes as soon as the server says so. */
+    launch(cached);
+    startP.then(function (res) {
+      var r = res && res.boot;
+      if (!r || !r.ok) { closed(r); return; }
+      keep(r);
+      var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol"].some(function (f) { return !!r[f] !== !!cached[f]; });
+      if (changed) { location.reload(); return; }
+      window.BOOT.pinSet = !!r.pinSet;
+      if (JSON.stringify(r.home) !== JSON.stringify(cached.home) && window.__applyHome) window.__applyHome(r.home);
+    }).catch(function () {});
+  } else {
+    /* First open on this phone: the quick link check opens the page; Work and the Inbox follow from the start request. */
+    window.api("boot", [k]).then(function (r) {
+      if (!r || !r.ok) { closed(r); return; }
+      keep(r); launch(r);
+    }).catch(function () { note("The Hub couldn't load. Check your connection.", true); });
+  }
 })();
 </script>
 <script>
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024030804";
+  var BUILD = "20261024031652";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
