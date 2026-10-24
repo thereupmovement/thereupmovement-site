@@ -11,7 +11,6 @@
 <meta name="apple-mobile-web-app-title" content="ReUp Hub">
 <link rel="apple-touch-icon" href="app-180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="app-192.png">
-<link rel="manifest" id="mf" href="manifest.json">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <title>ReUp Hub</title>
@@ -712,6 +711,23 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .appbtns{display:flex;gap:8px;margin-top:6px}
 .appbtns .tbtn{width:auto}
 .appsteps{margin:0 0 12px;padding-left:22px;display:grid;gap:8px;font-size:15.5px}
+.calseg{grid-template-columns:1fr 1fr;margin:10px 0}
+.cal{margin-top:6px}
+.calhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:2px 0 8px}
+.calhead b{font-size:17px}
+.calnav{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calwd{font-size:11px;font-weight:800;color:var(--muted);text-align:center;padding:2px 0}
+.calday{min-height:48px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:6px 0 4px;cursor:pointer}
+.calday b{font-size:14px;font-weight:700;line-height:1}
+.calday.past{opacity:.45}
+.calday.today{border:2px solid var(--ink)}
+.calday.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.caldots{display:flex;gap:3px;min-height:7px}
+.caldots i{width:7px;height:7px;border-radius:50%;background:var(--kc)}
+.calday.sel .caldots i{box-shadow:0 0 0 1.5px var(--bg)}
+.calsel{margin-top:14px}
+.calsel .month{margin-top:0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -770,6 +786,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-schedule" hidden>
       <div class="banner" data-cover="schedule"><div><h2>Schedule</h2><p>Every distribution, pickup and deadline coming up. Tap one for details.</p></div></div>
+      <div id="schedtoggle"></div>
       <div class="legend" id="legend"></div>
       <div class="filters" id="filters" role="group" aria-label="Show"></div>
       <div id="schedule"></div>
@@ -996,12 +1013,66 @@ function drawHome() {
 }
 
 let kindFilter = "All";
+/* ============ CALENDAR: a month view for the Schedule tab and for Admin's Schedule ============ */
+const calView = { sched: "list", adm: "list" }, calMonth = {}, calSel = {};
+try { Object.assign(calView, JSON.parse(localStorage.getItem("reupHubCalView") || "{}")); } catch (e) {}
+const isoDay = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function calToggle(id) {
+  return `<div class="seg calseg" role="group" aria-label="Show as"><button type="button" data-cv="${id}|list" aria-pressed="${calView[id] !== "cal"}">List</button><button type="button" data-cv="${id}|cal" aria-pressed="${calView[id] === "cal"}">Calendar</button></div>`;
+}
+function calHTML(id, events, dayList) {
+  const todayIso = isoDay(new Date());
+  if (!calMonth[id]) calMonth[id] = todayIso.slice(0, 7);
+  const [y, m] = calMonth[id].split("-").map(Number);
+  const first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate(), lead = first.getDay();
+  const byDay = {};
+  events.forEach(e => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+  if (!calSel[id] || calSel[id].slice(0, 7) !== calMonth[id]) {
+    const firstEv = Object.keys(byDay).filter(d => d.slice(0, 7) === calMonth[id] && d >= todayIso).sort()[0];
+    calSel[id] = todayIso.slice(0, 7) === calMonth[id] ? todayIso : (firstEv || calMonth[id] + "-01");
+  }
+  let cells = "";
+  for (let i = 0; i < lead; i++) cells += `<span></span>`;
+  for (let d = 1; d <= days; d++) {
+    const iso = calMonth[id] + "-" + String(d).padStart(2, "0"), ev = byDay[iso] || [];
+    const cls = (iso === todayIso ? " today" : "") + (iso === calSel[id] ? " sel" : "") + (iso < todayIso ? " past" : "") + (ev.length ? " has" : "");
+    const label = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) + (ev.length ? ", " + ev.map(e => e.name).join(", ") : "");
+    cells += `<button type="button" class="calday${cls}" data-cd="${id}|${iso}" aria-label="${esc(label)}" aria-pressed="${iso === calSel[id]}"><b>${d}</b><span class="caldots">${ev.slice(0, 3).map(e => `<i class="k-${esc(e.kind)}"></i>`).join("")}</span></button>`;
+  }
+  const sel = calSel[id];
+  return `<div class="cal"><div class="calhead"><button type="button" class="calnav" data-cm="${id}|-1" aria-label="Previous month"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <b>${first.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</b>
+      <button type="button" class="calnav" data-cm="${id}|1" aria-label="Next month"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button></div>
+    <div class="calgrid">${["S", "M", "T", "W", "T", "F", "S"].map(w => `<span class="calwd">${w}</span>`).join("")}${cells}</div>
+    <div class="calsel"><div class="month">${dt(sel).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>${dayList(sel, byDay[sel] || [])}</div></div>`;
+}
+function wireCal(root, id, redraw) {
+  root.querySelectorAll(`[data-cv^="${id}|"]`).forEach(b => b.addEventListener("click", () => {
+    calView[id] = b.dataset.cv.split("|")[1];
+    try { localStorage.setItem("reupHubCalView", JSON.stringify(calView)); } catch (e) {}
+    redraw();
+  }));
+  root.querySelectorAll(`[data-cm^="${id}|"]`).forEach(b => b.addEventListener("click", () => {
+    const n = +b.dataset.cm.split("|")[1], [y, m] = calMonth[id].split("-").map(Number), d = new Date(y, m - 1 + n, 1);
+    calMonth[id] = isoDay(d).slice(0, 7); calSel[id] = null; redraw();
+  }));
+  root.querySelectorAll(`[data-cd^="${id}|"]`).forEach(b => b.addEventListener("click", () => { calSel[id] = b.dataset.cd.split("|")[1]; redraw(); }));
+}
 function drawSchedule() {
   $("legend").innerHTML = ["Distribution", "Event", "Pickup", "Deadline"].map(k => `<span class="k-${k}"><i></i>${k}</span>`).join("");
   $("filters").innerHTML = ["All", "Distribution", "Event", "Pickup", "Deadline"].map(k =>
     `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === kindFilter}">${k === "All" ? "All" : k + "s"}</button>`).join("");
   $("filters").querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { kindFilter = b.dataset.k; drawSchedule(); }));
   const shown = upcoming.filter(e => kindFilter === "All" || e.kind === kindFilter);
+  $("schedtoggle").innerHTML = calToggle("sched");
+  wireCal($("schedtoggle"), "sched", drawSchedule);
+  if (calView.sched === "cal") {
+    $("schedule").innerHTML = calHTML("sched", shown, (day, list) => list.length
+      ? `<div class="list">${list.map(e => rowHTML(e, upcoming.indexOf(e))).join("")}</div>`
+      : `<p class="small" style="margin:0">Nothing on this day.</p>`);
+    wireRows($("schedule")); wireCal($("schedule"), "sched", drawSchedule);
+    return;
+  }
   let html = "", month = "";
   shown.forEach(e => {
     const m = dt(e.date).toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -2039,8 +2110,16 @@ function drawAdmin() {
         <span class="wrmeta"><span>${p.active ? (p.seen ? "Opened " + esc(String(p.seen).replace(/, \d{4}/, "")) : "Hasn't opened it") : "Link off"}</span></span></button>`).join("")}</div>`;
   } else if (adminView === "schedule") {
     html += `<button class="btn aadd" type="button" id="aadde">Add a date</button>
-      <p class="small">What the team sees on the Schedule tab. Tap a date to change or remove it. New distributions and events can go on the volunteer sign-up at the same time.</p>
-      <div class="wrows">${A.events.map((e, i) => `<button type="button" class="wrow" data-ae="${i}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(evDate(e.date))} &middot; ${esc(e.kind)}${e.start ? " &middot; " + esc(e.start) : ""}</span></span><span class="wrmeta"><span>${esc(e.status)}</span></span></button>`).join("") || `<p class="small">Nothing on the schedule.</p>`}</div>`;
+      ${calToggle("adm")}
+      <p class="small">What the team sees on the Schedule tab. Tap a date to change or remove it. New distributions and events can go on the volunteer sign-up at the same time.</p>`;
+    const arow = (e, i) => `<button type="button" class="wrow" data-ae="${i}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(evDate(e.date))} &middot; ${esc(e.kind)}${e.start ? " &middot; " + esc(e.start) : ""}</span></span><span class="wrmeta"><span>${esc(e.status)}</span></span></button>`;
+    if (calView.adm === "cal") {
+      html += calHTML("adm", A.events, (day, list) => list.length
+        ? `<div class="wrows">${list.map(e => arow(e, A.events.indexOf(e))).join("")}</div><button class="tbtn ghost" type="button" data-addon="${day}" style="margin-top:8px;width:auto">Add another date on this day</button>`
+        : `<p class="small" style="margin:0 0 8px">Nothing on this day.</p><button class="tbtn" type="button" data-addon="${day}" style="width:auto">Add a date on this day</button>`);
+    } else {
+      html += `<div class="wrows">${A.events.map(arow).join("") || `<p class="small">Nothing on the schedule.</p>`}</div>`;
+    }
   } else {
     html += `<button class="btn aadd" type="button" id="aaddf">Add a form</button>
       <p class="small">The forms on the Forms tab, Home and Event day. Tap one to change its words or link.</p>
@@ -2054,6 +2133,8 @@ function drawAdmin() {
   const ap = $("aaddp"); if (ap) ap.addEventListener("click", () => editPerson(0));
   const ae = $("aadde"); if (ae) ae.addEventListener("click", () => editEvent(-1));
   const af = $("aaddf"); if (af) af.addEventListener("click", () => editForm(-1));
+  box.querySelectorAll("[data-addon]").forEach(b => b.addEventListener("click", () => editEvent(-1, b.dataset.addon)));
+  wireCal(box, "adm", drawAdmin);
 }
 const aTop = (saveId, label, closeId) => `<div class="atop"><button class="btn" type="button" id="${saveId}">${label}</button><button class="btn ghost" type="button" id="${closeId}">Close</button></div><p class="tmsg" id="amsg" role="status" aria-live="polite"></p>`;
 const chipRow = (kind, opts, chosen, multi) => `<div class="wchips">${opts.map(o => `<button type="button" data-${kind}="${esc(o)}" aria-pressed="${multi ? chosen.includes(o) : chosen === o}">${esc(o)}</button>`).join("")}</div>`;
@@ -2097,13 +2178,13 @@ function editPerson(row) {
   $("apnew").addEventListener("click", async () => { if (confirm("Give " + p.name + " a new link? Their old link stops working right away.") && await adminCall("adminSavePerson", [row, { newLink: true }], "New link made. Send it to them.")) editPerson(row); });
   $("apoff").addEventListener("click", async () => { if ((p.active ? confirm("Switch off " + p.name + "'s link? They can't open the Hub until you switch it back on.") : true) && await adminCall("adminSavePerson", [row, { active: !p.active }], p.active ? "Link switched off." : "Link switched on.")) editPerson(row); });
 }
-function editEvent(i) {
+function editEvent(i, presetDate) {
   const A = ADMIN, e = i >= 0 ? A.events[i] : null, isNew = !e;
   const st = { kind: e ? e.kind : "Distribution", status: e ? e.status : "tentative" };
   const v = k => esc(e ? (e[k] || "") : "");
   openSheet(`${aTop("aesave", isNew ? "Add to the Schedule" : "Save", "aeclose")}<div class="k">${isNew ? "Add a date" : "Schedule"}</div>
     <input class="wtitle" id="aename" type="text" maxlength="80" placeholder="Name, for example Coke St" value="${v("name")}" aria-label="Name">
-    <div class="tsec"><div class="tl">Date</div><input class="ainput" id="aedate" type="date" value="${v("date")}" aria-label="Date"></div>
+    <div class="tsec"><div class="tl">Date</div><input class="ainput" id="aedate" type="date" value="${e ? v("date") : esc(presetDate || "")}" aria-label="Date"></div>
     <div class="tsec"><div class="tl">Kind</div>${chipRow("akind", A.kinds, st.kind, false)}</div>
     <div class="tsec"><div class="tl">Status</div>${chipRow("astat", A.statuses, st.status, false)}<p class="small" style="margin:6px 0 0">Tentative until it's confirmed with the place or partner.</p></div>
     <div class="tsec"><div class="tl">Time</div><div class="arow2"><label>Starts<input class="ainput" id="aestart" type="time" value="${v("start")}"></label><label>Ends<input class="ainput" id="aeend" type="time" value="${v("end")}"></label></div></div>
@@ -2754,7 +2835,22 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   var k = "";
   try { k = new URLSearchParams(location.search).get("k") || ""; } catch (e) {}
   try { if (k) localStorage.setItem("reupHubKey", k); else k = localStorage.getItem("reupHubKey") || ""; } catch (e) {}
-  if (!k) { note("The ReUp Hub opens from your own personal link. Ask Dasia for yours."); return; }
+  if (!k) {
+    /* No link on this phone (for example a home screen icon saved without it): let the person paste it once. */
+    var b0 = document.getElementById("boot");
+    b0.innerHTML = '<div style="max-width:340px;display:grid;gap:12px;text-align:left">' +
+      '<p style="margin:0">The ReUp Hub opens from your own personal link. Paste it here once and this phone will remember it.</p>' +
+      '<input id="klink" type="url" inputmode="url" autocomplete="off" placeholder="Paste your Hub link" style="font:inherit;padding:12px;border-radius:10px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:48px">' +
+      '<button class="btn" type="button" id="kgo">Open the Hub</button>' +
+      '<p id="kmsg" style="margin:0;font-size:14px;opacity:.8">No link? Ask Dasia for yours.</p></div>';
+    document.getElementById("kgo").onclick = function () {
+      var v = String(document.getElementById("klink").value || "").trim(), m = v.match(/[?&]k=([A-Za-z0-9_\-]{8,64})/) || v.match(/^([A-Za-z0-9_\-]{12,64})$/);
+      if (!m) { document.getElementById("kmsg").textContent = "That doesn't look like a Hub link. It ends with ?k= and a code."; return; }
+      try { localStorage.setItem("reupHubKey", m[1]); } catch (e) {}
+      location.replace(location.pathname + "?k=" + encodeURIComponent(m[1]));
+    };
+    return;
+  }
   /* Home screen app: a manifest that opens this person's own link. */
   try {
     var base = location.origin + location.pathname;
@@ -2762,8 +2858,14 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
       scope: base, display: "standalone", background_color: "#121212", theme_color: "#121212",
       icons: [{ src: base + "app-192.png", sizes: "192x192", type: "image/png" }, { src: base + "app-512.png", sizes: "512x512", type: "image/png" },
         { src: base + "app-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" }] };
-    var ml = document.getElementById("mf");
-    if (ml) ml.href = URL.createObjectURL(new Blob([JSON.stringify(mf)], { type: "application/manifest+json" }));
+    /* iPhones save the page address itself (with the personal link) when there is no manifest, and they keep a
+       home screen app's storage apart from Safari's, so they get no manifest. Android and computers get one. */
+    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (!isIOS) {
+      var ml = document.createElement("link"); ml.rel = "manifest"; ml.id = "mf";
+      ml.href = URL.createObjectURL(new Blob([JSON.stringify(mf)], { type: "application/manifest+json" }));
+      document.head.appendChild(ml);
+    }
   } catch (e) {}
   if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js").catch(function () {}); } catch (e) {} }
 
@@ -2823,7 +2925,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024033006";
+  var BUILD = "20261024033636";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
