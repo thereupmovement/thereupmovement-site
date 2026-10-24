@@ -1836,6 +1836,7 @@ async function loadInbox(quiet) {
     // Something new from someone else while the Hub is open, and they are not looking at the Inbox: say so.
     const fresh = before ? (INBOX.messages || []).filter(m => !before.has(m.id) && m.from !== INBOX.me) : [];
     const inView = $("v-inbox") && !$("v-inbox").hidden;
+    if (dmWith) fillDm();
     if (fresh.length && !inView) {
       const m = fresh[fresh.length - 1];
       toast(m.thread === "announce" ? "New announcement from " + m.from : m.thread === "team" ? m.from + " posted in Team chat" : "New message from " + m.from);
@@ -1922,9 +1923,15 @@ async function iSend(threadKey, sendTo, text, emailAll, done) {
   inboxSending = true;
   dmWith ? fillDm() : drawInbox();
   try {
-    INBOX = await run("sendMessage", KEY, sendTo, text, !!emailAll);
-    const s = INBOX.sent || {};
-    if (threadKey === "announce") toast(emailAll ? (/^sent/.test(s.emailed || "") ? "Posted and emailed." : /^not sent/.test(s.emailed || "") ? "Posted. The email didn't go out yet." : "Posted. Nobody has an email saved yet.") : "Posted.");
+    // Saving the message is quick; the email goes out in a second request so nobody waits on it.
+    const r = await run("sendMessage", KEY, sendTo, text, !!emailAll);
+    const s = (r && r.sent) || {};
+    Object.assign(temp, { id: s.id || temp.id, at: s.at || temp.at, thread: s.thread || temp.thread, pending: false });
+    inboxStamp = "";
+    if (threadKey === "announce" && !emailAll) toast("Posted.");
+    run("notifyMessage", KEY, s.id).then(n => {
+      if (threadKey === "announce" && emailAll) toast(/^sent/.test((n && n.emailed) || "") ? "Posted and emailed." : /^no addresses/.test((n && n.emailed) || "") ? "Posted. Nobody has an email saved yet." : "Posted. The email didn't go out.");
+    }).catch(() => { if (threadKey === "announce" && emailAll) toast("Posted. The email didn't go out."); });
   } catch (err) {
     INBOX.messages = (INBOX.messages || []).filter(m => m.id !== temp.id);
     toast(/^(Only|Write)/.test(String(err.message)) ? err.message : "That didn't send. Check your connection and try again.");
@@ -1943,7 +1950,7 @@ function openDm(name) {
 function fillDm() {
   const box = $("dmbody");
   if (!box || !INBOX || !dmWith) return;
-  const thread = dmKeyC(INBOX.me, dmWith), keep = $("dmtext") ? $("dmtext").value : "";
+  const thread = dmKeyC(INBOX.me, dmWith), keep = $("dmtext") ? $("dmtext").value : "", hadFocus = document.activeElement === $("dmtext");
   const list = (INBOX.messages || []).filter(m => m.thread === thread);
   const them = (INBOX.people || []).find(p => p.name === dmWith) || {};
   box.innerHTML = `<div class="k">Private message</div><h3 id="sheetTitle">${esc(dmWith)}</h3>
@@ -1952,18 +1959,27 @@ function fillDm() {
     <div class="icomp"><textarea id="dmtext" class="tarea" placeholder="Write to ${esc(dmWith)}" maxlength="2000"></textarea><button type="button" class="tbtn" id="dmsend">Send</button></div>
     <div class="btns"><button class="btn ghost" type="button" id="dmclose">Close</button></div>`;
   $("dmtext").value = keep;
+  if (hadFocus) { const t = $("dmtext"); t.focus(); try { t.setSelectionRange(keep.length, keep.length); } catch (e) {} }
   const c = $("dmchat"); c.scrollTop = c.scrollHeight;
   $("dmclose").addEventListener("click", () => sheet.close());
   $("dmsend").addEventListener("click", () => { const v = $("dmtext").value.trim(); if (!v) return; iSend(thread, "dm:" + dmWith, v, false, () => { $("dmtext").value = ""; }); });
   $("dmtext").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("dmsend").click(); } });
   iMarkRead(thread);
 }
-// Check for messages every 15 seconds while the Inbox is open, every 45 seconds otherwise.
-setInterval(() => {
-  if (document.hidden || !BOOT.work || inboxSending) return;
-  const inView = $("v-inbox") && !$("v-inbox").hidden;
-  if (inView || Date.now() - inboxAt > 44e3) loadInbox(true);
-}, 15e3);
+// New messages: a tiny check every 5 seconds (it does not read the sheet), and the full Inbox only when
+// something changed, plus a full refresh every minute as a backstop.
+let inboxStamp = "", pinging = false;
+setInterval(async () => {
+  if (document.hidden || !BOOT.work || inboxSending || pinging || loadingInbox) return;
+  if (Date.now() - inboxAt > 60e3) { loadInbox(true); return; }
+  pinging = true;
+  try {
+    const r = await run("inboxPing", KEY);
+    const st = (r && r.stamp) || "";
+    if (st && st !== inboxStamp) { const first = !inboxStamp; inboxStamp = st; if (!first || Date.now() - inboxAt > 5e3) loadInbox(true); }
+  } catch (e) {}
+  pinging = false;
+}, 5e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
@@ -2807,7 +2823,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024032655";
+  var BUILD = "20261024033006";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
