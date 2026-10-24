@@ -1830,7 +1830,15 @@ async function loadInbox(quiet) {
   if (!INBOX && !quiet && $("inbox")) $("inbox").innerHTML = `<p class="lead">Loading messages...</p>`;
   try {
     const pre = window.__inboxP && Date.now() - (window.__inboxT || 0) < 60e3 && !inboxAt ? window.__inboxP : null; window.__inboxP = null;
+    const before = INBOX ? new Set((INBOX.messages || []).map(m => m.id)) : null;
     INBOX = await (pre ? pre.catch(() => run("getInbox", KEY)) : run("getInbox", KEY)); inboxAt = Date.now(); drawInbox();
+    // Something new from someone else while the Hub is open, and they are not looking at the Inbox: say so.
+    const fresh = before ? (INBOX.messages || []).filter(m => !before.has(m.id) && m.from !== INBOX.me) : [];
+    const inView = $("v-inbox") && !$("v-inbox").hidden;
+    if (fresh.length && !inView) {
+      const m = fresh[fresh.length - 1];
+      toast(m.thread === "announce" ? "New announcement from " + m.from : m.thread === "team" ? m.from + " posted in Team chat" : "New message from " + m.from);
+    }
   }
   catch (e) { if (!INBOX && $("inbox")) $("inbox").innerHTML = `<p class="lead">Couldn't load messages right now. Try again in a minute.</p>`; }
   loadingInbox = false;
@@ -1845,6 +1853,8 @@ function iMarkRead(thread) {
 function drawInboxBadge() {
   const t = iTotals();
   const b = $("inboxBadge"); if (b) { b.hidden = !t.all; b.textContent = t.all > 9 ? "9+" : String(t.all); }
+  document.title = t.all ? "(" + t.all + ") ReUp Hub" : "ReUp Hub";
+  try { if (navigator.setAppBadge) { if (t.all) navigator.setAppBadge(t.all); else navigator.clearAppBadge(); } } catch (e) {}
   const h = $("homeinbox");
   if (!h) return;
   if (!INBOX || !t.all) { h.innerHTML = ""; return; }
@@ -1947,7 +1957,12 @@ function fillDm() {
   $("dmtext").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("dmsend").click(); } });
   iMarkRead(thread);
 }
-setInterval(() => { if (!document.hidden && BOOT.work && !inboxSending) loadInbox(true); }, 45e3);
+// Check for messages every 15 seconds while the Inbox is open, every 45 seconds otherwise.
+setInterval(() => {
+  if (document.hidden || !BOOT.work || inboxSending) return;
+  const inView = $("v-inbox") && !$("v-inbox").hidden;
+  if (inView || Date.now() - inboxAt > 44e3) loadInbox(true);
+}, 15e3);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
@@ -2746,7 +2761,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024031652";
+  var BUILD = "20261024032136";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
