@@ -649,6 +649,51 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .abtns .tbtn{width:auto;text-decoration:none;display:inline-flex;align-items:center}
 .arow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .arow2 label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:700}
+.aadd{width:100%;margin:0 0 10px}
+.atop{position:sticky;top:-1px;z-index:4;display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--surface);padding:2px 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line)}
+.atop .btn{margin:0}
+.invbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 14px}
+.invbox>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:1fr 20px;gap:2px 10px;align-items:center;padding:14px 0;min-height:56px}
+.invbox>summary::-webkit-details-marker{display:none}
+.invbox>summary b{font-size:17px}
+.invbox>summary span{grid-column:1;font-size:13px;color:var(--muted)}
+.invbox>summary::after{content:"";grid-row:1/span 2;grid-column:2;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);justify-self:center;margin-top:-4px}
+.invbox[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.invbox[open]{padding-bottom:12px}
+.vglance{grid-template-columns:repeat(2,1fr)}
+.vseg{grid-template-columns:repeat(3,1fr);margin-top:14px}
+.vrow .wrname{min-width:0}
+.vbar{display:block;height:6px;border-radius:4px;background:var(--line);margin-top:7px;overflow:hidden;max-width:220px}
+.vbar i{display:block;height:100%;background:#2E7D4F;border-radius:4px}
+.vbar.short i{background:#B35400}
+.vbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.vbs:empty{display:none}
+.vb{font-style:normal;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.vb.vnew{background:#E1ECF5;color:#1D5E8C;border-color:transparent}
+.vb.vok{background:#DDEFE3;color:#1E5C38;border-color:transparent}
+.vb.vwarn{background:#FBE9D6;color:#8A4100;border-color:transparent}
+.vb.vno{background:#F6DEDC;color:#B3261E;border-color:transparent}
+.vpast{margin-top:14px}
+.vcard{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 8px}
+.vtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.vname{font:inherit;font-weight:800;background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.vcall{font-weight:700;color:var(--ink);white-space:nowrap}
+.vst{margin-top:8px}
+.vhrs{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;font-weight:700;color:var(--muted)}
+.vhrs .ainput{width:110px}
+.vneed{display:flex;gap:8px}
+.vneed .ainput{max-width:140px}
+.vneed .tbtn{width:auto}
+.vkv{display:grid;grid-template-columns:minmax(110px,38%) 1fr;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:14.5px}
+.vkv span{color:var(--muted)}
+.vkv b{font-weight:600;overflow-wrap:anywhere}
+.vdates{margin-top:8px}
+.vorow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.vorow .tbtn{width:auto;flex:none}
+.vorow a{color:var(--ink);font-weight:700}
+.t-volunteers{--tc:#7A5A00;--ts:#F5EDCF}
+@media (min-width:640px){.vglance{grid-template-columns:repeat(4,1fr)}}
+.vglance{margin-top:0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -692,6 +737,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     <section class="view" id="v-inbox" hidden>
       <h2 class="ihead">Inbox</h2>
       <div id="inbox"><p class="lead">Loading messages...</p></div>
+    </section>
+
+    <section class="view" id="v-vol" hidden>
+      <h2 class="ihead">Volunteers</h2>
+      <div id="vol"><p class="lead">Loading...</p></div>
     </section>
 
     <section class="view" id="v-admin" hidden>
@@ -960,6 +1010,7 @@ const ICONS = {
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
   eventday: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  vol: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
@@ -990,13 +1041,13 @@ drawTabs();
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab)) tab = "home";
-  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals", "admin"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals", "admin", "vol"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
   if ((tab === "ops" || tab === "goals") && typeof openLeader === "function") openLeader(tab);
   if (tab === "inbox" && typeof loadInbox === "function") { drawInbox(); loadInbox(!!INBOX); }
-  if (tab === "admin" && typeof openLeader === "function") openLeader(tab);
+  if ((tab === "admin" || tab === "vol") && typeof openLeader === "function") openLeader(tab);
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -1261,7 +1312,7 @@ let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
-const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants" };
+const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants", Volunteers: "t-volunteers" };
 const wOpen = t => t.status !== "done";
 const wLate = t => wOpen(t) && t.due && daysAway(t.due) < 0;
 const wRecentDone = (t, days) => t.status === "done" && t.doneAt && (Date.now() - new Date(t.doneAt)) < days * 864e5;
@@ -1863,7 +1914,7 @@ setInterval(() => { if (!document.hidden && BOOT.work && !inboxSending) loadInbo
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
-const MORE_SUB = { admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+const MORE_SUB = { vol: "Who is signed up, orientation, reminder texts and hours.", admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
   openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
@@ -1909,18 +1960,18 @@ function drawAdmin() {
   let html = `<div class="seg aseg" role="group" aria-label="Admin section">${[["people", "People"], ["schedule", "Schedule"], ["forms", "Forms"]].map(([k, l]) => `<button type="button" data-av="${k}" aria-pressed="${adminView === k}">${l}</button>`).join("")}</div>
     ${ADMIN_GUIDE.indexOf("http") === 0 ? `<p class="small" style="margin:-4px 0 12px">New to this? <a class="wlink" href="${esc(ADMIN_GUIDE)}" target="_blank" rel="noopener">Open the Admin guide</a></p>` : ""}`;
   if (adminView === "people") {
-    html += `<p class="small">Everyone with a Hub link. Tap a person to change their role, teams or email, switch their link off, reset their PIN or copy their link.</p>
+    html += `<button class="btn aadd" type="button" id="aaddp">Add a person</button>
+      <p class="small">Everyone with a Hub link. Tap a person to change their role, teams or email, switch their link off, reset their PIN or copy their link.</p>
       <div class="wrows">${A.people.map(p => `<button type="button" class="wrow arow${p.active ? "" : " off"}" data-ap="${p.row}"><span class="wrname">${esc(p.name)}${p.coordinator ? ` <em class="atag">Admin</em>` : ""}<span class="idmlast">${esc(p.role)}${p.teams.length ? " &middot; " + esc(p.teams.join(", ")) : ""}${p.email ? " &middot; " + esc(p.email) : ""}</span></span>
-        <span class="wrmeta"><span>${p.active ? (p.seen ? "Opened " + esc(String(p.seen).replace(/, \d{4}/, "")) : "Hasn't opened it") : "Link off"}</span></span></button>`).join("")}</div>
-      <button class="btn" type="button" id="aaddp" style="margin-top:14px">Add a person</button>`;
+        <span class="wrmeta"><span>${p.active ? (p.seen ? "Opened " + esc(String(p.seen).replace(/, \d{4}/, "")) : "Hasn't opened it") : "Link off"}</span></span></button>`).join("")}</div>`;
   } else if (adminView === "schedule") {
-    html += `<p class="small">What the team sees on the Schedule tab. Tap a date to change or remove it. New distributions and events can go on the volunteer sign-up at the same time.</p>
-      <div class="wrows">${A.events.map((e, i) => `<button type="button" class="wrow" data-ae="${i}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(evDate(e.date))} &middot; ${esc(e.kind)}${e.start ? " &middot; " + esc(e.start) : ""}</span></span><span class="wrmeta"><span>${esc(e.status)}</span></span></button>`).join("") || `<p class="small">Nothing on the schedule.</p>`}</div>
-      <button class="btn" type="button" id="aadde" style="margin-top:14px">Add a date</button>`;
+    html += `<button class="btn aadd" type="button" id="aadde">Add a date</button>
+      <p class="small">What the team sees on the Schedule tab. Tap a date to change or remove it. New distributions and events can go on the volunteer sign-up at the same time.</p>
+      <div class="wrows">${A.events.map((e, i) => `<button type="button" class="wrow" data-ae="${i}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(evDate(e.date))} &middot; ${esc(e.kind)}${e.start ? " &middot; " + esc(e.start) : ""}</span></span><span class="wrmeta"><span>${esc(e.status)}</span></span></button>`).join("") || `<p class="small">Nothing on the schedule.</p>`}</div>`;
   } else {
-    html += `<p class="small">The forms on the Forms tab, Home and Event day. Tap one to change its words or link.</p>
-      <div class="wrows">${A.forms.map((f, i) => `<button type="button" class="wrow" data-af="${i}"><span class="wrname">${esc(f.title)}<span class="idmlast">${esc(f.group || "")}${f.sub ? " &middot; " + esc(f.sub) : ""}</span></span></button>`).join("")}</div>
-      <button class="btn" type="button" id="aaddf" style="margin-top:14px">Add a form</button>`;
+    html += `<button class="btn aadd" type="button" id="aaddf">Add a form</button>
+      <p class="small">The forms on the Forms tab, Home and Event day. Tap one to change its words or link.</p>
+      <div class="wrows">${A.forms.map((f, i) => `<button type="button" class="wrow" data-af="${i}"><span class="wrname">${esc(f.title)}<span class="idmlast">${esc(f.group || "")}${f.sub ? " &middot; " + esc(f.sub) : ""}</span></span></button>`).join("")}</div>`;
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-av]").forEach(b => b.addEventListener("click", () => { adminView = b.dataset.av; drawAdmin(); }));
@@ -1931,6 +1982,7 @@ function drawAdmin() {
   const ae = $("aadde"); if (ae) ae.addEventListener("click", () => editEvent(-1));
   const af = $("aaddf"); if (af) af.addEventListener("click", () => editForm(-1));
 }
+const aTop = (saveId, label, closeId) => `<div class="atop"><button class="btn" type="button" id="${saveId}">${label}</button><button class="btn ghost" type="button" id="${closeId}">Close</button></div><p class="tmsg" id="amsg" role="status" aria-live="polite"></p>`;
 const chipRow = (kind, opts, chosen, multi) => `<div class="wchips">${opts.map(o => `<button type="button" data-${kind}="${esc(o)}" aria-pressed="${multi ? chosen.includes(o) : chosen === o}">${esc(o)}</button>`).join("")}</div>`;
 function wireChips(kind, multi, state, key) {
   document.querySelectorAll(`[data-${kind}]`).forEach(b => b.addEventListener("click", () => {
@@ -1943,7 +1995,7 @@ function wireChips(kind, multi, state, key) {
 function editPerson(row) {
   const A = ADMIN, p = row ? A.people.find(x => x.row === row) : null, isNew = !p;
   const st = { role: p ? p.role : "Team", teams: p ? p.teams.slice() : ["Events"] };
-  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a person" : "Person"}</div>
+  openSheet(`${aTop("apsave", isNew ? "Add and get their link" : "Save", "apclose")}<div class="k">${isNew ? "Add a person" : "Person"}</div>
     <input class="wtitle" id="apname" type="text" maxlength="40" placeholder="First name" value="${esc(p ? p.name : "")}" aria-label="Name">
     <div class="tsec"><div class="tl">Role</div>${chipRow("arole", A.roles, st.role, false)}
       <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Ops: Ops tab too. Team: Home, Schedule, Work, Inbox, Event day, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
@@ -1956,8 +2008,7 @@ function editPerson(row) {
         ${p.pinSet ? `<button type="button" class="tbtn ghost" id="appin">Reset PIN</button>` : ""}
         <button type="button" class="tbtn ghost" id="apnew">New link (old one stops)</button>
         <button type="button" class="tbtn ghost" id="apoff">${p.active ? "Switch link off" : "Switch link on"}</button></div>
-        <p class="small" style="margin:6px 0 0">Reset PIN lets them pick a new one next time. Use a new link if theirs was forwarded.</p></div>` : ""}
-    <div class="btns"><button class="btn" type="button" id="apsave">${isNew ? "Add and get their link" : "Save"}</button><button class="btn ghost" type="button" id="apclose">Close</button></div>`);
+        <p class="small" style="margin:6px 0 0">Reset PIN lets them pick a new one next time. Use a new link if theirs was forwarded.</p></div>` : ""}`);
   wireChips("arole", false, st, "role"); wireChips("ateam", true, st, "teams");
   $("apclose").addEventListener("click", () => sheet.close());
   $("apsave").addEventListener("click", async () => {
@@ -1977,7 +2028,7 @@ function editEvent(i) {
   const A = ADMIN, e = i >= 0 ? A.events[i] : null, isNew = !e;
   const st = { kind: e ? e.kind : "Distribution", status: e ? e.status : "tentative" };
   const v = k => esc(e ? (e[k] || "") : "");
-  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a date" : "Schedule"}</div>
+  openSheet(`${aTop("aesave", isNew ? "Add to the Schedule" : "Save", "aeclose")}<div class="k">${isNew ? "Add a date" : "Schedule"}</div>
     <input class="wtitle" id="aename" type="text" maxlength="80" placeholder="Name, for example Coke St" value="${v("name")}" aria-label="Name">
     <div class="tsec"><div class="tl">Date</div><input class="ainput" id="aedate" type="date" value="${v("date")}" aria-label="Date"></div>
     <div class="tsec"><div class="tl">Kind</div>${chipRow("akind", A.kinds, st.kind, false)}</div>
@@ -1988,7 +2039,7 @@ function editEvent(i) {
     <div class="tsec"><div class="tl">Who</div><input class="ainput" id="aewho" type="text" value="${v("who")}" placeholder="For example Charles leads"></div>
     <div class="tsec"><div class="tl">Note</div><textarea class="tarea" id="aenote" placeholder="Anything the team should know">${v("note")}</textarea></div>
     ${isNew ? `<label class="icheck"><input type="checkbox" id="aevol" checked> Also put distributions and events on the volunteer sign-up</label>` : `<p class="small">Changing a date here does not change the volunteer sign-up or the community page. Tell the team in the Inbox if a date moves.</p>`}
-    <div class="btns"><button class="btn" type="button" id="aesave">${isNew ? "Add to the Schedule" : "Save"}</button>${isNew ? "" : `<button class="btn ghost" type="button" id="aedel">Remove from the Schedule</button>`}<button class="btn ghost" type="button" id="aeclose">Close</button></div>`);
+    ${isNew ? "" : `<div class="btns"><button class="btn ghost" type="button" id="aedel">Remove from the Schedule</button></div>`}`);
   wireChips("akind", false, st, "kind"); wireChips("astat", false, st, "status");
   $("aeclose").addEventListener("click", () => sheet.close());
   $("aesave").addEventListener("click", async () => {
@@ -2002,7 +2053,7 @@ function editForm(i) {
   const v = k => esc(f ? (f[k] || "") : "");
   const flags = [["main", "Big button"], ["quick", "On Home"], ["eventday", "On Event day"], ["share", "Can be shared"]];
   const st = { flags: flags.filter(([k]) => f && f[k]).map(([, l]) => l) };
-  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a form" : "Form"}</div>
+  openSheet(`${aTop("afsave", isNew ? "Add the form" : "Save", "afclose")}<div class="k">${isNew ? "Add a form" : "Form"}</div>
     <input class="wtitle" id="aftitle" type="text" maxlength="60" placeholder="Title, for example Snap a receipt" value="${v("title")}" aria-label="Title">
     <div class="tsec"><div class="tl">Short line under the title</div><input class="ainput" id="afsub" type="text" value="${v("sub")}"></div>
     <div class="tsec"><div class="tl">Group</div><input class="ainput" id="afgroup" type="text" value="${v("group")}" placeholder="Volunteers, Event day, Goods, Money or Share"></div>
@@ -2011,7 +2062,7 @@ function editForm(i) {
     <div class="tsec"><div class="tl">Who fills it out</div><input class="ainput" id="afwho" type="text" value="${v("who")}"></div>
     <div class="tsec"><div class="tl">How long it takes</div><input class="ainput" id="aftime" type="text" value="${v("time")}" placeholder="About 1 minute"></div>
     <div class="tsec"><div class="tl">Where it shows</div>${chipRow("aflag", flags.map(x => x[1]), st.flags, true)}</div>
-    <div class="btns"><button class="btn" type="button" id="afsave">${isNew ? "Add the form" : "Save"}</button>${isNew ? "" : `<button class="btn ghost" type="button" id="afdel">Remove</button>`}<button class="btn ghost" type="button" id="afclose">Close</button></div>`);
+    ${isNew ? "" : `<div class="btns"><button class="btn ghost" type="button" id="afdel">Remove this form from the Hub</button></div>`}`);
   wireChips("aflag", true, st, "flags");
   $("afclose").addEventListener("click", () => sheet.close());
   $("afsave").addEventListener("click", async () => {
@@ -2021,6 +2072,166 @@ function editForm(i) {
   });
   const d = $("afdel"); if (d) d.addEventListener("click", async () => { if (confirm("Remove " + f.title + " from the Hub? The form itself is not deleted.") && await adminCall("adminSaveForm", [i, null], "Removed.")) sheet.close(); });
 }
+/* ============ VOLUNTEERS: for the core team who organize volunteers (behind the PIN) ============ */
+let VOL = null, volAt = 0, volView = "dates", volBusy = false, volQ = "", volF = "all", volSheet = null;
+const V_ST = [["signed", "Signed up"], ["confirmed", "Confirmed"], ["came", "Came"], ["noshow", "No-show"], ["cancelled", "Can't make it"]];
+const vLabel = k => (V_ST.find(x => x[0] === k) || V_ST[0])[1];
+const vShort = s => dt(s).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const vDigits = s => String(s || "").replace(/\D/g, "").slice(-10);
+const vIdOf = (phone, name) => { const d = vDigits(phone); return d.length === 10 ? "p" + d : "n" + String(name || "").trim().toLowerCase().replace(/\s+/g, " "); };
+async function loadVol(quiet) {
+  if (!$("vol")) return;
+  if (!VOL && !quiet) $("vol").innerHTML = `<p class="lead">Loading volunteers...</p>`;
+  try { VOL = await run("getVolunteers", KEY, TOK); volAt = Date.now(); drawVol(); if (volSheet) volSheet(); }
+  catch (e) { if (isAuth(e)) relock(); else if (!VOL) $("vol").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+}
+async function volCall(fn, args, ok) {
+  if (volBusy) return null;
+  volBusy = true;
+  const m = $("vmsg"); if (m) m.textContent = "Saving...";
+  try {
+    VOL = await run(fn, KEY, TOK, ...args); volAt = Date.now(); volBusy = false;
+    drawVol(); if (volSheet) volSheet(); if (ok) toast(ok);
+    return VOL;
+  } catch (e) {
+    volBusy = false;
+    if (isAuth(e)) { relock(); return null; }
+    const msg = /^(Hours|That has)/.test(String(e.message)) ? e.message : "That didn't save. Try again.";
+    if ($("vmsg")) $("vmsg").textContent = msg; else toast(msg);
+    return null;
+  }
+}
+function vOpen(html) {
+  if (sheet.open) { const b = $("sheetBody"), y = b.scrollTop; b.innerHTML = `<div class="grab" aria-hidden="true"></div>` + html; b.scrollTop = y; } else openSheet(html);
+}
+const vPeople = () => (VOL ? VOL.people : []).filter(p => !p.hidden);
+const vPerson = id => (VOL ? VOL.people : []).find(p => p.id === id);
+const vOn = date => vPeople().filter(p => p.dates.includes(date));
+const vStatus = (p, date) => (p.shifts[date] && p.shifts[date].status) || "signed";
+const vCount = date => vOn(date).filter(p => vStatus(p, date) !== "cancelled").length;
+const vIsNew = p => /new/i.test(p.returning || "");
+const vNeedsOrient = p => !p.oriented && vIsNew(p);
+const vNoPhotos = p => /^no/i.test(p.photos || "");
+function vBadges(p) {
+  const b = [];
+  if (vIsNew(p)) b.push(`<em class="vb vnew">New</em>`);
+  if (p.oriented) b.push(`<em class="vb vok">Oriented</em>`);
+  else if (vIsNew(p)) b.push(`<em class="vb vwarn">${p.orientation && !/none of these/i.test(p.orientation) ? "Orientation " + esc(p.orientation.replace(/ at .*/, "")) : "Needs orientation"}</em>`);
+  if (vNoPhotos(p)) b.push(`<em class="vb vno">No photos</em>`);
+  if (/^no/i.test(p.adult || "")) b.push(`<em class="vb vwarn">Under 18</em>`);
+  return b.join("");
+}
+function vTally(p) {
+  const s = Object.keys(p.shifts).map(k => p.shifts[k]);
+  const came = s.filter(x => x.status === "came").length, hrs = s.reduce((a, x) => a + (x.status === "came" ? (+x.hours || 0) : 0), 0);
+  return { came: came, hrs: Math.round(hrs * 10) / 10 };
+}
+function drawVol() {
+  const box = $("vol");
+  if (!box || !VOL) return;
+  const V = VOL, today = V.today;
+  const up = V.events.filter(e => e.date >= today), past = V.events.filter(e => e.date < today).reverse();
+  const next = up[0];
+  const weekAgo = new Date(Date.now() - 7 * 864e5);
+  const fresh = vPeople().filter(p => { const d = new Date(p.first); return !isNaN(d) && d >= weekAgo; }).length;
+  const waitOr = vPeople().filter(vNeedsOrient).length;
+  let html = `<div class="glance vglance">
+      <div><b>${next ? vCount(next.date) + (next.needed ? " of " + esc(next.needed) : "") : "0"}</b><span>${next ? "signed up for " + esc(vShort(next.date)) : "no dates coming up"}</span></div>
+      <div><b>${fresh}</b><span>new this week</span></div>
+      <div class="${waitOr ? "warn" : ""}"><b>${waitOr}</b><span>need orientation</span></div>
+      <div><b>${V.stats.hoursYear}</b><span>hours logged this year</span></div></div>
+    <div class="seg vseg" role="group" aria-label="Volunteers section">${[["dates", "Dates"], ["people", "People"], ["orient", "Orientation"]].map(([k, l]) => `<button type="button" data-vv="${k}" aria-pressed="${volView === k}">${l}</button>`).join("")}</div>`;
+  if (volView === "dates") {
+    const row = e => { const n = vCount(e.date), need = +e.needed || 0, pct = need ? Math.min(100, 100 * n / need) : (n ? 100 : 0);
+      return `<button type="button" class="wrow vrow" data-ve="${e.date}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(vShort(e.date))}${e.time ? " &middot; " + esc(e.time) : ""}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</span>
+        <span class="vbar${need && n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span></span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span></span></button>`; };
+    html += `<p class="small">Tap a date to see who's coming, confirm them, copy their numbers for a reminder text, and mark who came and their hours.</p>
+      <div class="wrows">${up.map(row).join("") || `<p class="small">No volunteer dates coming up. Add one in Admin, Schedule.</p>`}</div>
+      ${past.length ? `<details class="tmore vpast"><summary>Past dates: mark who came</summary><div class="wrows">${past.map(row).join("")}</div></details>` : ""}`;
+  } else if (volView === "people") {
+    const q = volQ.trim().toLowerCase();
+    const filt = { all: () => true, new: vIsNew, orient: vNeedsOrient, nophoto: vNoPhotos };
+    const list = vPeople().filter(filt[volF] || filt.all).filter(p => !q || `${p.name} ${p.phone} ${p.email}`.toLowerCase().includes(q)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    html += `<div class="isearchwrap"><input class="isearch" type="search" id="volQ" placeholder="Search a name, phone or email" value="${esc(volQ)}" aria-label="Search volunteers"></div>
+      <div class="filters" role="group" aria-label="Show" style="margin:8px 0">${[["all", "Everyone"], ["new", "New"], ["orient", "Need orientation"], ["nophoto", "No photos"]].map(([k, l]) => `<button class="chip" type="button" data-vf="${k}" aria-pressed="${volF === k}">${l}</button>`).join("")}</div>
+      <p class="small">${list.length} volunteer${list.length === 1 ? "" : "s"}. Phone numbers and emails stay inside the Hub.</p>
+      <div class="wrows">${list.map(p => { const t = vTally(p); return `<button type="button" class="wrow" data-vp="${esc(p.id)}"><span class="wrname">${esc(p.name || "No name")}<span class="idmlast">${esc(p.phone || p.email || "")}</span><span class="vbs">${vBadges(p)}</span></span>
+        <span class="wrmeta"><span>${p.dates.length} date${p.dates.length === 1 ? "" : "s"}${t.came ? " &middot; came " + t.came : ""}${t.hrs ? " &middot; " + t.hrs + " hrs" : ""}</span></span></button>`; }).join("") || `<p class="small">Nobody yet. People show up here as soon as they sign up on the volunteer form.</p>`}</div>`;
+  } else {
+    html += `<p class="small">New volunteers pick a 30-minute call when they sign up. After the call, tap Done next to each person who joined.</p>
+      ${V.orientation.length ? V.orientation.map(o => `<h3 class="area">${esc(o.label)}<span>${o.ids.length}</span></h3><div class="wrows">${o.ids.map(vPerson).filter(Boolean).map(p => `<div class="wrow vorow"><span class="wrname">${esc(p.name)}<span class="idmlast">${p.phone ? `<a href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : esc(p.email || "")}</span></span><button type="button" class="tbtn" data-vor="${esc(p.id)}">Done</button></div>`).join("")}</div>`).join("")
+        : `<div class="empty">Nobody is waiting on orientation.</div>`}`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-vv]").forEach(b => b.addEventListener("click", () => { volView = b.dataset.vv; drawVol(); }));
+  box.querySelectorAll("[data-ve]").forEach(b => b.addEventListener("click", () => volEvent(b.dataset.ve)));
+  box.querySelectorAll("[data-vp]").forEach(b => b.addEventListener("click", () => volPerson(b.dataset.vp)));
+  box.querySelectorAll("[data-vf]").forEach(b => b.addEventListener("click", () => { volF = b.dataset.vf; drawVol(); }));
+  box.querySelectorAll("[data-vor]").forEach(b => b.addEventListener("click", () => volCall("saveVolunteer", [b.dataset.vor, { oriented: true }], "Marked done.")));
+  const s = $("volQ"); if (s) s.addEventListener("input", () => { volQ = s.value; const pos = s.selectionStart; drawVol(); const n = $("volQ"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} });
+}
+function volEvent(date) {
+  const draw = () => {
+    const e = VOL.events.find(x => x.date === date);
+    if (!e) { sheet.close(); return; }
+    const on = vOn(date).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const going = on.filter(p => vStatus(p, date) !== "cancelled");
+    const nums = going.map(p => p.phone).filter(Boolean);
+    const isPast = date < VOL.today;
+    const msg = `Hi, this is The ReUp Movement. Reminder: you signed up to volunteer at ${e.name} on ${vShort(date)}${e.time ? ", " + e.time : ""}${e.place ? ", at " + e.place : ""}. Reply here if you can't make it. Thank you!`;
+    vOpen(`<div class="atop"><button class="btn ghost" type="button" id="vclose">Close</button></div><p class="tmsg" id="vmsg" role="status" aria-live="polite"></p>
+      <div class="k">${esc(vShort(date))}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</div><h3 id="sheetTitle">${esc(e.name)}</h3>
+      <p class="small" style="margin:0 0 10px">${[e.time, e.place].filter(Boolean).map(esc).join(" &middot; ")}</p>
+      <div class="tsec"><div class="tl">Volunteers needed</div><div class="vneed"><input class="ainput" id="vneed" type="number" min="0" max="500" inputmode="numeric" value="${esc(e.needed || "")}" placeholder="How many"><button type="button" class="tbtn" id="vneedsave">Save</button></div>
+        <p class="small" style="margin:6px 0 0">${going.length} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}. This number also goes on the volunteer sign-up sheet.</p></div>
+      ${nums.length && !isPast ? `<div class="tsec"><div class="tl">Reminder text</div><div class="abtns"><button type="button" class="tbtn" id="vnums">Copy ${nums.length} phone number${nums.length === 1 ? "" : "s"}</button><button type="button" class="tbtn ghost" id="vtext">Copy the reminder message</button></div>
+        <p class="small" style="margin:6px 0 0">Paste the numbers into a new group text, then paste the message.</p></div>` : ""}
+      <div class="tsec"><div class="tl">${isPast ? "Who came" : "Who's coming"}</div>
+        ${on.map(p => { const s = p.shifts[date] || {}, st = s.status || "signed"; return `<div class="vcard">
+          <div class="vtop"><button type="button" class="vname" data-vpo="${esc(p.id)}">${esc(p.name || "No name")}</button>${p.phone ? `<a class="vcall" href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : ""}</div>
+          <div class="vbs">${vBadges(p)}</div>
+          <div class="wchips vst">${V_ST.map(([k, l]) => `<button type="button" data-vs="${esc(p.id)}|${k}" aria-pressed="${st === k}">${l}</button>`).join("")}</div>
+          ${st === "came" ? `<label class="vhrs">Hours <input class="ainput" type="number" min="0" max="24" step="0.25" inputmode="decimal" data-vh="${esc(p.id)}" value="${esc(s.hours === undefined ? "" : s.hours)}" placeholder="0"></label>` : ""}
+        </div>`; }).join("") || `<p class="small">Nobody has signed up for this date yet.</p>`}</div>
+      <div class="tsec"><div class="tl">Someone came who didn't sign up</div><div class="arow2"><input class="ainput" id="vwname" type="text" maxlength="60" placeholder="Name"><input class="ainput" id="vwphone" type="tel" placeholder="Phone (optional)"></div>
+        <button type="button" class="tbtn" id="vwadd" style="margin-top:8px">Add them as came</button></div>`);
+    $("vclose").addEventListener("click", () => sheet.close());
+    $("vneedsave").addEventListener("click", () => volCall("setVolNeeded", [date, $("vneed").value], "Saved."));
+    const n = $("vnums"); if (n) n.addEventListener("click", () => copyText(nums.join(", ")));
+    const t = $("vtext"); if (t) t.addEventListener("click", () => copyText(msg));
+    document.querySelectorAll("[data-vs]").forEach(b => b.addEventListener("click", () => { const [id, st] = b.dataset.vs.split("|"); const p = vPerson(id); volCall("saveShift", [id, date, { status: st, name: p ? p.name : "", event: e.name }], vLabel(st) + "."); }));
+    document.querySelectorAll("[data-vh]").forEach(i => i.addEventListener("change", () => volCall("saveShift", [i.dataset.vh, date, { hours: i.value }], "Hours saved.")));
+    document.querySelectorAll("[data-vpo]").forEach(b => b.addEventListener("click", () => volPerson(b.dataset.vpo)));
+    $("vwadd").addEventListener("click", () => { const nm = $("vwname").value.trim(); if (!nm) { $("vmsg").textContent = "Add their name."; return; } const ph = $("vwphone").value; const id = vIdOf(ph, nm);
+      volCall("saveShift", [id, date, { status: "came", name: nm, event: e.name }], "Added."); });
+  };
+  volSheet = draw; draw();
+  const off = () => { volSheet = null; sheet.removeEventListener("close", off); }; sheet.addEventListener("close", off);
+}
+function volPerson(id) {
+  const draw = () => {
+    const p = vPerson(id);
+    if (!p) { sheet.close(); return; }
+    const t = vTally(p), evs = VOL.events;
+    const row = (l, v) => v ? `<div class="vkv"><span>${l}</span><b>${esc(v)}</b></div>` : "";
+    vOpen(`<div class="atop"><button class="btn" type="button" id="vpsave">Save note</button><button class="btn ghost" type="button" id="vclose">Close</button></div><p class="tmsg" id="vmsg" role="status" aria-live="polite"></p>
+      <div class="k">Volunteer</div><h3 id="sheetTitle">${esc(p.name || "No name")}</h3><div class="vbs">${vBadges(p)}</div>
+      <div class="abtns" style="margin:10px 0">${p.phone ? `<a class="tbtn" href="tel:${vDigits(p.phone)}">Call ${esc(p.phone)}</a><a class="tbtn ghost" href="sms:${vDigits(p.phone)}" target="_top">Text</a>` : ""}${p.email ? `<a class="tbtn ghost" href="mailto:${esc(p.email)}">Email</a>` : ""}</div>
+      <div class="tsec"><div class="tl">So far</div><p style="margin:0">${p.dates.length} date${p.dates.length === 1 ? "" : "s"} signed up, came ${t.came} time${t.came === 1 ? "" : "s"}, ${t.hrs} hours.</p>
+        ${p.dates.length ? `<div class="vdates">${p.dates.map(d => { const e = evs.find(x => x.date === d); const st = vStatus(p, d); return `<div class="vkv"><span>${esc(vShort(d))}</span><b>${esc(e ? e.name : (p.shifts[d] && p.shifts[d].event) || "")} &middot; ${vLabel(st)}${p.shifts[d] && p.shifts[d].hours ? ", " + p.shifts[d].hours + " hrs" : ""}</b></div>`; }).join("")}</div>` : ""}</div>
+      <div class="tsec"><div class="tl">From their sign-up</div>
+        ${row("Before", p.returning)}${row("Orientation picked", p.orientation)}${row("18 or older", p.adult)}${row("Wants to help with", p.help)}${row("Place me well", p.place)}${row("Photos", p.photos)}${row("Emails OK", p.news)}${row("Heard about us", p.heard)}${row("Email", p.email)}${row("First signed up", p.first)}</div>
+      <div class="tsec"><div class="tl">Team note</div><textarea class="tarea" id="vpnote" placeholder="Anything the next person should know: great with kids, has a truck, prefers check-in">${esc(p.note || "")}</textarea></div>
+      <div class="tsec"><div class="abtns"><button type="button" class="tbtn ghost" id="vpor">${p.oriented ? "Orientation not done" : "Orientation done"}</button><button type="button" class="tbtn ghost" id="vphide">${p.hidden ? "Show in the lists again" : "Hide (a test or a duplicate)"}</button></div></div>`);
+    $("vclose").addEventListener("click", () => sheet.close());
+    $("vpsave").addEventListener("click", () => volCall("saveVolunteer", [id, { note: $("vpnote").value, name: p.name }], "Note saved."));
+    $("vpor").addEventListener("click", () => volCall("saveVolunteer", [id, { oriented: !p.oriented, name: p.name }], "Saved."));
+    $("vphide").addEventListener("click", () => volCall("saveVolunteer", [id, { hidden: !p.hidden, name: p.name }], p.hidden ? "Back in the lists." : "Hidden.").then(r => { if (r && !p.hidden) sheet.close(); }));
+  };
+  volSheet = draw; draw();
+  const off = () => { volSheet = null; sheet.removeEventListener("close", off); }; sheet.addEventListener("close", off);
+}
+setInterval(() => { if (!document.hidden && TOK && VOL && $("v-vol") && !$("v-vol").hidden && !volBusy && !(sheet && sheet.open)) loadVol(true); }, 120e3);
 /* ============ OPS (protected): requests from families and storage ============
    Lives in the database under "ops", which only Editors can read. Viewers never receive it
    and never see the tab, so names, phone numbers and addresses are safe here and nowhere else. */
@@ -2120,7 +2331,8 @@ function drawRequests(d) {
     ${d.sheet ? `<a class="btn ghost" style="margin-top:12px" href="${esc(d.sheet)}" target="_blank" rel="noopener">Open the full form responses</a>` : ""}`;
   return html;
 }
-let invQ = "", invCat = "All", invAllPickups = false;
+let invQ = "", invCat = "All", invAllPickups = false, invOpen = false;
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "invBox") invOpen = e.target.open; }, true);
 const shortDate = iso => iso ? dt(iso.slice(0, 10)).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 function drawInventory(d) {
   const inv = d.inventory;
@@ -2140,16 +2352,16 @@ function drawInventory(d) {
   const sortF = FORMS.find(f => f.title === "Sort an item"), pickF = FORMS.find(f => f.title === "Pallet pickup");
   const lastSorted = (inv.activity || {}).lastSortedDate;
   const limit = q || invCat !== "All" ? 200 : 30;
-  // 1. Search first
-  let html = `<div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search what is in storage"></div>
+  // The full storage list folds away; it opens by itself while someone is searching
+  const listHtml = `<details class="invbox" id="invBox"${invOpen || q || invCat !== "All" ? " open" : ""}><summary><b>What's in storage</b><span>${(+oh.units || 0).toLocaleString()} units &middot; ${items.length} kind${items.length === 1 ? "" : "s"} of item &middot; search</span></summary><div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search what is in storage"></div>
     ${cats.length > 2 ? `<div class="filters" role="group" aria-label="Category" style="margin:8px 0 0">${cats.map(c => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${invCat === c}">${esc(c)}</button>`).join("")}</div>` : ""}
     <div class="ires">${!items.length
       ? `<div class="empty">Nothing is in storage right now. Items show up here, searchable, once they're sorted.</div>`
       : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}</p>
         <div class="list">${shown.slice(0, limit).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em></div>`).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
-        ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div>`;
-  // 2. Actions, one tap straight into the form
-  html += `<div class="btns two" style="margin:14px 0 0">
+        ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
+  // 1. Actions first, one tap straight into the form
+  let html = `<div class="btns two" style="margin:0">
       ${sortF ? `<a class="btn" href="${sortF.url}" target="_blank" rel="noopener">Sort an item</a>` : ""}
       ${pickF ? `<a class="btn ghost" href="${pickF.url}" target="_blank" rel="noopener">Log a pickup</a>` : ""}</div>`;
   // 3. Status at a glance
@@ -2170,6 +2382,7 @@ function drawInventory(d) {
       ${p.notOnLog ? `<div class="rq-meta" style="margin-top:4px">Sorted, but missing from the pickup log.</div>` : ""}
     </div>`; }).join("")}</div>
     ${pickups.length > 3 ? `<button class="more" type="button" id="morePk">${invAllPickups ? "Show fewer" : `Show all ${pickups.length} pickups`}</button>` : ""}`;
+  html += `<h2>In storage</h2>` + listHtml;
   // 5. Activity and history
   html += `<h2>Sorting, last two weeks</h2>
     <div class="card" style="padding:12px 14px"><div class="dbars">${days.slice(-14).map(([day, r]) => `<div title="${esc(day)}: ${r} items"><i style="height:${(100 * r / maxDay).toFixed(0)}%"></i><span>${dt(day).toLocaleDateString("en-US", { weekday: "narrow" })}</span></div>`).join("")}</div>
@@ -2279,12 +2492,12 @@ function relock() {
   try { localStorage.removeItem(TOKK); } catch (e) {}
   const shown = document.querySelector(".view:not([hidden])");
   const tab = shown ? shown.id.slice(2) : "";
-  if (tab === "ops" || tab === "goals" || tab === "admin") pinCard(tab);
+  if (tab === "ops" || tab === "goals" || tab === "admin" || tab === "vol") pinCard(tab);
 }
 function pinCard(tab) {
-  const box = tab === "ops" ? $("ops") : tab === "admin" ? $("admin") : $("leaders");
+  const box = tab === "ops" ? $("ops") : tab === "admin" ? $("admin") : tab === "vol" ? $("vol") : $("leaders");
   const choose = !BOOT.pinSet;
-  const where = BOOT.leader ? "Ops and Goals" : "Ops";
+  const where = [BOOT.ops && "Ops", BOOT.vol && "Volunteers", BOOT.leader && "Leadership", BOOT.coordinator && "Admin"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1") || "this tab";
   let first = "";
   box.innerHTML = `<div class="pinbox"><div class="pinic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
     <h3>${choose ? "Choose your PIN" : "Enter your PIN"}</h3>
@@ -2341,6 +2554,7 @@ function openLeader(tab, force) {
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
   if (tab === "goals" && (force || !goalsAt || Date.now() - goalsAt > 300e3)) loadGoals();
   if (tab === "admin") loadAdmin();
+  if (tab === "vol" && (force || !VOL || Date.now() - volAt > 60e3)) loadVol(!!VOL);
   if (tab === "goals" && typeof drawActivity === "function") { setLeadView(leadView); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
 }
 // Keep Ops current while it is open: new requests and other people's updates show up within two minutes.
@@ -2354,8 +2568,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && TO
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
 if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
-if (BOOT.ops || BOOT.leader) {
-  TABS.push(["ops", "Ops"]);
+if (BOOT.ops || BOOT.leader || BOOT.vol) {
+  if (BOOT.ops) TABS.push(["ops", "Ops"]);
+  if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
   drawTabs();
@@ -2387,7 +2602,7 @@ if (BOOT.ops || BOOT.leader) {
   try { var tk = localStorage.getItem("reupHubTok_" + k) || ""; window.__workT = Date.now(); window.__workP = window.api("getWork", [k, tk]); window.__workP.catch(function () {}); } catch (e) {}
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!r.vol, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
     document.getElementById("boot").remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -2400,7 +2615,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024013509";
+  var BUILD = "20261024015202";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
