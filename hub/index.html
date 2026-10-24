@@ -1805,5 +1805,41 @@ if (BOOT.ops || BOOT.leader) {
   }).catch(function () { note("The Hub couldn't load. Check your connection.", true); });
 })();
 </script>
+<script>
+/* Self-update: when a newer Hub is published, open pages switch to it on their own.
+   It waits until nothing is saving and no task is open, so no tap or typing is lost. */
+(function () {
+  var BUILD = "20261024001242";
+  function idle() {
+    try {
+      if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
+      if (typeof sheet !== "undefined" && sheet && sheet.open) return false;
+    } catch (e) {}
+    return true;
+  }
+  var busy = false;
+  function check() {
+    if (busy || document.hidden) return;
+    busy = true;
+    fetch("version.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.build || j.build === BUILD) return;
+        if (!idle()) return;
+        /* Try each new build at most once every 5 minutes, so a slow server never causes a reload loop. */
+        var tried = null;
+        try { tried = JSON.parse(sessionStorage.getItem("hubUpd") || "null"); } catch (e) {}
+        if (tried && tried.b === j.build && Date.now() - tried.at < 300000) return;
+        try { sessionStorage.setItem("hubUpd", JSON.stringify({ b: j.build, at: Date.now() })); } catch (e) {}
+        return fetch(location.href, { cache: "reload" }).catch(function () {}).then(function () { location.reload(); });
+      })
+      .catch(function () {})
+      .then(function () { busy = false; });
+  }
+  setTimeout(check, 4000);
+  setInterval(check, 60000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
+})();
+</script>
 </body>
 </html>
