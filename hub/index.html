@@ -781,6 +781,27 @@ form.vs>.vs-btn{width:100%}
 .vs-dl{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
 .vs-dl:first-of-type{border-top:0;padding-top:0}
 @media (max-width:360px){.vs-two{grid-template-columns:1fr}}
+.rvcard{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.rvthumb{width:72px;height:72px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font:inherit;font-size:12px;font-weight:700;display:grid;place-items:center;overflow:hidden;padding:0;cursor:pointer}
+.rvthumb.none{cursor:default}
+.rvthumb img{width:100%;height:100%;object-fit:cover}
+.rvinfo{display:grid;gap:3px;min-width:0}
+.rvinfo b{font-size:16px}
+.rvinfo span{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.rvinfo .rvst{color:var(--ink);font-weight:700}
+.rvbtns{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.rvbtns .btn{flex:1 1 auto;min-height:44px}
+.rvq{grid-column:1/-1;display:grid;gap:8px}
+.rvq textarea{font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;box-sizing:border-box}
+.rvfull{grid-column:1/-1;max-width:100%;border-radius:10px;border:1px solid var(--line)}
+.rvdone{margin-top:14px}
+.rvdone summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.rvsums{margin:16px 0 4px;display:grid;gap:6px}
+.rvsum{display:grid;gap:2px;font-size:14px}
+.rvsum span{color:var(--muted)}
+.rchome{display:grid;gap:2px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--ink);border-radius:14px;padding:14px 16px;margin:16px 0 0;cursor:pointer}
+.rchome b{font-size:17px}
+.rchome span{color:var(--muted);font-size:14px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -804,6 +825,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       </div>
       <div id="homeapp"></div>
       <div id="homeinbox"></div>
+      <div id="homerc"></div>
       <div id="homework"></div>
       <div id="impactmap"></div>
       <div class="hsec"><h3>Coming up</h3><button class="hlink" type="button" id="toSchedule">Full schedule</button></div>
@@ -1055,6 +1077,7 @@ function openSignup(preset, f) {
 }
 function openForm(f) {
   if (f.native === "volunteer") return openSignup(null, f);
+  if (f.native === "receipt" || f.native === "trip") return openMoney(f.native, f);
   openSheet(`<div class="k">${esc(f.group)}${f.time ? " &middot; " + esc(f.time) : ""}</div>
     <h3 id="sheetTitle">${esc(f.title)}</h3>
     <div class="facts">
@@ -1100,6 +1123,7 @@ const QICON = {
   "What they need": qi('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
   "Sort an item": qi('<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/>'),
   "Get a story": qi('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>'),
+  "Log a trip": qi('<path d="M3 17h2l2-5h10l2 5h2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M12 7v3M12 3v1"/>'),
   "Snap a receipt": qi('<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>')
 };
 function drawHome() {
@@ -1125,6 +1149,7 @@ function drawHome() {
   wireForms($("quick"));
   $("edforms").innerHTML = FORMS.filter(f => f.eventday).map(f => `<button class="tile ${f.main ? "main" : ""}" type="button" data-form="${FORMS.indexOf(f)}"><b>${esc(f.title)}</b><span>${esc(f.sub)}</span></button>`).join("");
   wireForms($("edforms"));
+  drawRcCard();
 }
 
 let kindFilter = "All";
@@ -3105,6 +3130,265 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   }
   window.ReUpSignup = { mount: mount };
 })();
+
+/* ============ RECEIPTS AND MILEAGE: snap a receipt, log a trip; Janay or Dasia reviews ============ */
+let RCI = null, RCR = null, rcBusy = false;
+const rcMoney = n => "$" + (Math.round(+n * 100) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const rcToday = () => isoDay(new Date());
+async function rcInfo() {
+  if (RCI && Date.now() - RCI.at < 120e3) return RCI;
+  RCI = await run("receiptInfo", KEY); RCI.at = Date.now();
+  if (typeof RCI.toReview === "number" && RCI.reviewer) { BOOT.rc = RCI.toReview; drawRcCard(); }
+  return RCI;
+}
+/* Phone photos are big: shrink to 1600 px on the long side before sending. */
+function rcShrink(file, max) {
+  return new Promise((ok, bad) => {
+    const rd = new FileReader();
+    rd.onerror = () => bad(new Error("read"));
+    rd.onload = () => {
+      const img = new Image();
+      img.onerror = () => bad(new Error("That photo could not be opened. Try taking it again."));
+      img.onload = () => {
+        const k = Math.min(1, (max || 1600) / Math.max(img.width, img.height));
+        const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        const url = c.toDataURL("image/jpeg", 0.82);
+        ok({ mime: "image/jpeg", b64: url.split(",")[1], url: url });
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+const rcOpts = (name, list, chosen) => `<div class="vs-opts" role="radiogroup">${list.map(x => `<label class="vs-opt"><input type="radio" name="${name}" value="${esc(x)}"${x === chosen ? " checked" : ""}><span>${esc(x)}</span></label>`).join("")}</div>`;
+const rcVal = (root, name) => { const x = root.querySelector(`[name="${name}"]:checked`); return x ? x.value : ""; };
+
+function openMoney(which, f) {
+  openSheet(`<div class="k">${which === "trip" ? "Mileage" : "Money"}</div>
+    <h3 id="sheetTitle">${which === "trip" ? "Log a trip" : "Snap a receipt"}</h3>
+    <div class="seg calseg" role="group" aria-label="What to send"><button type="button" data-rcw="receipt" aria-pressed="${which !== "trip"}">Receipt</button><button type="button" data-rcw="trip" aria-pressed="${which === "trip"}">Trip miles</button></div>
+    <div id="rcrev"></div>
+    <div id="rcbox"><p class="lead">Loading...</p></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  document.querySelectorAll("[data-rcw]").forEach(b => b.addEventListener("click", () => openMoney(b.dataset.rcw)));
+  rcInfo().then(info => {
+    if (!$("rcbox")) return;
+    if (info.reviewer) $("rcrev").innerHTML = `<button class="btn ghost" type="button" id="rcgo" style="width:100%;margin:0 0 6px">Review receipts and trips${BOOT.rc > 0 ? ` (${BOOT.rc} waiting)` : ""}</button>`;
+    const g = $("rcgo"); if (g) g.addEventListener("click", openReview);
+    if (which === "trip") drawTrip(info); else drawReceipt(info);
+  }, e => { if ($("rcbox")) $("rcbox").innerHTML = `<p class="lead">${isAuth(e) ? "This needs your own Hub link." : "Couldn't load this right now. Check your connection and try again."}</p>`; });
+}
+
+function drawReceipt(info) {
+  const box = $("rcbox");
+  box.innerHTML = `<form class="vs" novalidate>
+    <p class="vs-note">One receipt at a time, the same day you pay if you can. It goes to Janay and Dasia to check before anything goes in the books.</p>
+    <div class="vs-field"><span>Photo of the receipt</span><small>Lay it flat so every number shows.</small>
+      <label class="btn ghost" style="width:100%">Take or choose a photo<input type="file" accept="image/*" capture="environment" id="rcfile" hidden></label>
+      <img id="rcprev" alt="Your receipt photo" hidden style="max-width:100%;max-height:260px;border-radius:12px;border:1px solid var(--line);object-fit:contain;background:var(--surface)"></div>
+    <label class="vs-field"><span>How much, in dollars</span><small>The total on the receipt.</small><input type="text" name="amount" inputmode="decimal" placeholder="0.00" maxlength="12"></label>
+    <label class="vs-field"><span>Who did you pay</span><small>Like Shell or U-Haul.</small><input type="text" name="payee" maxlength="80"></label>
+    <label class="vs-field"><span>Date you paid</span><input type="date" name="date" value="${rcToday()}" max="${rcToday()}"></label>
+    <div class="vs-field"><span>What kind of cost</span>${rcOpts("rckind", info.kinds, "")}<input type="text" name="kindOther" maxlength="60" placeholder="Say what it was" hidden></div>
+    <div class="vs-field"><span>Which event or job was this for</span>${rcOpts("rcjob", info.jobs.concat(["Something else"]), "")}<input type="text" name="jobOther" maxlength="80" placeholder="Say which" hidden></div>
+    <div class="vs-field"><span>How was this paid</span>${rcOpts("rcpaid", info.paid, "")}<input type="text" name="paidOther" maxlength="40" placeholder="Say how" hidden></div>
+    <label class="vs-field"><span>Anything else we should know</span><small>Optional. Never type a full card or account number.</small><textarea name="notes" rows="2" maxlength="600"></textarea></label>
+    <p class="vs-err" role="alert"></p>
+    <button class="vs-btn" type="submit">Send the receipt</button></form>`;
+  const form = box.querySelector("form");
+  let photo = null;
+  $("rcfile").addEventListener("change", async e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try { photo = await rcShrink(file); $("rcprev").src = photo.url; $("rcprev").hidden = false; form.querySelector(".vs-err").textContent = ""; }
+    catch (err) { form.querySelector(".vs-err").textContent = err.message === "read" ? "That photo could not be opened. Try again." : err.message; }
+  });
+  form.addEventListener("change", e => {
+    if (e.target.name === "rckind") form.elements["kindOther"].hidden = rcVal(form, "rckind") !== "Something else";
+    if (e.target.name === "rcjob") form.elements["jobOther"].hidden = rcVal(form, "rcjob") !== "Something else";
+    if (e.target.name === "rcpaid") form.elements["paidOther"].hidden = rcVal(form, "rcpaid") !== "Something else";
+  });
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (rcBusy) return;
+    const err = form.querySelector(".vs-err"), el = form.elements;
+    const r = { amount: el["amount"].value, payee: el["payee"].value, date: el["date"].value, kind: rcVal(form, "rckind"), kindOther: el["kindOther"].value,
+      job: rcVal(form, "rcjob"), jobOther: el["jobOther"].value, paid: rcVal(form, "rcpaid"), paidOther: el["paidOther"].value, notes: el["notes"].value, photo: photo };
+    const miss = !photo ? "Add a photo of the receipt." : !(parseFloat(String(r.amount).replace(/[$,\s]/g, "")) > 0) ? "Put in the total from the receipt." : !r.payee.trim() ? "Say who you paid." :
+      !r.date ? "Pick the date you paid." : !r.kind ? "Pick what kind of cost it was." : !r.job ? "Say which event or job this was for." : !r.paid ? "Say how it was paid." : "";
+    if (miss) { err.textContent = miss; return; }
+    err.textContent = ""; rcBusy = true;
+    const b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Sending...";
+    try {
+      await run("saveReceipt", KEY, r);
+      RCI = null;
+      box.innerHTML = `<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Sent. Thank you.</h3><p class="vs-note">${esc(rcMoney(String(r.amount).replace(/[$,\s]/g, "")))} to ${esc(r.payee)}. Janay or Dasia will check it and add it to the books.</p>
+        <button class="vs-btn" type="button" id="rcagain">Snap another receipt</button></div>`;
+      $("rcagain").addEventListener("click", () => openMoney("receipt"));
+    } catch (x) {
+      b.disabled = false; b.textContent = "Send the receipt";
+      err.textContent = /^(Say|Pick|Put|Add|That photo|The photo)/.test(String(x.message)) ? x.message : "That didn't send. Check your connection and try again. Your answers are still here.";
+    }
+    rcBusy = false;
+  });
+}
+
+function drawTrip(info) {
+  const box = $("rcbox");
+  box.innerHTML = `<form class="vs" novalidate>
+    <p class="vs-note">One trip at a time, for ReUp driving: pickups, storage runs, events. Write down the odometer when you start and when you finish.</p>
+    <label class="vs-field"><span>Date of the trip</span><input type="date" name="date" value="${rcToday()}" max="${rcToday()}"></label>
+    <div class="vs-field"><span>Vehicle</span>${rcOpts("mveh", info.vehicles, "")}<input type="text" name="vehicleOther" maxlength="40" placeholder="Say which" hidden></div>
+    <div class="vs-field"><span>What the trip was for</span>${rcOpts("mjob", info.jobs.concat(["Something else"]), "")}<input type="text" name="jobOther" maxlength="80" placeholder="Say what" hidden></div>
+    <label class="vs-field"><span>Where you started</span><small>A place name or a ZIP code, never a street address. For example: Caddo storage, or 77021.</small><input type="text" name="from" maxlength="80"></label>
+    <label class="vs-field"><span>Where you went</span><small>For a donor's or family's home, put only the ZIP code.</small><input type="text" name="to" maxlength="80"></label>
+    <div id="modo">
+      <label class="vs-field"><span>Odometer at the start</span><small id="mlast"></small><input type="text" name="start" inputmode="decimal" maxlength="9"></label>
+      <label class="vs-field" style="margin-top:14px"><span>Odometer at the end</span><input type="text" name="end" inputmode="decimal" maxlength="9"></label>
+      <p class="vs-note" id="mcalc" style="margin-top:10px"></p>
+    </div>
+    <label class="vs-opt"><input type="checkbox" name="noodo"><span>I didn't check the odometer</span></label>
+    <label class="vs-field" id="mmiles" hidden><span>About how many miles</span><small>This counts as an estimate. Odometer readings are better.</small><input type="text" name="miles" inputmode="decimal" maxlength="7"></label>
+    <div class="vs-field"><span>Photo of the odometer</span><small>Optional, and it makes the trip count as proof.</small>
+      <label class="btn ghost" style="width:100%">Take or choose a photo<input type="file" accept="image/*" capture="environment" id="mfile" hidden></label>
+      <img id="mprev" alt="Your odometer photo" hidden style="max-width:100%;max-height:200px;border-radius:12px;border:1px solid var(--line);object-fit:contain"></div>
+    <label class="vs-field"><span>Anything else we should know</span><small>Optional.</small><textarea name="notes" rows="2" maxlength="600"></textarea></label>
+    <p class="vs-err" role="alert"></p>
+    <button class="vs-btn" type="submit">Log the trip</button></form>`;
+  const form = box.querySelector("form"), el = form.elements;
+  let photo = null;
+  const calc = () => {
+    const a = parseFloat(String(el["start"].value).replace(/[,\s]/g, "")), b = parseFloat(String(el["end"].value).replace(/[,\s]/g, ""));
+    $("mcalc").textContent = a >= 0 && b > a ? `That's ${Math.round((b - a) * 10) / 10} miles.` : "";
+  };
+  el["start"].addEventListener("input", calc); el["end"].addEventListener("input", calc);
+  form.addEventListener("change", e => {
+    const n = e.target.name;
+    if (n === "mveh") {
+      el["vehicleOther"].hidden = rcVal(form, "mveh") !== "Something else";
+      const last = info.lastOdo && info.lastOdo[rcVal(form, "mveh")];
+      if (last && !el["start"].value) { el["start"].value = String(last.end); calc(); }
+      $("mlast").textContent = last ? `The last trip in this vehicle ended at ${last.end.toLocaleString("en-US")}. Change it if that's not right.` : "";
+    }
+    if (n === "mjob") el["jobOther"].hidden = rcVal(form, "mjob") !== "Something else";
+    if (n === "noodo") { $("modo").hidden = el["noodo"].checked; $("mmiles").hidden = !el["noodo"].checked; }
+  });
+  $("mfile").addEventListener("change", async e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try { photo = await rcShrink(file, 1400); $("mprev").src = photo.url; $("mprev").hidden = false; }
+    catch (err) { form.querySelector(".vs-err").textContent = "That photo could not be opened. Try again."; }
+  });
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (rcBusy) return;
+    const err = form.querySelector(".vs-err"), noodo = el["noodo"].checked;
+    const t = { date: el["date"].value, vehicle: rcVal(form, "mveh"), vehicleOther: el["vehicleOther"].value, job: rcVal(form, "mjob"), jobOther: el["jobOther"].value,
+      from: el["from"].value, to: el["to"].value, start: noodo ? "" : el["start"].value, end: noodo ? "" : el["end"].value, miles: noodo ? el["miles"].value : "", notes: el["notes"].value, photo: photo };
+    const miss = !t.date ? "Pick the date of the trip." : !t.vehicle ? "Pick the vehicle." : !t.job ? "Say what the trip was for." : !t.from.trim() || !t.to.trim() ? "Say where you started and where you went." :
+      !noodo && (!t.start || !t.end) ? "Put in both odometer readings, or tick I didn't check the odometer." : noodo && !(parseFloat(t.miles) > 0) ? "Put in about how many miles." : "";
+    if (miss) { err.textContent = miss; return; }
+    err.textContent = ""; rcBusy = true;
+    const b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Saving...";
+    try {
+      const r = await run("saveTrip", KEY, t);
+      RCI = null;
+      box.innerHTML = `<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Logged: ${esc(String(r.miles))} miles.</h3><p class="vs-note">Thank you. Janay or Dasia will look it over.</p>
+        <button class="vs-btn" type="button" id="magain">Log another trip</button></div>`;
+      $("magain").addEventListener("click", () => openMoney("trip"));
+    } catch (x) {
+      b.disabled = false; b.textContent = "Log the trip";
+      err.textContent = /^(Say|Pick|Put|Use|The end|That is|That photo|The photo)/.test(String(x.message)) ? x.message : "That didn't save. Check your connection and try again. Your answers are still here.";
+    }
+    rcBusy = false;
+  });
+}
+
+/* ---- Review, for Janay and Dasia with their PIN ---- */
+let rcView = "receipts";
+async function openReview() {
+  openSheet(`<div class="k">Money</div><h3 id="sheetTitle">Receipts and trips to review</h3><div id="rvbox"><p class="lead">Loading...</p></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  if (!TOK) { $("rvbox").innerHTML = `<p class="lead">Enter your PIN on the Leadership tab first, then come back here.</p><div class="btns"><button class="btn" type="button" id="rvpin">Go to Leadership</button></div>`; $("rvpin").addEventListener("click", () => { sheet.close(); go("goals"); }); return; }
+  try { RCR = await run("getReceipts", KEY, TOK); drawReview(); }
+  catch (e) { if (isAuth(e)) { $("rvbox").innerHTML = `<p class="lead">Only Janay and Dasia review receipts, with their PIN.</p>`; } else $("rvbox").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+}
+function drawReview() {
+  const box = $("rvbox"); if (!box || !RCR) return;
+  const S = RCR.statuses, TS = RCR.tripStatuses;
+  const recW = RCR.list.filter(r => r.status === S.review), recD = RCR.list.filter(r => r.status !== S.review);
+  const trW = RCR.trips.filter(t => t.status === TS.review), trD = RCR.trips.filter(t => t.status !== TS.review);
+  BOOT.rc = recW.length + trW.length; drawRcCard();
+  const card = r => `<div class="rvcard" data-rid="${esc(r.id)}">
+      <button type="button" class="rvthumb" data-rph="${esc(r.id)}" aria-label="See the full photo"><span>Photo</span></button>
+      <div class="rvinfo"><b>${esc(rcMoney(r.amount))} to ${esc(r.payee)}</b>
+        <span>${esc(fmtDay(r.date))} &middot; ${esc(r.kind)}${r.cat ? ` &middot; Money Out: ${esc(r.cat)}` : ""}</span>
+        <span>${esc(r.job)} &middot; paid by ${esc(r.paid)} &middot; sent by ${esc(r.who)}</span>
+        ${r.notes ? `<span>Note: ${esc(r.notes)}</span>` : ""}
+        ${r.status !== S.review ? `<span class="rvst">${esc(r.status)}${r.by ? " by " + esc(r.by) : ""}${r.note ? ": " + esc(r.note) : ""}</span>` : ""}</div>
+      <div class="rvbtns">${r.status === S.review || r.status === S.question ? `<button class="btn" type="button" data-rv="added">Added to Money Out</button><button class="btn ghost" type="button" data-rv="notreup">Not a ReUp cost</button><button class="btn ghost" type="button" data-rv="question">Ask a question</button>` : `<button class="btn ghost" type="button" data-rv="review">Move back to review</button>`}</div></div>`;
+  const trip = t => `<div class="rvcard" data-tid="${esc(t.id)}">
+      ${t.photo ? `<button type="button" class="rvthumb" data-rph="${esc(t.id)}" aria-label="See the odometer photo"><span>Photo</span></button>` : `<div class="rvthumb none"><span>No photo</span></div>`}
+      <div class="rvinfo"><b>${esc(t.miles)} miles &middot; ${esc(t.vehicle)}</b>
+        <span>${esc(fmtDay(t.date))} &middot; ${esc(t.who)} &middot; ${esc(t.job)}</span>
+        <span>${esc(t.from)} to ${esc(t.to)}</span>
+        <span>${t.how === "Odometer" ? `Odometer ${esc(t.start)} to ${esc(t.end)}` : "Estimated, no odometer"}</span>
+        ${t.notes ? `<span>Note: ${esc(t.notes)}</span>` : ""}
+        ${t.status !== TS.review ? `<span class="rvst">${esc(t.status)}${t.by ? " by " + esc(t.by) : ""}${t.note ? ": " + esc(t.note) : ""}</span>` : ""}</div>
+      <div class="rvbtns">${t.status === TS.review || t.status === TS.question ? `<button class="btn" type="button" data-tv="ok">Looks right</button><button class="btn ghost" type="button" data-tv="question">Ask a question</button>` : `<button class="btn ghost" type="button" data-tv="review">Move back to review</button>`}</div></div>`;
+  // Miles this month and last, by vehicle. Odometer miles and estimated miles are never added together.
+  const sums = {};
+  RCR.trips.forEach(t => { const m = t.date.slice(0, 7), k = m + "|" + t.vehicle; sums[k] = sums[k] || { m: m, v: t.vehicle, odo: 0, est: 0 }; sums[k][t.how === "Odometer" ? "odo" : "est"] += +t.miles || 0; });
+  const sumRows = Object.values(sums).sort((a, b) => b.m.localeCompare(a.m) || a.v.localeCompare(b.v)).slice(0, 8)
+    .map(s => `<div class="rvsum"><b>${esc(new Date(s.m + "-15T12:00:00").toLocaleDateString("en-US", { month: "long" }))} &middot; ${esc(s.v)}</b><span>${Math.round(s.odo * 10) / 10} miles by odometer${s.est ? `, plus ${Math.round(s.est * 10) / 10} estimated (kept separate)` : ""}</span></div>`).join("");
+  box.innerHTML = `<div class="seg calseg" role="group" aria-label="Show"><button type="button" data-rvv="receipts" aria-pressed="${rcView === "receipts"}">Receipts (${recW.length})</button><button type="button" data-rvv="trips" aria-pressed="${rcView === "trips"}">Trips (${trW.length})</button></div>
+    ${rcView === "receipts" ? `${recW.length ? recW.map(card).join("") : `<p class="lead">No receipts waiting.</p>`}
+      ${recD.length ? `<details class="rvdone"><summary>Done in the last 60 days (${recD.length})</summary>${recD.map(card).join("")}</details>` : ""}`
+    : `${trW.length ? trW.map(trip).join("") : `<p class="lead">No trips waiting.</p>`}
+      ${sumRows ? `<div class="rvsums"><div class="tl">Miles by month and vehicle</div>${sumRows}</div>` : ""}
+      ${trD.length ? `<details class="rvdone"><summary>Checked in the last 90 days (${trD.length})</summary>${trD.map(trip).join("")}</details>` : ""}`}
+    <p class="small" id="rvmsg" role="status"></p>`;
+  box.querySelectorAll("[data-rvv]").forEach(b => b.addEventListener("click", () => { rcView = b.dataset.rvv; drawReview(); }));
+  box.querySelectorAll("[data-rv],[data-tv]").forEach(b => b.addEventListener("click", async () => {
+    const c = b.closest(".rvcard"), isTrip = !!b.dataset.tv, st = b.dataset.rv || b.dataset.tv, id = c.dataset.rid || c.dataset.tid;
+    let note = "";
+    if (st === "question") {
+      let q = c.querySelector(".rvq");
+      if (!q) {
+        q = document.createElement("div"); q.className = "rvq";
+        q.innerHTML = `<label class="vs-field"><span>Your question</span><small>Saved on this ${isTrip ? "trip" : "receipt"} so whoever sent it can answer.</small><textarea rows="2" maxlength="400"></textarea></label><button class="btn" type="button">Save the question</button>`;
+        c.appendChild(q); q.querySelector("textarea").focus();
+        q.querySelector("button").addEventListener("click", async () => {
+          const text = q.querySelector("textarea").value.trim(); if (!text) return;
+          $("rvmsg").textContent = "Saving...";
+          try { RCR = await run(isTrip ? "reviewTrip" : "reviewReceipt", KEY, TOK, id, "question", text); drawReview(); toast("Saved."); }
+          catch (e) { if (isAuth(e)) { sheet.close(); relock(); } else $("rvmsg").textContent = "That didn't save. Try again."; }
+        });
+      }
+      return;
+    }
+    $("rvmsg").textContent = "Saving...";
+    try { RCR = await run(isTrip ? "reviewTrip" : "reviewReceipt", KEY, TOK, id, st, note); drawReview(); toast("Saved."); }
+    catch (e) { if (isAuth(e)) { sheet.close(); relock(); } else $("rvmsg").textContent = "That didn't save. Try again."; }
+  }));
+  // Thumbnails load one by one through the Hub, so nobody needs access to the Drive folder.
+  box.querySelectorAll("[data-rph]").forEach(async b => {
+    try { const p = await run("receiptPhoto", KEY, TOK, b.dataset.rph, false); b.innerHTML = `<img alt="" src="data:${p.mime};base64,${p.b64}">`; } catch (e) {}
+    b.addEventListener("click", async () => {
+      const c = b.closest(".rvcard"), had = c.querySelector(".rvfull");
+      if (had) { had.remove(); return; }
+      b.disabled = true;
+      try { const p = await run("receiptPhoto", KEY, TOK, b.dataset.rph, true); const img = document.createElement("img"); img.className = "rvfull"; img.alt = "Full photo"; img.src = `data:${p.mime};base64,${p.b64}`; c.appendChild(img); }
+      catch (e) { toast("Couldn't open the photo."); }
+      b.disabled = false;
+    });
+  });
+}
+function drawRcCard() {
+  const c = $("homerc"); if (!c) return;
+  const n = +BOOT.rc || 0;
+  c.innerHTML = n > 0 ? `<button type="button" class="rchome" id="rchome"><b>${n} ${n === 1 ? "receipt or trip" : "receipts and trips"} to review</b><span>Check them and add them to the books.</span></button>` : "";
+  const b = $("rchome"); if (b) b.addEventListener("click", openReview);
+}
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
 <script>
@@ -3216,7 +3500,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024063603";
+  var BUILD = "20261024063955";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
