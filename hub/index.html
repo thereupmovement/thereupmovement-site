@@ -2576,6 +2576,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   drawTabs();
   const want = start === "leaders" ? "goals" : start;
   go(TABS.some(([k]) => k === want) ? want : "home");
+  if (BOOT.ops && TOK) setTimeout(() => { if (TOK && !OPS && !loadingOps) loadOps(true); }, 2500);
 }
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
@@ -2616,7 +2617,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024020652";
+  var BUILD = "20261024025608";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
