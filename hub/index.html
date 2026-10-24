@@ -582,6 +582,31 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .tmore[open]>summary span::after{content:" \2212";}
 .tmore>summary em{font-style:normal;font-weight:700}
 .tmore>.tsec{margin:0 14px 14px}
+
+.wme{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 16px}
+.wmetop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wmetop b{font-size:15px;text-transform:uppercase;letter-spacing:.05em}
+.wmetop span{color:var(--muted);font-weight:700}
+.wmebar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 12px}
+.wmebar i{display:block;height:100%;background:#2E7D4F;border-radius:999px}
+.wmenums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.wmenums b{display:block;font-family:var(--display);font-size:28px;line-height:1}
+.wmenums span{font-size:12px;color:var(--muted)}
+#activity{margin-bottom:22px}
+.actnums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.acttable{display:grid;gap:6px}
+.actrow{display:grid;grid-template-columns:1.6fr repeat(4,.8fr) 1.2fr;gap:6px;align-items:center;width:100%;text-align:center;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;min-height:44px}
+.actrow span:first-child{text-align:left}
+.actrow span:first-child em{display:block;font-style:normal;font-size:12px;color:var(--muted)}
+.actrow.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.acthead{background:none;border:0;cursor:default;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:0 10px;min-height:0}
+.actrow .bad,.actnums .bad b{color:#B3261E;font-weight:800}
+.actfeed{display:grid;gap:6px}
+.actitem{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.actitem .acttask{grid-column:1;font-size:13px;color:var(--muted)}
+.actitem .actwhen{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:12px;color:var(--muted);white-space:nowrap}
+.a-done{border-left-color:#2E7D4F}.a-doing{border-left-color:#1D5E8C}.a-stuck{border-left-color:#B3261E}.a-note{border-left-color:#B35400}
+@media (max-width:520px){.actrow{grid-template-columns:1.4fr repeat(4,.7fr);font-size:13px}.actrow .actlast{grid-column:1 / -1;text-align:left;font-size:12px;color:var(--muted)}.acthead span:last-child{display:none}.actnums{grid-template-columns:repeat(2,1fr)}}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -673,7 +698,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     </section>
 
     <section class="view" id="v-goals" hidden>
-      <div class="banner" data-cover="goals"><div><h2>Goals</h2><p>Where ReUp stands on its numbers and on getting grant ready.</p></div></div>
+      <div class="banner" data-cover="goals"><div><h2>Leadership</h2><p>How the team is moving, and where ReUp stands on its goals.</p></div></div>
+      <div id="activity"></div>
       <div id="leaders"><p class="lead">Loading...</p></div>
     </section>
 
@@ -887,7 +913,7 @@ const TABS = [["home", "Home"], ["schedule", "Schedule"], ["eventday", "Event da
 function drawTabs() {
   $("tabs").style.setProperty("--n", TABS.length);
   $("tabs").classList.toggle("many", TABS.length > 5);
-  $("tabs").innerHTML = TABS.map(([k, label]) => k === "goals"
+  $("tabs").innerHTML = TABS.map(([k, label]) => k === "goals-icon-only"
     ? `<button class="navbtn icononly" type="button" data-tab="${k}" aria-label="${label}" title="${label}">${ICONS[k]}</button>`
     : `<button class="navbtn" type="button" data-tab="${k}">${ICONS[k]}<span>${label}</span></button>`).join("");
   $("tabs").querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => go(b.dataset.tab)));
@@ -1342,6 +1368,11 @@ function drawWork() {
     const now = active.length;
     html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${now ? `You have <b>${plural(now, "thing")}</b> on your list${week.length ? `, <b>${week.length}</b> due this week` : ""}.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
       <p class="small">Most urgent first. Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
+    const doneWk = mine.filter(t => wRecentDone(t, 7)).length, done30 = mine.filter(t => wRecentDone(t, 30)).length;
+    const leftWk = stuck.length + late.length + week.length, pct = doneWk + leftWk ? Math.round(100 * doneWk / (doneWk + leftWk)) : 0;
+    html += `<div class="wme"><div class="wmetop"><b>Your week</b><span>${doneWk} done${leftWk ? `, ${leftWk} to go` : ""}</span></div>
+      <div class="wmebar" role="img" aria-label="${pct}% of this week's tasks done"><i style="width:${pct}%"></i></div>
+      <div class="wmenums"><div><b>${doneWk}</b><span>done this week</span></div><div><b>${done30}</b><span>done in 30 days</span></div><div><b>${active.filter(t => t.status === "doing").length}</b><span>in progress</span></div></div></div>`;
     html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
     html += wgroup("Late", "g-late", late, { hideWho: true });
     html += wgroup("Due this week", "g-week", week, { hideWho: true });
@@ -1390,6 +1421,7 @@ function drawWork() {
   }
   box.innerHTML = html;
   drawHomeWork();
+  drawActivity();
   box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; drawWork(); }));
   box.querySelectorAll("[data-wunlock]").forEach(b => b.addEventListener("click", () => { if (TOK) loadWork(); else go("goals"); }));
   box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
@@ -1403,6 +1435,62 @@ function drawWork() {
     drawWork();
   }));
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
+}
+/* Leadership: who is moving, and what changed. Built from every task's update log, so nothing extra is tracked. */
+let actWho = "", actLimit = 30;
+const ago = iso => {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (!(m >= 0)) return "";
+  if (m < 60) return m <= 1 ? "just now" : m + " min ago";
+  const h = Math.round(m / 60); if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
+  const d = Math.round(h / 24); return d === 1 ? "yesterday" : d < 7 ? d + " days ago" : stamp(iso).split(",")[0];
+};
+function actLabel(text) {
+  const s = String(text || "");
+  if (/^Status: Done/.test(s)) return ["done", "finished it"];
+  if (/^Decided: /.test(s)) return ["done", "decided: " + s.slice(9)];
+  if (/^Stuck/.test(s)) return ["stuck", s.replace(/^Stuck/, "is stuck")];
+  if (/^Status: (Doing|In progress)/.test(s)) return ["doing", "started it"];
+  if (/^Status: /.test(s)) return ["", "moved it to " + s.slice(8)];
+  if (/^(Assigned|Unassigned|Helpers|Due |Due date|Team|Renamed|Created|Made leaders|Opened to|Shows up|Marked as|No longer|Edited|Owner|Reopened)/.test(s) || / (is helping|stopped helping)$/.test(s)) return ["meta", s.charAt(0).toLowerCase() + s.slice(1)];
+  return ["note", "posted: " + s];
+}
+function drawActivity() {
+  const box = $("activity");
+  if (!box) return;
+  if (!WORK || !WORK.unlocked || WORK.stale) { box.innerHTML = `<p class="lead">Loading team activity...</p>`; return; }
+  const tasks = WORK.tasks || [], people = (WORK.people || []).map(p => p.name);
+  const feed = [];
+  tasks.forEach(t => (t.updates || []).forEach(u => feed.push({ at: u.at, who: u.who, text: u.text, id: t.id, title: t.title })));
+  feed.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const wk = feed.filter(f => Date.now() - new Date(f.at) < 7 * 864e5);
+  const doneWk = tasks.filter(t => wRecentDone(t, 7)).length;
+  const open = tasks.filter(wOpen), stuckN = open.filter(t => t.status === "stuck").length, lateN = open.filter(t => t.status !== "stuck" && wLate(t)).length;
+  const rows = people.map(n => {
+    const theirs = tasks.filter(t => t.owners.includes(n)), o = theirs.filter(wOpen);
+    const last = feed.find(f => f.who === n);
+    return { n, done7: theirs.filter(t => wRecentDone(t, 7)).length, done30: theirs.filter(t => wRecentDone(t, 30)).length,
+      doing: o.filter(t => t.status === "doing").length, bad: o.filter(t => t.status === "stuck" || wLate(t)).length,
+      open: o.filter(t => !wNotYet(t)).length, last: last ? last.at : "" };
+  });
+  const shown = feed.filter(f => !actWho || f.who === actWho || tasks.some(t => t.id === f.id && t.owners.includes(actWho)));
+  box.innerHTML = `<h2>Team activity</h2>
+    <p class="small" style="margin:-4px 0 10px">Everything people finish, start, post or change on a task shows up here. Tap a person to see only their work.</p>
+    <div class="tnums actnums"><div class="good"><b>${doneWk}</b><span>finished this week</span></div><div><b>${wk.length}</b><span>changes this week</span></div><div class="${stuckN ? "bad" : ""}"><b>${stuckN}</b><span>stuck now</span></div><div class="${lateN ? "bad" : ""}"><b>${lateN}</b><span>late now</span></div></div>
+    <div class="acttable">
+      <div class="actrow acthead" aria-hidden="true"><span>Person</span><span>Done 7 days</span><span>Done 30 days</span><span>In progress</span><span>Late or stuck</span><span>Last active</span></div>
+      ${rows.map(r => `<button type="button" class="actrow${actWho === r.n ? " on" : ""}" data-actwho="${esc(r.n)}" aria-pressed="${actWho === r.n}" aria-label="${esc(r.n)}: ${r.done7} done in 7 days, ${r.done30} in 30 days, ${r.doing} in progress, ${r.bad} late or stuck, last active ${esc(r.last ? ago(r.last) : "not yet")}">
+        <span><b>${esc(r.n)}</b><em>${r.open} open</em></span><span>${r.done7}</span><span>${r.done30}</span><span>${r.doing}</span>
+        <span class="${r.bad ? "bad" : ""}">${r.bad}</span><span class="actlast${r.last && Date.now() - new Date(r.last) > 7 * 864e5 ? " bad" : ""}">${r.last ? esc(ago(r.last)) : "Not yet"}</span></button>`).join("")}
+    </div>
+    <h3 class="wpeople">${actWho ? esc(actWho) + "'s recent changes" : "Recent changes"}${actWho ? ` <button type="button" class="linkish" id="actall">Show everyone</button>` : ""}</h3>
+    <div class="actfeed">${shown.slice(0, actLimit).map(f => { const [k, l] = actLabel(f.text); return `<button type="button" class="actitem a-${k}" data-work="${esc(f.id)}">
+      <span class="actwhat"><b>${esc(f.who)}</b> ${esc(l)}</span><span class="acttask">${esc(f.title)}</span><span class="actwhen">${esc(ago(f.at))}</span></button>`; }).join("") || `<p class="small">Nothing yet.</p>`}</div>
+    ${shown.length > actLimit ? `<button type="button" class="tbtn ghost" id="actmore">Show more</button>` : ""}`;
+  box.querySelectorAll("[data-actwho]").forEach(b => b.addEventListener("click", () => { actWho = actWho === b.dataset.actwho ? "" : b.dataset.actwho; actLimit = 30; drawActivity(); }));
+  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  const al = $("actall"); if (al) al.addEventListener("click", () => { actWho = ""; drawActivity(); });
+  const am = $("actmore"); if (am) am.addEventListener("click", () => { actLimit += 30; drawActivity(); });
 }
 /* Home shows the top of your list, so most people never need to open the Work tab to know what's next. */
 function drawHomeWork() {
@@ -1867,6 +1955,7 @@ function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
   if (tab === "goals" && (force || !goalsAt || Date.now() - goalsAt > 300e3)) loadGoals();
+  if (tab === "goals" && typeof drawActivity === "function") { drawActivity(); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
 }
 // Keep Ops current while it is open: new requests and other people's updates show up within two minutes.
 setInterval(() => {
@@ -1881,7 +1970,7 @@ drawImpact(BOOT.home ? BOOT.home.impact : null);
 if (BOOT.work) { TABS.push(["work", "Work"]); drawTabs(); if (start === "work") go("work"); else loadWork(true); }
 if (BOOT.ops || BOOT.leader) {
   TABS.push(["ops", "Ops"]);
-  if (BOOT.leader) TABS.push(["goals", "Goals"]);
+  if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   drawTabs();
   const want = start === "leaders" ? "goals" : start;
   go(TABS.some(([k]) => k === want) ? want : "home");
@@ -1924,7 +2013,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024005204";
+  var BUILD = "20261024010118";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
