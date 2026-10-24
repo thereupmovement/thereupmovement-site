@@ -802,7 +802,14 @@ form.vs>.vs-btn{width:100%}
 .rchome{display:grid;gap:2px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--ink);border-radius:14px;padding:14px 16px;margin:16px 0 0;cursor:pointer}
 .rchome b{font-size:17px}
 .rchome span{color:var(--muted);font-size:14px}
-.opsmoney{margin:10px 0 14px}
+.vs-sel{position:relative}
+.vs-select{appearance:none;-webkit-appearance:none;width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;min-height:50px;padding:12px 44px 12px 14px;cursor:pointer}
+.vs-select:focus-visible{outline:3px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+.vs-sel svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.vs-field input[type=date]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;width:100%;box-sizing:border-box}
+.opshead{margin:2px 0 10px}
+.opsqa{margin-bottom:18px}
+a.qab{text-decoration:none}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -2750,9 +2757,7 @@ function drawInventory(d) {
         <div class="list">${shown.slice(0, limit).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em></div>`).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
         ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
   // 1. Actions first, one tap straight into the form
-  let html = `<div class="btns two" style="margin:0">
-      ${sortF ? `<a class="btn" href="${sortF.url}" target="_blank" rel="noopener">Sort an item</a>` : ""}
-      ${pickF ? `<a class="btn ghost" href="${pickF.url}" target="_blank" rel="noopener">Log a pickup</a>` : ""}</div>`;
+  let html = "";
   // 3. Status at a glance
   html += `<div class="glance">
       <div><b>${(+oh.units || 0).toLocaleString()}</b><span>units in storage</span></div>
@@ -2792,6 +2797,16 @@ function drawStorage(d) {
     <div class="btns" style="margin-top:12px"><button class="btn" type="button" data-openform="Pallet pickup">Log a pickup</button><button class="btn ghost" type="button" data-openform="Sort an item">Sort an item</button>
     ${st.log ? `<a class="btn ghost" href="${esc(st.log)}" target="_blank" rel="noopener">Open the Item Log</a>` : ""}</div>`;
 }
+function opsActions() {
+  const sortF = FORMS.find(f => f.title === "Sort an item"), pickF = FORMS.find(f => f.title === "Pallet pickup");
+  const tile = (inner, attrs) => attrs.href ? `<a class="qab" href="${esc(attrs.href)}" target="_blank" rel="noopener">${inner}</a>` : `<button class="qab" type="button" data-openmoney="${attrs.money}">${inner}</button>`;
+  const t = (icon, title, sub) => `<i aria-hidden="true">${icon}</i><span><b>${title}</b><small>${sub}</small></span>`;
+  return `<div class="hsec opshead"><h3>Quick actions</h3></div><div class="qa opsqa">
+    ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { href: sortF.url }) : ""}
+    ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { href: pickF.url }) : ""}
+    ${tile(t(QICON["Snap a receipt"] || "", "Snap a receipt", "Gas, storage, supplies"), { money: "receipt" })}
+    ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}</div>`;
+}
 function drawOps() {
   const d = OPS;
   if (!d) { $("ops").innerHTML = `<p class="lead">Nothing posted here yet.</p>`; return; }
@@ -2799,10 +2814,9 @@ function drawOps() {
   const open = lst.filter(x => isOpen(stOf(x.id))).length;
   const openNotes = {};
   $("ops").querySelectorAll("textarea[data-note]").forEach(t => { if (t.value !== (t.dataset.orig || "")) openNotes[t.dataset.note] = t.value; });
-  $("ops").innerHTML = `<div class="seg" role="group" aria-label="Ops section">
+  $("ops").innerHTML = opsActions() + `<div class="seg" role="group" aria-label="Ops section">
       <button type="button" data-ov="requests" aria-pressed="${opsView === "requests"}">Requests${open ? ` (${open} open)` : ""}</button>
-      <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>
-    <div class="btns two opsmoney"><button class="btn ghost" type="button" data-openmoney="receipt">Snap a receipt</button><button class="btn ghost" type="button" data-openmoney="trip">Log a trip</button></div>` +
+      <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>` +
     (opsView === "storage" ? drawInventory(d) : drawRequests(d));
   Object.entries(openNotes).forEach(([id, v]) => { const t = $("ops").querySelector(`textarea[data-note="${CSS.escape(id)}"]`); if (t) { t.value = v; t.closest("details").open = true; } });
   $("ops").querySelectorAll("[data-ov]").forEach(b => b.addEventListener("click", () => { opsView = b.dataset.ov; drawOps(); }));
@@ -3164,8 +3178,9 @@ function rcShrink(file, max) {
     rd.readAsDataURL(file);
   });
 }
-const rcOpts = (name, list, chosen) => `<div class="vs-opts" role="radiogroup">${list.map(x => `<label class="vs-opt"><input type="radio" name="${name}" value="${esc(x)}"${x === chosen ? " checked" : ""}><span>${esc(x)}</span></label>`).join("")}</div>`;
-const rcVal = (root, name) => { const x = root.querySelector(`[name="${name}"]:checked`); return x ? x.value : ""; };
+/* Choices are dropdowns, so the forms stay short. */
+const rcOpts = (name, list, chosen, label) => `<div class="vs-sel"><select class="vs-select" name="${name}" aria-label="${esc(label || "")}"><option value="">Choose one</option>${list.map(x => `<option value="${esc(x)}"${x === chosen ? " selected" : ""}>${esc(x)}</option>`).join("")}</select><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>`;
+const rcVal = (root, name) => { const x = root.querySelector(`[name="${name}"]`); return x ? x.value : ""; };
 
 function openMoney(which, f) {
   openSheet(`<div class="k">${which === "trip" ? "Mileage" : "Money"}</div>
@@ -3193,9 +3208,9 @@ function drawReceipt(info) {
     <label class="vs-field"><span>How much, in dollars</span><small>The total on the receipt.</small><input type="text" name="amount" inputmode="decimal" placeholder="0.00" maxlength="12"></label>
     <label class="vs-field"><span>Who did you pay</span><small>Like Shell or U-Haul.</small><input type="text" name="payee" maxlength="80"></label>
     <label class="vs-field"><span>Date you paid</span><input type="date" name="date" value="${rcToday()}" max="${rcToday()}"></label>
-    <div class="vs-field"><span>What kind of cost</span>${rcOpts("rckind", info.kinds, "")}<input type="text" name="kindOther" maxlength="60" placeholder="Say what it was" hidden></div>
-    <div class="vs-field"><span>Which event or job was this for</span>${rcOpts("rcjob", info.jobs.concat(["Something else"]), "")}<input type="text" name="jobOther" maxlength="80" placeholder="Say which" hidden></div>
-    <div class="vs-field"><span>How was this paid</span>${rcOpts("rcpaid", info.paid, "")}<input type="text" name="paidOther" maxlength="40" placeholder="Say how" hidden></div>
+    <div class="vs-field"><span>What kind of cost</span>${rcOpts("rckind", info.kinds, "", "What kind of cost")}<input type="text" name="kindOther" maxlength="60" placeholder="Say what it was" hidden></div>
+    <div class="vs-field"><span>Which event or job was this for</span>${rcOpts("rcjob", info.jobs.concat(["Something else"]), "", "Which event or job")}<input type="text" name="jobOther" maxlength="80" placeholder="Say which" hidden></div>
+    <div class="vs-field"><span>How was this paid</span>${rcOpts("rcpaid", info.paid, "", "How it was paid")}<input type="text" name="paidOther" maxlength="40" placeholder="Say how" hidden></div>
     <label class="vs-field"><span>Anything else we should know</span><small>Optional. Never type a full card or account number.</small><textarea name="notes" rows="2" maxlength="600"></textarea></label>
     <p class="vs-err" role="alert"></p>
     <button class="vs-btn" type="submit">Send the receipt</button></form>`;
@@ -3241,8 +3256,8 @@ function drawTrip(info) {
   box.innerHTML = `<form class="vs" novalidate>
     <p class="vs-note">One trip at a time, for ReUp driving: pickups, storage runs, events. Write down the odometer when you start and when you finish.</p>
     <label class="vs-field"><span>Date of the trip</span><input type="date" name="date" value="${rcToday()}" max="${rcToday()}"></label>
-    <div class="vs-field"><span>Vehicle</span>${rcOpts("mveh", info.vehicles, "")}<input type="text" name="vehicleOther" maxlength="40" placeholder="Say which" hidden></div>
-    <div class="vs-field"><span>What the trip was for</span>${rcOpts("mjob", info.jobs.concat(["Something else"]), "")}<input type="text" name="jobOther" maxlength="80" placeholder="Say what" hidden></div>
+    <div class="vs-field"><span>Vehicle</span>${rcOpts("mveh", info.vehicles, "", "Vehicle")}<input type="text" name="vehicleOther" maxlength="40" placeholder="Say which" hidden></div>
+    <div class="vs-field"><span>What the trip was for</span>${rcOpts("mjob", info.jobs.concat(["Something else"]), "", "What the trip was for")}<input type="text" name="jobOther" maxlength="80" placeholder="Say what" hidden></div>
     <label class="vs-field"><span>Where you started</span><small>A place name or a ZIP code, never a street address. For example: Caddo storage, or 77021.</small><input type="text" name="from" maxlength="80"></label>
     <label class="vs-field"><span>Where you went</span><small>For a donor's or family's home, put only the ZIP code.</small><input type="text" name="to" maxlength="80"></label>
     <div id="modo">
@@ -3507,7 +3522,7 @@ function drawRcCard() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024065415";
+  var BUILD = "20261024070036";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
