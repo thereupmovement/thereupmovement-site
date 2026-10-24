@@ -556,6 +556,23 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 @keyframes wpulse{0%,100%{opacity:1}50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.wprog i{animation:none}}
 .g-prog{--gc:#1D5E8C}
+
+.g-quick{--gc:#1E5C38}.g-soon{--gc:#5D5A57}
+.wrows{display:grid;gap:6px}
+.wrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--tc);border-radius:10px;padding:10px 12px;cursor:pointer;min-height:44px}
+.wrow:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.wrname{font-weight:700;font-size:15px;line-height:1.3}
+.wrmeta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none;font-size:12.5px;color:var(--muted);text-align:right}
+.wrprog{background:#E1ECF5;color:#1D5E8C;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-radius:6px;padding:1px 6px}
+.wfold>summary{list-style:none;cursor:pointer}
+.wfold>summary::-webkit-details-marker{display:none}
+.wfold>summary h3::after{content:"Show";margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0}
+.wfold[open]>summary h3::after{content:"Hide"}
+.dhist .wrows{margin-top:10px}
+
+.wtext{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.wlink{display:inline-block;font-weight:700;color:var(--red);text-decoration:underline;text-underline-offset:3px;padding:4px 0;min-height:24px}
+#wdetbox{margin-top:8px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -1179,7 +1196,7 @@ let wq = [], wqRunning = false, wqNote = "", wGen = 0;
 function wApply(id, patch) {
   const t = WORK && (WORK.tasks || []).find(x => x.id === id);
   if (!t || !patch) return;
-  ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title"].forEach(k => { if (k in patch) t[k] = patch[k]; });
+  ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title", "opens", "quick"].forEach(k => { if (k in patch) t[k] = patch[k]; });
   if (patch.status === "done" && !t.doneAt) t.doneAt = new Date().toISOString();
   if (patch.status && patch.status !== "done") t.doneAt = "";
   if (patch.status === "stuck" && patch.why && String(patch.why).trim()) t.updates = [{ at: new Date().toISOString(), who: WORK.me, text: "Stuck, needs help: " + String(patch.why).trim() }].concat(t.updates || []);
@@ -1249,6 +1266,36 @@ function wcard(t, opts) {
       <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
     </button>${t.status === "doing" ? `<div class="wprog" aria-hidden="true"><i></i>In progress</div>` : ""}${acts}</div>`;
 }
+/* Text with web links made tappable. Long links get a short, plain label. */
+function linkLabel(u) {
+  if (/docs\.google\.com\/document/.test(u)) return "Open the Google Doc";
+  if (/docs\.google\.com\/spreadsheets/.test(u)) return "Open the Google Sheet";
+  if (/docs\.google\.com\/forms|forms\.gle/.test(u)) return "Open the form";
+  if (/drive\.google\.com/.test(u)) return "Open the file";
+  if (/\.pdf($|[?#])/i.test(u)) return "Open the PDF";
+  try { return "Open " + new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return "Open link"; }
+}
+function linkify(text) {
+  const s = String(text || ""), re = /https?:\/\/[^\s<>"]+/g, out = [];
+  let last = 0, m;
+  while ((m = re.exec(s))) {
+    const u = m[0].replace(/[.,;:!?)\]]+$/, "");
+    out.push(esc(s.slice(last, m.index)), `<a class="wlink" href="${esc(u)}" target="_blank" rel="noopener">${esc(linkLabel(u))}</a>`);
+    last = m.index + u.length; re.lastIndex = last;
+  }
+  out.push(esc(s.slice(last)));
+  return out.join("");
+}
+const wShortDate = s => dt(String(s).slice(0, 10)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const wNotYet = t => !!t.opens && daysAway(t.opens) > 0;
+function wrow(t, sub) {
+  const [dw, dc] = dueWords(t.due, false);
+  return `<button type="button" class="wrow ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wrname">${esc(t.title)}</span>
+    <span class="wrmeta">${t.status === "doing" ? `<span class="wrprog">In progress</span>` : ""}<span class="wdue ${dc}">${esc(sub || dw)}</span></span></button>`;
+}
+const wlist = (title, cls, list, note, fold) => !list.length ? "" : fold
+  ? `<details class="wgroup wfold ${cls}"><summary><h3><span>${title}</span><b>${list.length}</b></h3></summary>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></details>`
+  : `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></section>`;
 const wgroup = (title, cls, list, opts, note) => list.length ? `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}${list.map(t => wcard(t, opts)).join("")}</section>` : "";
 function drawWork() {
   const W = WORK, box = $("work");
@@ -1261,20 +1308,33 @@ function drawWork() {
   if (workView === "mine") {
     const mine = all.filter(t => t.owners.includes(me));
     const open = mine.filter(wOpen).sort(wSort);
-    const stuck = open.filter(t => t.status === "stuck"), late = open.filter(t => t.status !== "stuck" && wLate(t));
-    const prog = open.filter(t => t.status === "doing" && !wLate(t));
-    const rest = open.filter(t => t.status !== "stuck" && t.status !== "doing" && !wLate(t));
-    const week = rest.filter(t => t.due && daysAway(t.due) <= 7), later = rest.filter(t => t.due && daysAway(t.due) > 7), nodate = rest.filter(t => !t.due);
-    const helping = all.filter(t => wOpen(t) && !t.owners.includes(me) && t.helpers.includes(me)).sort(wSort);
-    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${open.length ? `You have <b>${plural(open.length, "thing")}</b> to do${prog.length ? `, ${prog.length} in progress` : ""}.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
-      <p class="small">Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
+    /* Sorted by what needs attention first. Tasks that open later wait in their own fold until their date. */
+    const notYet = open.filter(t => wNotYet(t) && t.status !== "stuck");
+    const active = open.filter(t => !notYet.includes(t));
+    const d = t => t.due ? daysAway(t.due) : 9999;
+    const stuck = active.filter(t => t.status === "stuck"), late = active.filter(t => t.status !== "stuck" && wLate(t));
+    const rest = active.filter(t => t.status !== "stuck" && !wLate(t));
+    const week = rest.filter(t => d(t) <= 7);
+    const quick = rest.filter(t => d(t) > 7 && t.quick);
+    const soon = rest.filter(t => d(t) > 7 && d(t) <= 30 && !t.quick);
+    const ongoing = rest.filter(t => d(t) > 30 && !t.quick && t.status === "doing");
+    const later = rest.filter(t => d(t) > 30 && !t.quick && t.status !== "doing");
+    const helping = all.filter(t => wOpen(t) && !t.owners.includes(me) && t.helpers.includes(me) && !wNotYet(t)).sort(wSort);
+    const byDue = (x, y) => d(x) - d(y) || x.title.localeCompare(y.title);
+    [week, quick, soon, ongoing, later].forEach(l => l.sort(byDue));
+    notYet.sort((x, y) => String(x.opens).localeCompare(String(y.opens)));
+    const now = active.length;
+    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${now ? `You have <b>${plural(now, "thing")}</b> on your list${week.length ? `, <b>${week.length}</b> due this week` : ""}.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
+      <p class="small">Most urgent first. Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
     html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
     html += wgroup("Late", "g-late", late, { hideWho: true });
-    html += wgroup("In progress", "g-prog", prog, { hideWho: true });
     html += wgroup("Due this week", "g-week", week, { hideWho: true });
-    html += wgroup("Coming up", "g-later", later, { hideWho: true });
-    html += wgroup("No due date", "g-later", nodate, { hideWho: true });
+    html += wgroup("Quick ones", "g-quick", quick, { hideWho: true }, "Each of these takes a call or a few minutes. Knock them out when you have a gap.");
+    html += wgroup("Next 30 days", "g-soon", soon, { hideWho: true });
+    html += wlist("Ongoing", "g-prog", ongoing, "Started, and due further out. Keep these moving a little at a time.");
+    html += wlist("Later", "g-later", later, "", true);
     html += wgroup("You're helping", "g-help", helping);
+    if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own when it's time</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(t.opens))).join("")}</div></details>`;
     const done = mine.filter(t => wRecentDone(t, 14));
     if (done.length) html += `<details class="dhist"><summary>Finished in the last 2 weeks (${done.length})</summary>${done.map(t => wcard(t, { hideWho: true, noActs: true })).join("")}</details>`;
     if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
@@ -1356,7 +1416,7 @@ function fillWork(keep) {
   const G = !!t.goal, GD = t.goal === "decision";
   const teamHtml = `<div class="tsec"><div class="tl">Team</div><div class="wchips">${(W.teams || []).map(x => `<button type="button" data-wteam="${esc(x)}" aria-pressed="${t.team === x}">${esc(x)}</button>`).join("")}</div></div>`;
   const decisionHtml = !GD ? "" : `<div class="tsec"><div class="tl">Decision</div>${t.decision ? `<p style="margin:0 0 4px;white-space:pre-wrap"><b>${esc(t.decision)}</b></p><p class="small" style="margin:0 0 8px">Decided by ${esc(t.decidedBy || "")}, ${stamp(t.decidedAt)}</p>${manage ? `<button type="button" class="tbtn ghost" id="wreopen">Reopen</button>` : ""}` : (manage ? `<textarea id="wdecide" class="tarea" placeholder="What did leadership decide?" style="min-height:60px"></textarea><button type="button" class="tbtn" id="wdecidesave">Record the decision</button>` : `<p style="margin:0">Not decided yet.</p>`)}</div>`;
-  const goalDetHtml = !G ? "" : `<div class="tsec"><div class="tl">What this is</div><p style="margin:0;white-space:pre-wrap">${esc(t.details || "")}</p></div>
+  const goalDetHtml = !G ? "" : `<div class="tsec"><div class="tl">What this is</div><p class="wtext">${linkify(t.details || "")}</p></div>
     <div class="tsec"><div class="tl">Notes</div>${manage ? `<textarea id="wnotes" class="tarea" placeholder="Anything leaders should know.">${esc(t.notes || "")}</textarea><button type="button" class="tbtn" id="wnotessave">Save notes</button>` : `<p style="margin:0;white-space:pre-wrap">${esc(t.notes || "None yet.")}</p>`}</div>`;
   const names = (W.people || []).map(p => p.name);
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
@@ -1371,17 +1431,21 @@ function fillWork(keep) {
       <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
     ${isNew || G ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
+    ${isNew || G || !(mine || manage) ? "" : `<div class="tsec"><div class="tl">Size</div><div class="wchips"><button type="button" data-wquick="1" aria-pressed="${!!t.quick}">Quick one</button><button type="button" data-wquick="0" aria-pressed="${!t.quick}">Takes longer</button></div></div>`}
+    ${isNew || G || !manage ? "" : `<div class="tsec"><div class="tl">Shows up on</div><div class="tdue"><input type="date" id="wopens" value="${esc(t.opens || "")}" aria-label="Shows up on">${t.opens ? `<button type="button" class="linkish" id="wopensclear">Show it now</button>` : ""}</div><p class="small" style="margin:6px 0 0">Leave empty to show it right away. Set a date to keep it out of the way until then.</p></div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
-    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew || (mine && !G) ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>${isNew ? "" : `<button type="button" class="tbtn" id="wdetsave">Save details</button>`}` : `<p style="margin:0;white-space:pre-wrap">${esc(t.details || "None yet.")}</p>`}</div>
+    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
+      : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
+      <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
     <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
       <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
     <div class="tsec"><div class="tl">Updates</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
-      ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${esc(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
+      ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${linkify(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
   if (keep) {
     if (keep.upd && $("wupd")) $("wupd").value = keep.upd;
-    if (keep.det != null && $("wdet")) $("wdet").value = keep.det;
+    if (keep.det != null && $("wdet")) { $("wdet").value = keep.det; if ($("wdetbox") && keep.det.trim() !== (t.details || "").trim()) { $("wdetbox").hidden = false; $("wdetedit").hidden = true; } }
     if (keep.notes != null && $("wnotes")) $("wnotes").value = keep.notes;
     if (keep.decide && $("wdecide")) $("wdecide").value = keep.decide;
     if ((keep.stuckOpen || keep.why) && $("wstuck")) { $("wstuck").hidden = false; if (keep.why) $("wwhy").value = keep.why; }
@@ -1424,11 +1488,15 @@ function fillWork(keep) {
   box.querySelectorAll("[data-whelp]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.whelp; save("saveWork", [t.id, { helpers: t.helpers.includes(n) ? t.helpers.filter(x => x !== n) : t.helpers.concat(n) }], "Helpers saved."); }));
   const hm = $("whelpme"); if (hm) hm.addEventListener("click", () => save("saveWork", [t.id, { helpMe: true }], "You're on it as a helper."));
   const uh = $("wunhelp"); if (uh) uh.addEventListener("click", () => save("saveWork", [t.id, { stopHelping: true }], "Removed you as a helper."));
+  box.querySelectorAll("[data-wquick]").forEach(b => b.addEventListener("click", () => { const q = b.dataset.wquick === "1"; if (q !== !!t.quick) save("saveWork", [t.id, { quick: q }], q ? "Marked as a quick one." : "Marked as taking longer."); }));
+  const wo = $("wopens"); if (wo) wo.addEventListener("change", e => save("saveWork", [t.id, { opens: e.target.value }], e.target.value ? "It will show up on that date." : "It shows up now."));
+  const woc = $("wopensclear"); if (woc) woc.addEventListener("click", () => save("saveWork", [t.id, { opens: "" }], "It shows up now."));
   const wd = $("wdue"); if (wd) wd.addEventListener("change", e => save("saveWork", [t.id, { due: e.target.value }], "Due date saved."));
   const wc = $("wdueclear"); if (wc) wc.addEventListener("click", () => save("saveWork", [t.id, { due: "" }], "Due date removed."));
   const dsv = $("wdecidesave"); if (dsv) dsv.addEventListener("click", () => { const v = $("wdecide").value.trim(); if (!v) { msg("Write what was decided first."); return; } save("saveWork", [t.id, { decide: v }], "Decision recorded."); });
   const ro = $("wreopen"); if (ro) ro.addEventListener("click", () => save("saveWork", [t.id, { reopen: true }], "Decision reopened."));
   const ns = $("wnotessave"); if (ns) ns.addEventListener("click", () => save("saveWork", [t.id, { notes: $("wnotes").value }], "Notes saved.", "notes"));
+  const de = $("wdetedit"); if (de) de.addEventListener("click", () => { $("wdetbox").hidden = false; de.hidden = true; $("wdet").focus(); });
   const ds = $("wdetsave"); if (ds) ds.addEventListener("click", () => save("saveWork", [t.id, { details: $("wdet").value }], "Details saved.", "det"));
   const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
   $("wupdpost").addEventListener("click", post);
@@ -1818,7 +1886,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024003856";
+  var BUILD = "20261024004525";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
