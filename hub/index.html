@@ -898,7 +898,7 @@ function rowHTML(e, i) {
   const cal = e.status !== "tentative" ? `<a class="calbtn" href="${calLink(e)}" target="_blank" rel="noopener" aria-label="Add ${esc(e.name)} to your calendar" title="Add to calendar">${CALICON}</a>` : `<span class="calbtn off" aria-hidden="true"></span>`;
   return `<div class="rw">` + `<button class="row k-${e.kind}" type="button" data-ev="${i}">
     <div class="day"><small>${d.toLocaleDateString("en-US", { month: "short" })}</small><b>${d.getDate()}</b></div>
-    <div><div class="k">${e.kind}</div><div class="t">${esc(e.name)}<span class="tag ${e.status === "tentative" ? "tbc" : ""}">${STATUS[e.status]}</span></div>
+    <div><div class="k">${e.kind}</div><div class="t">${esc(e.name)}<span class="tag ${e.status === "tentative" ? "tbc" : ""}">${(e.kind === "Sorting" && e.status === "tentative" ? "Tentative" : STATUS[e.status])}</span></div>
       <div class="s">${d.toLocaleDateString("en-US", { weekday: "short" })} &middot; ${away(daysAway(e.date))}${goingLine(e)}</div></div>
     <div class="chev" aria-hidden="true">&rsaquo;</div></button>${cal}</div>`;
 }
@@ -975,7 +975,7 @@ function openEvent(e) {
     <div class="facts">
       <div class="fact"><span>When</span><div>${fmtDay(e.date)}${time ? "<br>" + time : ""}</div></div>
       <div class="fact"><span>Where</span><div>${where || "To be shared"}</div></div>
-      <div class="fact"><span>Status</span><div>${STATUS[e.status]}</div></div>
+      <div class="fact"><span>Status</span><div>${(e.kind === "Sorting" && e.status === "tentative" ? "Tentative" : STATUS[e.status])}</div></div>
       <div class="fact"><span>Who</span><div>${esc(e.who)}</div></div>
       ${e.note ? `<div class="fact"><span>Notes</span><div>${esc(e.note)}</div></div>` : ""}
     </div>
@@ -2984,7 +2984,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024043705";
+  var BUILD = "20261024043948";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
