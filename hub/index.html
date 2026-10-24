@@ -1175,6 +1175,7 @@ function wApply(id, patch) {
   ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title"].forEach(k => { if (k in patch) t[k] = patch[k]; });
   if (patch.status === "done" && !t.doneAt) t.doneAt = new Date().toISOString();
   if (patch.status && patch.status !== "done") t.doneAt = "";
+  if (patch.status === "stuck" && patch.why && String(patch.why).trim()) t.updates = [{ at: new Date().toISOString(), who: WORK.me, text: "Stuck, needs help: " + String(patch.why).trim() }].concat(t.updates || []);
   if (patch.helpMe && !t.helpers.includes(WORK.me)) t.helpers = t.helpers.concat(WORK.me);
   if (patch.stopHelping) t.helpers = t.helpers.filter(n => n !== WORK.me);
   if (patch.decide) { t.decision = patch.decide; t.status = "done"; t.decidedBy = WORK.me; t.decidedAt = new Date().toISOString(); }
@@ -1217,7 +1218,8 @@ async function wRun() {
 }
 function wKeep() {
   const v = id => { const el = $(id); return el ? el.value : null; };
-  return { upd: v("wupd") || "", det: v("wdet"), notes: v("wnotes"), decide: v("wdecide"), why: v("wwhy") };
+  const sb = $("wstuck");
+  return { upd: v("wupd") || "", det: v("wdet"), notes: v("wnotes"), decide: v("wdecide"), why: v("wwhy"), stuckOpen: !!(sb && !sb.hidden) };
 }
 function wRefresh(keep) {
   if (sheet.open && openWorkId !== null && $("wbody")) fillWork(keep || wKeep()); else drawWork();
@@ -1319,7 +1321,20 @@ function drawWork() {
 function openWork(id) {
   openWorkId = id;
   openSheet(`<div id="wbody"></div>`);
-  sheet.addEventListener("close", () => { openWorkId = null; drawWork(); }, { once: true });
+  sheet.addEventListener("close", () => {
+    /* Anything typed but not sent is saved on close, so closing never loses words. */
+    const k = wKeep(), tid = openWorkId, t = tid && WORK && (WORK.tasks || []).find(x => x.id === tid);
+    openWorkId = null;
+    if (t) {
+      const why = (k.why || "").trim(), upd = (k.upd || "").trim();
+      if (k.stuckOpen && why) wQueue("saveWork", [tid, { status: "stuck", why: why }], "Marked stuck. The coordinator can see it.");
+      if (upd) wQueue("workUpdate", [tid, upd], "Update posted.");
+      if (k.det != null && k.det.trim() !== (t.details || "").trim() && !t.goal) wQueue("saveWork", [tid, { details: k.det }], "Details saved.");
+      if (k.notes != null && k.notes.trim() !== (t.notes || "").trim()) wQueue("saveWork", [tid, { notes: k.notes }], "Notes saved.");
+      if (k.decide && k.decide.trim() && t.goal === "decision" && !t.decision) wQueue("saveWork", [tid, { decide: k.decide.trim() }], "Decision recorded.");
+    }
+    drawWork();
+  }, { once: true });
   fillWork();
 }
 function fillWork(keep) {
@@ -1360,12 +1375,14 @@ function fillWork(keep) {
     if (keep.det != null && $("wdet")) $("wdet").value = keep.det;
     if (keep.notes != null && $("wnotes")) $("wnotes").value = keep.notes;
     if (keep.decide && $("wdecide")) $("wdecide").value = keep.decide;
+    if ((keep.stuckOpen || keep.why) && $("wstuck")) { $("wstuck").hidden = false; if (keep.why) $("wwhy").value = keep.why; }
   }
   if (wqNote && $("wmsg")) $("wmsg").textContent = wqNote;
   const msg = s => { const m = $("wmsg"); if (m) m.textContent = s; };
   const save = (fn, args, ok, skip) => {
     const k = wKeep();
     if (skip) k[skip] = skip === "det" || skip === "notes" ? null : "";
+    if (skip === "why") k.stuckOpen = false;
     const creating = fn === "saveWork" && !args[0];
     wQueue(fn, args, ok);
     if (!creating) fillWork(k);
@@ -1391,7 +1408,7 @@ function fillWork(keep) {
     if (b.dataset.ws === "stuck" && t.status !== "stuck") { $("wstuck").hidden = false; $("wwhy").focus(); return; }
     save("saveWork", [t.id, { status: b.dataset.ws }], "Status saved.");
   }));
-  const ss = $("wstucksave"); if (ss) ss.addEventListener("click", () => save("saveWork", [t.id, { status: "stuck", why: $("wwhy").value }], "Marked stuck. The coordinator can see it."));
+  const ss = $("wstucksave"); if (ss) ss.addEventListener("click", () => save("saveWork", [t.id, { status: "stuck", why: $("wwhy").value }], "Marked stuck. The coordinator can see it.", "why"));
   box.querySelectorAll("[data-wvis]").forEach(b => b.addEventListener("click", () => save("saveWork", [t.id, { private: b.dataset.wvis === "1" }], b.dataset.wvis === "1" ? "Only leaders can see this now." : "The whole team can see this now.")));
   box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => save("saveWork", [t.id, { team: t.team === b.dataset.wteam ? "" : b.dataset.wteam }], "Team saved.")));
   box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; save("saveWork", [t.id, { owners: t.owners.includes(n) ? t.owners.filter(x => x !== n) : t.owners.concat(n) }], "Owners saved."); }));
