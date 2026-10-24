@@ -608,6 +608,39 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .a-done{border-left-color:#2E7D4F}.a-doing{border-left-color:#1D5E8C}.a-stuck{border-left-color:#B3261E}.a-note{border-left-color:#B35400}
 @media (max-width:520px){.actrow{grid-template-columns:1.4fr repeat(4,.7fr);font-size:13px}.actrow .actlast{grid-column:1 / -1;text-align:left;font-size:12px;color:var(--muted)}.acthead span:last-child{display:none}.actnums{grid-template-columns:repeat(2,1fr)}}
 .actlast em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);font-weight:400}
+.navbtn{position:relative}
+.nbadge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#B3261E;color:#fff;font-size:11px;font-weight:800;line-height:18px;letter-spacing:0;text-align:center}
+.nb{display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:#B3261E;color:#fff;font-size:11.5px;font-weight:800;line-height:18px;text-align:center}
+.iseg button{font-size:13px}
+.iemail{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 12px}
+.iemail p{margin:0 0 8px}
+.iemail form{display:flex;gap:8px}
+.iemail input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.icomp{display:grid;gap:8px;margin:10px 0 14px}
+.icheck{display:flex;align-items:center;gap:8px;font-weight:600;min-height:32px}
+.icheck input{width:20px;height:20px}
+.ianns{display:grid;gap:10px}
+.iann{background:var(--surface);border:1px solid var(--line);border-left:5px solid #7B2121;border-radius:12px;padding:12px 14px}
+.iann p,.ibub p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ibw{font-size:12.5px;color:var(--muted)}
+.ichat{display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;padding:4px 2px}
+.ibub{max-width:85%;align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:8px 12px}
+.ibub.mine{align-self:flex-end;background:#F4E7E7;border-color:#E5CFCF;border-radius:14px 14px 4px 14px}
+.ibub.pending{opacity:.6}
+.idm .wrname{display:flex;flex-direction:column;gap:2px}
+.idmlast{font-weight:400;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.hinbox{display:grid;gap:4px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:2px solid #7B2121;border-radius:14px;padding:12px 14px;margin:14px 0 4px;cursor:pointer}
+.hik{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#7B2121}
+.hit{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.hio{font-weight:700}
+.hgo{font-weight:800;color:#7B2121;text-decoration:underline;text-underline-offset:3px}
+.morelist{display:grid;gap:8px;margin-top:8px}
+.moreitem{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;min-height:56px}
+.moreitem svg{width:26px;height:26px;flex:none}
+.moreitem b{display:block;font-size:16px}
+.moreitem em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
+.ihead{font-family:var(--display);font-weight:400;font-size:40px;line-height:1;text-transform:uppercase;margin:6px 0 14px}
+.iseg{grid-template-columns:repeat(3,1fr)}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -629,6 +662,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
         <div class="poster" id="poster"></div>
         <div id="impact"></div>
       </div>
+      <div id="homeinbox"></div>
       <div id="homework"></div>
       <div id="impactmap"></div>
       <div class="hsec"><h3>Coming up</h3><button class="hlink" type="button" id="toSchedule">Full schedule</button></div>
@@ -645,6 +679,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     <section class="view" id="v-work" hidden>
       <div class="banner" data-cover="work"><div><h2>Work</h2><p>What's on your plate, and how the team is doing.</p></div></div>
       <div id="work"><p class="lead">Loading...</p></div>
+    </section>
+
+    <section class="view" id="v-inbox" hidden>
+      <h2 class="ihead">Inbox</h2>
+      <div id="inbox"><p class="lead">Loading messages...</p></div>
     </section>
 
     <section class="view" id="v-schedule" hidden>
@@ -908,28 +947,41 @@ const ICONS = {
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
   eventday: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
   work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11l2 2 4-4M8 17h8"/></svg>',
   goals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
 };
 const TABS = [["home", "Home"], ["schedule", "Schedule"], ["eventday", "Event day"], ["forms", "Forms"]];
+/* Five buttons at most: the everyday tabs, then More for the rest. */
+const PRIMARY_TABS = ["home", "schedule", "work", "inbox"];
 function drawTabs() {
-  $("tabs").style.setProperty("--n", TABS.length);
-  $("tabs").classList.toggle("many", TABS.length > 5);
-  $("tabs").innerHTML = TABS.map(([k, label]) => k === "goals-icon-only"
-    ? `<button class="navbtn icononly" type="button" data-tab="${k}" aria-label="${label}" title="${label}">${ICONS[k]}</button>`
-    : `<button class="navbtn" type="button" data-tab="${k}">${ICONS[k]}<span>${label}</span></button>`).join("");
-  $("tabs").querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => go(b.dataset.tab)));
+  const prim = PRIMARY_TABS.map(k => TABS.find(t => t[0] === k)).filter(Boolean);
+  const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
+  const items = more.length > 1 ? prim.concat([["more", "More"]]) : TABS;
+  $("tabs").style.setProperty("--n", items.length);
+  $("tabs").classList.toggle("many", items.length > 5);
+  $("tabs").innerHTML = items.map(([k, label]) => `<button class="navbtn" type="button" data-tab="${k}">${ICONS[k]}<span>${label}</span>${k === "inbox" ? `<b class="nbadge" id="inboxBadge" hidden></b>` : ""}</button>`).join("");
+  $("tabs").querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => b.dataset.tab === "more" ? openMore() : go(b.dataset.tab)));
+  try { drawInboxBadge(); } catch (e) {}
+  markNav((location.hash || "#home").slice(1));
+}
+function markNav(tab) {
+  const bs = $("tabs").querySelectorAll("[data-tab]");
+  const shown = [...bs].some(b => b.dataset.tab === tab);
+  bs.forEach(b => (b.dataset.tab === tab || (!shown && b.dataset.tab === "more")) ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
 }
 drawTabs();
 
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab)) tab = "home";
-  ["home", "work", "schedule", "eventday", "forms", "ops", "goals"].forEach(k => { $("v-" + k).hidden = k !== tab; });
-  $("tabs").querySelectorAll("[data-tab]").forEach(b => b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
   if ((tab === "ops" || tab === "goals") && typeof openLeader === "function") openLeader(tab);
+  if (tab === "inbox" && typeof loadInbox === "function") { drawInbox(); loadInbox(!!INBOX); }
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -1651,6 +1703,159 @@ function fillWork(keep) {
 }
 setInterval(() => { if (!document.hidden && WORK && $("v-work") && !$("v-work").hidden && openWorkId === null) loadWork(true); }, 120e3);
 
+/* ============ INBOX: announcements, team chat and direct messages ============ */
+let INBOX = null, inboxAt = 0, inboxView = "announce", loadingInbox = false, dmWith = null, inboxSending = false;
+try { inboxView = localStorage.getItem("reupHubInboxView") || "announce"; } catch (e) {}
+const dmKeyC = (a, b) => "dm:" + [a, b].sort().join("|");
+const ITITLE = { announce: "Announcements", team: "Team chat", dms: "Messages" };
+function iUnread(thread) {
+  if (!INBOX) return 0;
+  const seen = (INBOX.reads || {})[thread] || "";
+  return (INBOX.messages || []).filter(m => m.thread === thread && m.from !== INBOX.me && String(m.at) > seen).length;
+}
+function iDmThreads() {
+  if (!INBOX) return [];
+  return (INBOX.people || []).filter(p => p.name !== INBOX.me).map(p => {
+    const t = dmKeyC(INBOX.me, p.name), list = (INBOX.messages || []).filter(m => m.thread === t);
+    return { name: p.name, thread: t, last: list[list.length - 1] || null, unread: iUnread(t) };
+  }).sort((a, b) => String(b.last ? b.last.at : "").localeCompare(String(a.last ? a.last.at : "")) || a.name.localeCompare(b.name));
+}
+function iTotals() {
+  const dm = iDmThreads().reduce((n, x) => n + x.unread, 0);
+  return { announce: iUnread("announce"), team: iUnread("team"), dms: dm, all: iUnread("announce") + iUnread("team") + dm };
+}
+async function loadInbox(quiet) {
+  if (loadingInbox || inboxSending) return;
+  loadingInbox = true;
+  if (!INBOX && !quiet && $("inbox")) $("inbox").innerHTML = `<p class="lead">Loading messages...</p>`;
+  try { INBOX = await run("getInbox", KEY); inboxAt = Date.now(); drawInbox(); }
+  catch (e) { if (!INBOX && $("inbox")) $("inbox").innerHTML = `<p class="lead">Couldn't load messages right now. Try again in a minute.</p>`; }
+  loadingInbox = false;
+}
+function iMarkRead(thread) {
+  if (!INBOX || !iUnread(thread)) return;
+  const last = (INBOX.messages || []).filter(m => m.thread === thread).map(m => String(m.at)).sort().pop();
+  INBOX.reads = Object.assign({}, INBOX.reads, { [thread]: last || new Date().toISOString() });
+  run("markRead", KEY, thread).catch(() => {});
+  drawInboxBadge();
+}
+function drawInboxBadge() {
+  const t = iTotals();
+  const b = $("inboxBadge"); if (b) { b.hidden = !t.all; b.textContent = t.all > 9 ? "9+" : String(t.all); }
+  const h = $("homeinbox");
+  if (!h) return;
+  if (!INBOX || !t.all) { h.innerHTML = ""; return; }
+  const seen = (INBOX.reads || {}).announce || "";
+  const ann = (INBOX.messages || []).filter(m => m.thread === "announce" && m.from !== INBOX.me && String(m.at) > seen).pop();
+  const other = t.team + t.dms;
+  h.innerHTML = `<button type="button" class="hinbox" id="toInbox">${ann ? `<span class="hik">New announcement from ${esc(ann.from)} &middot; ${esc(ago(ann.at))}</span><span class="hit">${esc(ann.text)}</span>` : ""}
+    ${other ? `<span class="hio">${t.dms ? plural(t.dms, "new message") : ""}${t.dms && t.team ? " and " : ""}${t.team ? plural(t.team, "new team chat message") : ""}</span>` : ""}<span class="hgo">Open Inbox</span></button>`;
+  $("toInbox").addEventListener("click", () => { if (ann) inboxView = "announce"; else if (t.dms) inboxView = "dms"; else inboxView = "team"; go("inbox"); });
+}
+function iBubble(m, mine) {
+  return `<div class="ibub${mine ? " mine" : ""}${m.pending ? " pending" : ""}"><span class="ibw">${mine ? "You" : esc(m.from)} &middot; ${m.pending ? "Sending..." : esc(ago(m.at))}</span><p>${linkify(m.text)}</p></div>`;
+}
+function drawInbox() {
+  drawInboxBadge();
+  const box = $("inbox");
+  if (!box || !INBOX) return;
+  const t = iTotals(), me = INBOX.me;
+  if (!ITITLE[inboxView]) inboxView = "announce";
+  let html = `<div class="seg iseg" role="group" aria-label="Inbox section">${["announce", "team", "dms"].map(k => `<button type="button" data-iv="${k}" aria-pressed="${inboxView === k}">${ITITLE[k]}${t[k] ? ` <b class="nb">${t[k]}</b>` : ""}</button>`).join("")}</div>`;
+  if (!INBOX.myEmail) html += `<div class="iemail"><p><b>Get these by email too.</b> Add your email and you'll get announcements and direct messages there as well.</p>
+    <form id="iemailf"><input type="email" id="iemail" placeholder="you@example.com" aria-label="Your email" autocomplete="email"><button class="tbtn" type="submit">Save</button></form></div>`;
+  const msgs = thread => (INBOX.messages || []).filter(m => m.thread === thread);
+  if (inboxView === "announce") {
+    if (INBOX.canAnnounce) html += `<div class="icomp"><textarea id="itext" class="tarea" placeholder="Post an announcement to the whole team" maxlength="2000"></textarea>
+      <label class="icheck"><input type="checkbox" id="iemailall" checked> Also email everyone</label><button type="button" class="tbtn" id="isend">Post announcement</button><p class="tmsg" id="imsg" role="status" aria-live="polite"></p></div>`;
+    const list = msgs("announce").slice().reverse();
+    html += list.length ? `<div class="ianns">${list.map(m => `<article class="iann"><div class="ibw"><b>${esc(m.from)}</b> &middot; ${m.pending ? "Posting..." : esc(ago(m.at))}</div><p>${linkify(m.text)}</p></article>`).join("")}</div>`
+      : `<p class="small">No announcements yet.${INBOX.canAnnounce ? " Post the first one above." : " Leaders post them here."}</p>`;
+  } else if (inboxView === "team") {
+    const list = msgs("team");
+    html += `<p class="small">Everyone with a Hub link can read and write here.</p><div class="ichat" id="ichat">${list.length ? list.map(m => iBubble(m, m.from === me)).join("") : `<p class="small">Nothing here yet. Say hi.</p>`}</div>
+      <div class="icomp"><textarea id="itext" class="tarea" placeholder="Message the team" maxlength="2000"></textarea><button type="button" class="tbtn" id="isend">Send</button><p class="tmsg" id="imsg" role="status" aria-live="polite"></p></div>`;
+  } else {
+    html += `<p class="small">Private between the two of you. Nobody else can see these, leaders included.</p><div class="wrows">${iDmThreads().map(x => `<button type="button" class="wrow idm" data-dm="${esc(x.name)}">
+      <span class="wrname">${esc(x.name)}<span class="idmlast">${x.last ? esc((x.last.from === me ? "You: " : "") + x.last.text) : "Start a conversation"}</span></span>
+      <span class="wrmeta">${x.unread ? `<b class="nb">${x.unread}</b>` : ""}${x.last ? `<span>${esc(ago(x.last.at))}</span>` : ""}</span></button>`).join("")}</div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-iv]").forEach(b => b.addEventListener("click", () => { inboxView = b.dataset.iv; try { localStorage.setItem("reupHubInboxView", inboxView); } catch (e) {} drawInbox(); }));
+  box.querySelectorAll("[data-dm]").forEach(b => b.addEventListener("click", () => openDm(b.dataset.dm)));
+  const ef = $("iemailf"); if (ef) ef.addEventListener("submit", async e => {
+    e.preventDefault();
+    const v = $("iemail").value.trim(); if (!v) return;
+    try { INBOX = await run("setMyEmail", KEY, v); toast("Saved. You'll get announcements and messages by email."); drawInbox(); }
+    catch (err) { toast(/look right/.test(String(err.message)) ? err.message : "That didn't save. Try again."); }
+  });
+  const sb = $("isend"); if (sb) sb.addEventListener("click", () => {
+    const ta = $("itext"), text = ta.value.trim();
+    if (!text) { ta.focus(); return; }
+    const thread = inboxView === "announce" ? "announce" : "team", all = !!($("iemailall") && $("iemailall").checked);
+    iSend(thread, thread, text, all, () => { ta.value = ""; });
+  });
+  const it = $("itext"); if (it && inboxView === "team") it.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("isend").click(); } });
+  const ch = $("ichat"); if (ch) ch.scrollTop = ch.scrollHeight;
+  if (!$("v-inbox").hidden && inboxView !== "dms") iMarkRead(inboxView);
+}
+/* Shows the message at once, then saves it. A failed send keeps the words so nothing is lost. */
+async function iSend(threadKey, sendTo, text, emailAll, done) {
+  const now = new Date().toISOString();
+  const temp = { id: "tmp" + Date.now(), at: now, from: INBOX.me, thread: threadKey, text: text, pending: true };
+  INBOX.messages = (INBOX.messages || []).concat(temp);
+  if (done) done();
+  inboxSending = true;
+  dmWith ? fillDm() : drawInbox();
+  try {
+    INBOX = await run("sendMessage", KEY, sendTo, text, !!emailAll);
+    const s = INBOX.sent || {};
+    if (threadKey === "announce") toast(emailAll ? (/^sent/.test(s.emailed || "") ? "Posted and emailed." : /^not sent/.test(s.emailed || "") ? "Posted. The email didn't go out yet." : "Posted. Nobody has an email saved yet.") : "Posted.");
+  } catch (err) {
+    INBOX.messages = (INBOX.messages || []).filter(m => m.id !== temp.id);
+    toast(/^(Only|Write)/.test(String(err.message)) ? err.message : "That didn't send. Check your connection and try again.");
+    const ta = $(dmWith ? "dmtext" : "itext"); if (ta && !ta.value) ta.value = text;
+  }
+  inboxSending = false;
+  dmWith ? fillDm() : drawInbox();
+}
+function openDm(name) {
+  dmWith = name;
+  openSheet(`<div id="dmbody"></div>`);
+  sheet.addEventListener("close", () => { dmWith = null; drawInbox(); }, { once: true });
+  fillDm();
+  setTimeout(() => { const t = $("dmtext"); if (t) t.focus(); }, 80);
+}
+function fillDm() {
+  const box = $("dmbody");
+  if (!box || !INBOX || !dmWith) return;
+  const thread = dmKeyC(INBOX.me, dmWith), keep = $("dmtext") ? $("dmtext").value : "";
+  const list = (INBOX.messages || []).filter(m => m.thread === thread);
+  const them = (INBOX.people || []).find(p => p.name === dmWith) || {};
+  box.innerHTML = `<div class="k">Private message</div><h3 id="sheetTitle">${esc(dmWith)}</h3>
+    <p class="small" style="margin:2px 0 10px">Only you and ${esc(dmWith)} can see this.${them.email ? ` ${esc(dmWith)} also gets an email when you write.` : ""}</p>
+    <div class="ichat" id="dmchat">${list.length ? list.map(m => iBubble(m, m.from === INBOX.me)).join("") : `<p class="small">No messages yet.</p>`}</div>
+    <div class="icomp"><textarea id="dmtext" class="tarea" placeholder="Write to ${esc(dmWith)}" maxlength="2000"></textarea><button type="button" class="tbtn" id="dmsend">Send</button></div>
+    <div class="btns"><button class="btn ghost" type="button" id="dmclose">Close</button></div>`;
+  $("dmtext").value = keep;
+  const c = $("dmchat"); c.scrollTop = c.scrollHeight;
+  $("dmclose").addEventListener("click", () => sheet.close());
+  $("dmsend").addEventListener("click", () => { const v = $("dmtext").value.trim(); if (!v) return; iSend(thread, "dm:" + dmWith, v, false, () => { $("dmtext").value = ""; }); });
+  $("dmtext").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("dmsend").click(); } });
+  iMarkRead(thread);
+}
+setInterval(() => { if (!document.hidden && BOOT.work && !inboxSending) loadInbox(true); }, 45e3);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
+
+/* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
+const MORE_SUB = { eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+function openMore() {
+  const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
+  openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
+    <div class="btns"><button class="btn ghost" type="button" id="moreclose">Close</button></div>`);
+  document.querySelectorAll("[data-more]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.more; sheet.close(); go(k); }));
+  $("moreclose").addEventListener("click", () => sheet.close());
+}
 /* ============ OPS (protected): requests from families and storage ============
    Lives in the database under "ops", which only Editors can read. Viewers never receive it
    and never see the tab, so names, phone numbers and addresses are safe here and nowhere else. */
@@ -1982,7 +2187,7 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOK && !$("v-ops").hidden && Date.now() - opsAt > 60e3) loadOps(true); });
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
-if (BOOT.work) { TABS.push(["work", "Work"]); drawTabs(); if (start === "work") go("work"); else loadWork(true); }
+if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader) {
   TABS.push(["ops", "Ops"]);
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
@@ -2028,7 +2233,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024010449";
+  var BUILD = "20261024012213";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
