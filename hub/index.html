@@ -2963,13 +2963,14 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
     launch(cached);
     startP.then(function (res) {
       var r = res && res.boot;
+      window.__startSeen = { at: Date.now(), ok: !!(r && r.ok), events: r && r.home && r.home.events ? r.home.events.length : -1 };
       if (!r || !r.ok) { closed(r); return; }
       keep(r);
       var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol"].some(function (f) { return !!r[f] !== !!cached[f]; });
       if (changed) { location.reload(); return; }
       window.BOOT.pinSet = !!r.pinSet;
       if (JSON.stringify(r.home) !== JSON.stringify(cached.home) && window.__applyHome) window.__applyHome(r.home);
-    }).catch(function () {});
+    }).catch(function (e) { window.__startErr = String((e && e.message) || e); });
   } else {
     /* First open on this phone: the quick link check opens the page; Work and the Inbox follow from the start request. */
     window.api("boot", [k]).then(function (r) {
@@ -2983,7 +2984,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024043142";
+  var BUILD = "20261024043705";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
