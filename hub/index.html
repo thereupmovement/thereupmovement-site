@@ -2602,7 +2602,8 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   try { var tk = localStorage.getItem("reupHubTok_" + k) || ""; window.__workT = Date.now(); window.__workP = window.api("getWork", [k, tk]); window.__workP.catch(function () {}); } catch (e) {}
   window.api("boot", [k]).then(function (r) {
     if (!r || !r.ok) { try { localStorage.removeItem("reupHubKey"); } catch (e) {} note((r && r.msg) || "This link isn't active. Ask Dasia for your personal Hub link."); return; }
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!r.vol, pinSet: !!r.pinSet, asset: r.asset, home: r.home };
+    window.__bootAt = Date.now(); window.__bootVol = r.vol;
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, asset: r.asset, home: r.home };
     document.getElementById("boot").remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -2615,7 +2616,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024015202";
+  var BUILD = "20261024020312";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
