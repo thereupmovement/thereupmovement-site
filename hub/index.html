@@ -550,6 +550,12 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 
 .wsticky{position:sticky;top:-1px;z-index:3;margin:0 0 6px;min-height:0;background:var(--surface);font-weight:700}
 .wsticky:empty{display:none}
+
+.wprog{display:flex;align-items:center;gap:8px;margin:0 12px 8px;padding:7px 12px;border-radius:8px;background:#E1ECF5;color:#1D5E8C;font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.wprog i{width:9px;height:9px;border-radius:50%;background:#1D5E8C;flex:none;animation:wpulse 1.6s ease-in-out infinite}
+@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.wprog i{animation:none}}
+.g-prog{--gc:#1D5E8C}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -1128,7 +1134,7 @@ function fillTask(keep) {
 
 /* ============ WORK: everyday tasks for the whole team ============ */
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
-const WSTAT = [["todo", "To do"], ["doing", "Working on it"], ["stuck", "Stuck"], ["done", "Done"]];
+const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants" };
 const wOpen = t => t.status !== "done";
@@ -1240,7 +1246,7 @@ function wcard(t, opts) {
       <span class="wtop"><span class="wteam">${esc(t.team || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.goal ? `<span class="wlock">${t.goal === "decision" ? "Decision" : "Grant readiness"}</span>` : t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
       <span class="wname">${esc(t.title)}</span>
       <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
-    </button>${acts}</div>`;
+    </button>${t.status === "doing" ? `<div class="wprog" aria-hidden="true"><i></i>In progress</div>` : ""}${acts}</div>`;
 }
 const wgroup = (title, cls, list, opts, note) => list.length ? `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}${list.map(t => wcard(t, opts)).join("")}</section>` : "";
 function drawWork() {
@@ -1255,13 +1261,15 @@ function drawWork() {
     const mine = all.filter(t => t.owners.includes(me));
     const open = mine.filter(wOpen).sort(wSort);
     const stuck = open.filter(t => t.status === "stuck"), late = open.filter(t => t.status !== "stuck" && wLate(t));
-    const rest = open.filter(t => t.status !== "stuck" && !wLate(t));
+    const prog = open.filter(t => t.status === "doing" && !wLate(t));
+    const rest = open.filter(t => t.status !== "stuck" && t.status !== "doing" && !wLate(t));
     const week = rest.filter(t => t.due && daysAway(t.due) <= 7), later = rest.filter(t => t.due && daysAway(t.due) > 7), nodate = rest.filter(t => !t.due);
     const helping = all.filter(t => wOpen(t) && !t.owners.includes(me) && t.helpers.includes(me)).sort(wSort);
-    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${open.length ? `You have <b>${plural(open.length, "thing")}</b> to do.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
+    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${open.length ? `You have <b>${plural(open.length, "thing")}</b> to do${prog.length ? `, ${prog.length} in progress` : ""}.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
       <p class="small">Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
     html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
     html += wgroup("Late", "g-late", late, { hideWho: true });
+    html += wgroup("In progress", "g-prog", prog, { hideWho: true });
     html += wgroup("Due this week", "g-week", week, { hideWho: true });
     html += wgroup("Coming up", "g-later", later, { hideWho: true });
     html += wgroup("No due date", "g-later", nodate, { hideWho: true });
@@ -1300,7 +1308,7 @@ function drawWork() {
           <span class="pbar" aria-hidden="true">${seg(dn, "b-done")}${seg(wk, "b-doing")}${seg(bad, "b-bad")}${seg(td, "b-todo")}</span></button>
         ${isOpen ? (theirs.filter(wOpen).length ? theirs.filter(wOpen).sort(wSort).map(t => wcard(t, { hideWho: false })).join("") : `<p class="small" style="margin:6px 14px 12px">Nothing open${allTeams ? "" : " on " + esc(workTeam)}.</p>`) : ""}</div>`;
     }).join("") || `<div class="empty">Nobody is on this team yet.</div>`}</div>
-      <p class="small" style="margin-top:10px">Bar colors: <span class="key b-done"></span> done <span class="key b-doing"></span> working on it <span class="key b-bad"></span> stuck or late <span class="key b-todo"></span> to do</p>`;
+      <p class="small" style="margin-top:10px">Bar colors: <span class="key b-done"></span> done <span class="key b-doing"></span> in progress <span class="key b-bad"></span> stuck or late <span class="key b-todo"></span> to do</p>`;
     if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   }
   box.innerHTML = html;
@@ -1313,7 +1321,7 @@ function drawWork() {
     const id = b.dataset.id, q = b.dataset.q;
     if (q === "stuck") { workStuckOpen = true; openWork(id); return; }
     if (q === "decide") { workDecideOpen = true; openWork(id); return; }
-    wQueue("saveWork", [id, { status: q }], q === "done" ? "Nice work. Marked done." : "Marked as working on it.");
+    wQueue("saveWork", [id, { status: q }], q === "done" ? "Nice work. Marked done." : "Marked in progress.");
     drawWork();
   }));
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
@@ -1809,7 +1817,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024001355";
+  var BUILD = "20261024002019";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
