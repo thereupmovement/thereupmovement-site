@@ -3315,9 +3315,10 @@ async function openReview() {
 function drawReview() {
   const box = $("rvbox"); if (!box || !RCR) return;
   const S = RCR.statuses, TS = RCR.tripStatuses;
-  const recW = RCR.list.filter(r => r.status === S.review), recD = RCR.list.filter(r => r.status !== S.review);
-  const trW = RCR.trips.filter(t => t.status === TS.review), trD = RCR.trips.filter(t => t.status !== TS.review);
-  BOOT.rc = recW.length + trW.length; drawRcCard();
+  const open_ = (x, st) => x.status === st.review || x.status === st.question;
+  const recW = RCR.list.filter(r => open_(r, S)), recD = RCR.list.filter(r => !open_(r, S));
+  const trW = RCR.trips.filter(t => open_(t, TS)), trD = RCR.trips.filter(t => !open_(t, TS));
+  BOOT.rc = RCR.list.filter(r => r.status === S.review).length + RCR.trips.filter(t => t.status === TS.review).length; drawRcCard();
   const card = r => `<div class="rvcard" data-rid="${esc(r.id)}">
       <button type="button" class="rvthumb" data-rph="${esc(r.id)}" aria-label="See the full photo"><span>Photo</span></button>
       <div class="rvinfo"><b>${esc(rcMoney(r.amount))} to ${esc(r.payee)}</b>
@@ -3372,7 +3373,10 @@ function drawReview() {
   }));
   // Thumbnails load one by one through the Hub, so nobody needs access to the Drive folder.
   box.querySelectorAll("[data-rph]").forEach(async b => {
-    try { const p = await run("receiptPhoto", KEY, TOK, b.dataset.rph, false); b.innerHTML = `<img alt="" src="data:${p.mime};base64,${p.b64}">`; } catch (e) {}
+    for (let i = 0; i < 3; i++) {
+      try { const p = await run("receiptPhoto", KEY, TOK, b.dataset.rph, false); if (b.isConnected) b.innerHTML = `<img alt="" src="data:${p.mime};base64,${p.b64}">`; break; }
+      catch (e) { await new Promise(r => setTimeout(r, 2500)); }
+    }
     b.addEventListener("click", async () => {
       const c = b.closest(".rvcard"), had = c.querySelector(".rvfull");
       if (had) { had.remove(); return; }
@@ -3500,7 +3504,7 @@ function drawRcCard() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024063955";
+  var BUILD = "20261024064741";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
