@@ -728,6 +728,13 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .calday.sel .caldots i{box-shadow:0 0 0 1.5px var(--bg)}
 .calsel{margin-top:14px}
 .calsel .month{margin-top:0}
+.k-Sorting{--kc:#7E57B5;--ks:rgba(126,87,181,.16)}
+.tag.going{background:#DDEFE3;color:#1E5C38;border-color:transparent}
+.rsvp{border:1px solid var(--line);border-radius:12px;padding:12px;margin:2px 0 4px;background:var(--surface)}
+.rsvpq{font-weight:800;margin-bottom:8px}
+.rsvpseg{grid-template-columns:1fr 1fr}
+.wgoing{display:grid;gap:4px;background:#DDEFE3;color:#1E5C38;border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14.5px}
+.wgoing b{font-size:15px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -864,6 +871,15 @@ const KEY = BOOT.key, A = BOOT.asset || "https://thereupmovement.github.io/there
 const EVENTS = (BOOT.home && BOOT.home.events) || [];
 const MEETINGS = (BOOT.home && BOOT.home.meetings) || [];
 const FORMS = (BOOT.home && BOOT.home.forms) || [];
+let GOING = (BOOT.home && BOOT.home.going) || {};
+const RSVP_KINDS = ["Distribution", "Event", "Pickup", "Sorting"];
+const goingList = e => GOING[e.date + "|" + e.name] || [];
+const myGoing = e => (goingList(e).find(x => x.who === BOOT.name) || {}).a || "";
+const goingLine = e => {
+  if (!RSVP_KINDS.includes(e.kind)) return "";
+  const y = goingList(e).filter(x => x.a === "yes").length, me = BOOT.work ? myGoing(e) : "";
+  return (y ? ` &middot; ${y} from the team going` : "") + (me === "yes" ? ` <span class="tag going">You're going</span>` : me === "no" ? ` <span class="tag">Can't make it</span>` : "");
+};
 const VOLUNTEER_FORM = (FORMS.find(f => f.title === "Sign up for an event") || {}).url || "";
 
 /* ============ HELPERS ============ */
@@ -883,7 +899,7 @@ function rowHTML(e, i) {
   return `<div class="rw">` + `<button class="row k-${e.kind}" type="button" data-ev="${i}">
     <div class="day"><small>${d.toLocaleDateString("en-US", { month: "short" })}</small><b>${d.getDate()}</b></div>
     <div><div class="k">${e.kind}</div><div class="t">${esc(e.name)}<span class="tag ${e.status === "tentative" ? "tbc" : ""}">${STATUS[e.status]}</span></div>
-      <div class="s">${d.toLocaleDateString("en-US", { weekday: "short" })} &middot; ${away(daysAway(e.date))}</div></div>
+      <div class="s">${d.toLocaleDateString("en-US", { weekday: "short" })} &middot; ${away(daysAway(e.date))}${goingLine(e)}</div></div>
     <div class="chev" aria-hidden="true">&rsaquo;</div></button>${cal}</div>`;
 }
 const CALICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>';
@@ -915,6 +931,41 @@ function calLink(e) {
   return "https://calendar.google.com/calendar/render?" + p.toString();
 }
 
+function rsvpHTML(e) {
+  if (!BOOT.work || !RSVP_KINDS.includes(e.kind)) return "";
+  const l = goingList(e), yes = l.filter(x => x.a === "yes").map(x => x.who), no = l.filter(x => x.a === "no").map(x => x.who), me = myGoing(e);
+  const q = e.kind === "Pickup" ? "Riding on this pickup?" : e.kind === "Sorting" ? "Can you help sort and price?" : "Are you going?";
+  return `<div class="rsvp"><div class="rsvpq">${q}</div><div class="seg rsvpseg" role="group" aria-label="${q}"><button type="button" data-rsvp="yes" aria-pressed="${me === "yes"}">I'm going</button><button type="button" data-rsvp="no" aria-pressed="${me === "no"}">Can't make it</button></div>
+    <p class="small" style="margin:8px 0 0">${yes.length ? "Going from the team: " + esc(yes.join(", ")) : "Nobody from the team has said yes yet."}${no.length ? "<br>Can't make it: " + esc(no.join(", ")) : ""}</p></div>`;
+}
+function saveGoing() {
+  BOOT.home.going = GOING;
+  try { const k = "reupHubBoot_" + KEY, c = JSON.parse(localStorage.getItem(k) || "null"); if (c) { c.home = Object.assign({}, c.home, { going: GOING }); localStorage.setItem(k, JSON.stringify(c)); } } catch (err) {}
+}
+function refreshGoingViews() {
+  drawHome(); drawSchedule();
+  try { if (typeof WORK !== "undefined" && WORK) drawWork(); } catch (err) {}
+  try { if (typeof VOL !== "undefined" && VOL) drawVol(); } catch (err) {}
+}
+function wireRsvp(e) {
+  document.querySelectorAll("[data-rsvp]").forEach(b => b.addEventListener("click", async () => {
+    const want = myGoing(e) === b.dataset.rsvp ? "" : b.dataset.rsvp; // tapping your answer again clears it
+    const k = e.date + "|" + e.name, before = GOING[k] || [];
+    GOING = Object.assign({}, GOING, { [k]: before.filter(x => x.who !== BOOT.name).concat(want ? [{ who: BOOT.name, a: want }] : []) });
+    openEvent(e); refreshGoingViews();
+    try {
+      const r = await run("setGoing", KEY, e.date, e.name, want);
+      if (r && r.going) GOING = r.going;
+      saveGoing(); refreshGoingViews();
+      if (sheet.open && $("sheetTitle") && $("sheetTitle").textContent === e.name) openEvent(e);
+      toast(want === "yes" ? "You're on the list." : want === "no" ? "Got it. Thanks for letting the team know." : "Answer cleared.");
+    } catch (err) {
+      GOING = Object.assign({}, GOING, { [k]: before }); refreshGoingViews();
+      if (sheet.open && $("sheetTitle") && $("sheetTitle").textContent === e.name) openEvent(e);
+      toast("That didn't save. Check your connection and try again.");
+    }
+  }));
+}
 function openEvent(e) {
   const n = daysAway(e.date);
   const where = [e.place, e.address].filter(Boolean).map(esc).join("<br>");
@@ -929,14 +980,16 @@ function openEvent(e) {
       ${e.note ? `<div class="fact"><span>Notes</span><div>${esc(e.note)}</div></div>` : ""}
     </div>
     ${e.kind === "Distribution" ? `<p class="small">On the day: check-in table, needs forms, and every volunteer knows the rules on the line.</p>` : ""}
+    ${rsvpHTML(e)}
     <div class="btns">
-      ${["Distribution", "Event"].includes(e.kind) ? `<a class="btn" href="${VOLUNTEER_FORM}" target="_blank" rel="noopener">I can help at this one</a>` : ""}
+      ${BOOT.work && RSVP_KINDS.includes(e.kind) ? "" : ["Distribution", "Event"].includes(e.kind) ? `<a class="btn" href="${VOLUNTEER_FORM}" target="_blank" rel="noopener">I can help at this one</a>` : ""}
       ${e.address ? `<a class="btn ghost" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">Get directions</a>` : ""}
       ${e.status !== "tentative" ? `<a class="btn ghost" href="${calLink(e)}" target="_blank" rel="noopener">Add to my calendar</a>` : ""}
       ${e.kind === "Distribution" ? `<button class="btn ghost" type="button" id="toRules">See event-day rules</button>` : ""}
       <button class="btn ghost" type="button" data-close>Close</button>
     </div>`);
   const r = $("toRules"); if (r) r.addEventListener("click", () => { sheet.close(); go("eventday"); });
+  wireRsvp(e);
 }
 
 function openForm(f) {
@@ -1059,9 +1112,9 @@ function wireCal(root, id, redraw) {
   root.querySelectorAll(`[data-cd^="${id}|"]`).forEach(b => b.addEventListener("click", () => { calSel[id] = b.dataset.cd.split("|")[1]; redraw(); }));
 }
 function drawSchedule() {
-  $("legend").innerHTML = ["Distribution", "Event", "Pickup", "Deadline"].map(k => `<span class="k-${k}"><i></i>${k}</span>`).join("");
-  $("filters").innerHTML = ["All", "Distribution", "Event", "Pickup", "Deadline"].map(k =>
-    `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === kindFilter}">${k === "All" ? "All" : k + "s"}</button>`).join("");
+  $("legend").innerHTML = ["Distribution", "Event", "Pickup", "Sorting", "Deadline"].map(k => `<span class="k-${k}"><i></i>${k}</span>`).join("");
+  $("filters").innerHTML = ["All", "Distribution", "Event", "Pickup", "Sorting", "Deadline"].map(k =>
+    `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === kindFilter}">${k === "All" ? "All" : k === "Sorting" ? "Sorting days" : k + "s"}</button>`).join("");
   $("filters").querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { kindFilter = b.dataset.k; drawSchedule(); }));
   const shown = upcoming.filter(e => kindFilter === "All" || e.kind === kindFilter);
   $("schedtoggle").innerHTML = calToggle("sched");
@@ -1149,6 +1202,7 @@ window.__applyHome = function (h) {
   put(EVENTS, h.events); put(MEETINGS, h.meetings); put(FORMS, h.forms);
   put(upcoming, EVENTS.filter(e => daysAway(e.date) >= 0).sort((a, b) => a.date.localeCompare(b.date)));
   BOOT.home = h;
+  GOING = h.going || {};
   drawMeetings(); drawHome(); drawSchedule(); drawForms(); drawImpact(h.impact || null);
 };
 setInterval(() => {
@@ -1599,6 +1653,8 @@ function drawWork() {
     html += `<div class="wme"><div class="wmetop"><b>Your week</b><span>${doneWk} done${leftWk ? `, ${leftWk} to go` : ""}</span></div>
       <div class="wmebar" role="img" aria-label="${pct}% of this week's tasks done"><i style="width:${pct}%"></i></div>
       <div class="wmenums"><div><b>${doneWk}</b><span>done this week</span></div><div><b>${done30}</b><span>done in 30 days</span></div><div><b>${active.filter(t => t.status === "doing").length}</b><span>in progress</span></div></div></div>`;
+    const goingWk = (typeof EVENTS !== "undefined" && typeof myGoing === "function" ? EVENTS : []).filter(e => myGoing(e) === "yes" && daysAway(e.date) >= 0 && daysAway(e.date) <= 7);
+    if (goingWk.length) html += `<div class="wgoing"><b>You're going this week</b>${goingWk.map(e => `<span>${esc(e.name)} &middot; ${esc(dt(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</span>`).join("")}</div>`;
     html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
     html += wgroup("Late", "g-late", late, { hideWho: true });
     html += wgroup("Due this week", "g-week", week, { hideWho: true });
@@ -2271,6 +2327,7 @@ const vPerson = id => (VOL ? VOL.people : []).find(p => p.id === id);
 const vOn = date => vPeople().filter(p => p.dates.includes(date));
 const vStatus = (p, date) => (p.shifts[date] && p.shifts[date].status) || "signed";
 const vCount = date => vOn(date).filter(p => vStatus(p, date) !== "cancelled").length;
+const vTeam = date => { const names = new Set(); Object.keys(typeof GOING !== "undefined" ? GOING : {}).forEach(k => { if (k.slice(0, 10) === date) GOING[k].forEach(x => { if (x.a === "yes") names.add(x.who); }); }); return [...names]; };
 const vIsNew = p => /new/i.test(p.returning || "");
 const vNeedsOrient = p => !p.oriented && vIsNew(p);
 const vNoPhotos = p => /^no/i.test(p.photos || "");
@@ -2306,7 +2363,7 @@ function drawVol() {
   if (volView === "dates") {
     const row = e => { const n = vCount(e.date), need = +e.needed || 0, pct = need ? Math.min(100, 100 * n / need) : (n ? 100 : 0);
       return `<button type="button" class="wrow vrow" data-ve="${e.date}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(vShort(e.date))}${e.time ? " &middot; " + esc(e.time) : ""}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</span>
-        ${need ? `<span class="vbar${n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span>` : ""}</span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span></span></button>`; };
+        ${need ? `<span class="vbar${n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span>` : ""}</span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span>${vTeam(e.date).length ? `<span>Team ${vTeam(e.date).length}</span>` : ""}</span></button>`; };
     html += `<p class="small">Tap a date to see who's coming, confirm them, copy their numbers for a reminder text, and mark who came and their hours.</p>
       <div class="wrows">${up.map(row).join("") || `<p class="small">No volunteer dates coming up. Add one in Admin, Schedule.</p>`}</div>
       ${past.length ? `<details class="tmore vpast"><summary>Past dates: mark who came</summary><div class="wrows">${past.map(row).join("")}</div></details>` : ""}`;
@@ -2345,7 +2402,8 @@ function volEvent(date) {
       <div class="k">${esc(vShort(date))}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</div><h3 id="sheetTitle">${esc(e.name)}</h3>
       <p class="small" style="margin:0 0 10px">${[e.time, e.place].filter(Boolean).map(esc).join(" &middot; ")}</p>
       <div class="tsec"><div class="tl">Volunteers needed</div><div class="vneed"><input class="ainput" id="vneed" type="number" min="0" max="500" inputmode="numeric" value="${esc(e.needed || "")}" placeholder="How many"><button type="button" class="tbtn" id="vneedsave">Save</button></div>
-        <p class="small" style="margin:6px 0 0">${going.length} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}. This number also goes on the volunteer sign-up sheet.</p></div>
+        <p class="small" style="margin:6px 0 0">${going.length} volunteer${going.length === 1 ? "" : "s"} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}. This number also goes on the volunteer sign-up sheet.</p>
+        <p class="small" style="margin:6px 0 0">${vTeam(date).length ? "From the team: " + esc(vTeam(date).join(", ")) : "Nobody from the team has said they are going yet."}</p></div>
       ${nums.length && !isPast ? `<div class="tsec"><div class="tl">Reminder text</div><div class="abtns"><button type="button" class="tbtn" id="vnums">Copy ${nums.length} phone number${nums.length === 1 ? "" : "s"}</button><button type="button" class="tbtn ghost" id="vtext">Copy the reminder message</button></div>
         <p class="small" style="margin:6px 0 0">Paste the numbers into a new group text, then paste the message.</p></div>` : ""}
       <div class="tsec"><div class="tl">${isPast ? "Who came" : "Who's coming"}</div>
@@ -2925,7 +2983,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024033636";
+  var BUILD = "20261024043142";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
