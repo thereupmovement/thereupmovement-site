@@ -607,6 +607,7 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .actitem .actwhen{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:12px;color:var(--muted);white-space:nowrap}
 .a-done{border-left-color:#2E7D4F}.a-doing{border-left-color:#1D5E8C}.a-stuck{border-left-color:#B3261E}.a-note{border-left-color:#B35400}
 @media (max-width:520px){.actrow{grid-template-columns:1.4fr repeat(4,.7fr);font-size:13px}.actrow .actlast{grid-column:1 / -1;text-align:left;font-size:12px;color:var(--muted)}.acthead span:last-child{display:none}.actnums{grid-template-columns:repeat(2,1fr)}}
+.actlast em{display:block;font-style:normal;font-size:11.5px;color:var(--muted);font-weight:400}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -698,8 +699,9 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     </section>
 
     <section class="view" id="v-goals" hidden>
-      <div class="banner" data-cover="goals"><div><h2>Leadership</h2><p>How the team is moving, and where ReUp stands on its goals.</p></div></div>
-      <div id="activity"></div>
+      <div class="banner" data-cover="goals"><div><h2>Leadership</h2><p>Where ReUp stands on its goals, and how the team is moving.</p></div></div>
+      <div class="seg" role="group" aria-label="Leadership section"><button type="button" data-lv="goals" aria-pressed="true">Goals</button><button type="button" data-lv="team" aria-pressed="false">Team activity</button></div>
+      <div id="activity" hidden></div>
       <div id="leaders"><p class="lead">Loading...</p></div>
     </section>
 
@@ -1437,7 +1439,19 @@ function drawWork() {
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
 }
 /* Leadership: who is moving, and what changed. Built from every task's update log, so nothing extra is tracked. */
-let actWho = "", actLimit = 30;
+let actWho = "", actLimit = 30, leadView = "goals";
+try { leadView = localStorage.getItem("reupHubLeadView") === "team" ? "team" : "goals"; } catch (e) {}
+/* Leadership shows one section at a time, like Ops: Goals, or Team activity. */
+function setLeadView(v) {
+  leadView = v === "team" ? "team" : "goals";
+  try { localStorage.setItem("reupHubLeadView", leadView); } catch (e) {}
+  const a = $("activity"), l = $("leaders");
+  if (a) a.hidden = leadView !== "team";
+  if (l) l.hidden = leadView === "team";
+  document.querySelectorAll("[data-lv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lv === leadView));
+  if (leadView === "team") drawActivity();
+}
+document.querySelectorAll("[data-lv]").forEach(b => b.addEventListener("click", () => setLeadView(b.dataset.lv)));
 const ago = iso => {
   const m = Math.round((Date.now() - new Date(iso)) / 60000);
   if (!(m >= 0)) return "";
@@ -1471,9 +1485,10 @@ function drawActivity() {
     const last = feed.find(f => f.who === n);
     return { n, done7: theirs.filter(t => wRecentDone(t, 7)).length, done30: theirs.filter(t => wRecentDone(t, 30)).length,
       doing: o.filter(t => t.status === "doing").length, bad: o.filter(t => t.status === "stuck" || wLate(t)).length,
-      open: o.filter(t => !wNotYet(t)).length, last: last ? last.at : "" };
+      open: o.filter(t => !wNotYet(t)).length, last: last ? last.at : "", seen: ((WORK.people || []).find(p => p.name === n) || {}).seen || "" };
   });
   const shown = feed.filter(f => !actWho || f.who === actWho || tasks.some(t => t.id === f.id && t.owners.includes(actWho)));
+  const tb = document.querySelector('[data-lv="team"]'); if (tb) tb.textContent = "Team activity" + (stuckN ? ` (${stuckN} stuck)` : "");
   box.innerHTML = `<h2>Team activity</h2>
     <p class="small" style="margin:-4px 0 10px">Everything people finish, start, post or change on a task shows up here. Tap a person to see only their work.</p>
     <div class="tnums actnums"><div class="good"><b>${doneWk}</b><span>finished this week</span></div><div><b>${wk.length}</b><span>changes this week</span></div><div class="${stuckN ? "bad" : ""}"><b>${stuckN}</b><span>stuck now</span></div><div class="${lateN ? "bad" : ""}"><b>${lateN}</b><span>late now</span></div></div>
@@ -1481,7 +1496,7 @@ function drawActivity() {
       <div class="actrow acthead" aria-hidden="true"><span>Person</span><span>Done 7 days</span><span>Done 30 days</span><span>In progress</span><span>Late or stuck</span><span>Last active</span></div>
       ${rows.map(r => `<button type="button" class="actrow${actWho === r.n ? " on" : ""}" data-actwho="${esc(r.n)}" aria-pressed="${actWho === r.n}" aria-label="${esc(r.n)}: ${r.done7} done in 7 days, ${r.done30} in 30 days, ${r.doing} in progress, ${r.bad} late or stuck, last active ${esc(r.last ? ago(r.last) : "not yet")}">
         <span><b>${esc(r.n)}</b><em>${r.open} open</em></span><span>${r.done7}</span><span>${r.done30}</span><span>${r.doing}</span>
-        <span class="${r.bad ? "bad" : ""}">${r.bad}</span><span class="actlast${r.last && Date.now() - new Date(r.last) > 7 * 864e5 ? " bad" : ""}">${r.last ? esc(ago(r.last)) : "Not yet"}</span></button>`).join("")}
+        <span class="${r.bad ? "bad" : ""}">${r.bad}</span><span class="actlast${r.last && Date.now() - new Date(r.last) > 7 * 864e5 ? " bad" : ""}">${r.last ? esc(ago(r.last)) : "No changes yet"}${r.seen ? `<em>opened the Hub ${esc(String(r.seen).replace(/, \d{4}/, ""))}</em>` : `<em>hasn't opened the Hub</em>`}</span></button>`).join("")}
     </div>
     <h3 class="wpeople">${actWho ? esc(actWho) + "'s recent changes" : "Recent changes"}${actWho ? ` <button type="button" class="linkish" id="actall">Show everyone</button>` : ""}</h3>
     <div class="actfeed">${shown.slice(0, actLimit).map(f => { const [k, l] = actLabel(f.text); return `<button type="button" class="actitem a-${k}" data-work="${esc(f.id)}">
@@ -1955,7 +1970,7 @@ function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
   if (tab === "goals" && (force || !goalsAt || Date.now() - goalsAt > 300e3)) loadGoals();
-  if (tab === "goals" && typeof drawActivity === "function") { drawActivity(); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
+  if (tab === "goals" && typeof drawActivity === "function") { setLeadView(leadView); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
 }
 // Keep Ops current while it is open: new requests and other people's updates show up within two minutes.
 setInterval(() => {
@@ -2013,7 +2028,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024010118";
+  var BUILD = "20261024010449";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
