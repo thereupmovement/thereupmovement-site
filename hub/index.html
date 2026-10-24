@@ -1923,13 +1923,15 @@ function openMore() {
   $("moreclose").addEventListener("click", () => sheet.close());
 }
 /* ============ ADMIN: people, schedule and forms, for the Hub admin (coordinator) ============ */
-let ADMIN = null, adminView = "people", adminBusy = false;
+let ADMIN = null, adminView = "people", adminBusy = false, adminAt = 0, adminLoading = false;
 const ADMIN_GUIDE = "https://docs.google.com/document/d/1nHkicSgTMaaYolcduelzUNvyQFfLhdNPrAL335pJaQY/edit";
 async function loadAdmin() {
-  if (!$("admin")) return;
+  if (!$("admin") || adminLoading) return;
+  adminLoading = true;
   if (!ADMIN) $("admin").innerHTML = `<p class="lead">Loading...</p>`;
-  try { ADMIN = await run("adminGet", KEY, TOK); drawAdmin(); }
-  catch (e) { if (isAuth(e)) relock(); else $("admin").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  try { const r = await run("adminGet", KEY, TOK); if (!adminBusy) { ADMIN = r; adminAt = Date.now(); drawAdmin(); } }
+  catch (e) { if (isAuth(e)) relock(); else if (!ADMIN) $("admin").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  adminLoading = false;
 }
 async function adminCall(fn, args, ok) {
   if (adminBusy) return null;
@@ -2079,11 +2081,19 @@ const vLabel = k => (V_ST.find(x => x[0] === k) || V_ST[0])[1];
 const vShort = s => dt(s).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 const vDigits = s => String(s || "").replace(/\D/g, "").slice(-10);
 const vIdOf = (phone, name) => { const d = vDigits(phone); return d.length === 10 ? "p" + d : "n" + String(name || "").trim().toLowerCase().replace(/\s+/g, " "); };
+let volLoading = false;
 async function loadVol(quiet) {
-  if (!$("vol")) return;
+  if (!$("vol") || volLoading) return;
+  volLoading = true;
   if (!VOL && !quiet) $("vol").innerHTML = `<p class="lead">Loading volunteers...</p>`;
-  try { VOL = await run("getVolunteers", KEY, TOK); volAt = Date.now(); drawVol(); if (volSheet) volSheet(); }
+  try {
+    const r = await run("getVolunteers", KEY, TOK);
+    // A refresh never redraws over someone who is typing or saving.
+    const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+    if (!volBusy && !(quiet && typing)) { VOL = r; volAt = Date.now(); drawVol(); if (volSheet && !typing) volSheet(); }
+  }
   catch (e) { if (isAuth(e)) relock(); else if (!VOL) $("vol").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  volLoading = false;
 }
 async function volCall(fn, args, ok) {
   if (volBusy) return null;
@@ -2544,16 +2554,20 @@ async function loadOps(quiet) {
   }
   loadingOps = false;
 }
+let goalsLoading = false;
 async function loadGoals() {
+  if (goalsLoading) return;
+  goalsLoading = true;
   if (!goalsAt) $("leaders").innerHTML = `<p class="lead">Loading...</p>`;
   try { const d = await run("getGoals", KEY, TOK); goalsAt = Date.now(); drawLeaders(d); }
-  catch (e) { if (isAuth(e)) relock(); else $("leaders").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  catch (e) { if (isAuth(e)) relock(); else if (!goalsAt) $("leaders").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+  goalsLoading = false;
 }
 function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
   if (tab === "goals" && (force || !goalsAt || Date.now() - goalsAt > 300e3)) loadGoals();
-  if (tab === "admin") loadAdmin();
+  if (tab === "admin" && (force || !ADMIN || Date.now() - adminAt > 60e3)) loadAdmin();
   if (tab === "vol" && (force || !VOL || Date.now() - volAt > 60e3)) loadVol(!!VOL);
   if (tab === "goals" && typeof drawActivity === "function") { setLeadView(leadView); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
 }
@@ -2576,7 +2590,15 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   drawTabs();
   const want = start === "leaders" ? "goals" : start;
   go(TABS.some(([k]) => k === want) ? want : "home");
-  if (BOOT.ops && TOK) setTimeout(() => { if (TOK && !OPS && !loadingOps) loadOps(true); }, 2500);
+  // Load each protected tab in the background, one after another, so it is ready before anyone taps it.
+  if (TOK) {
+    const pre = [];
+    if (BOOT.ops) pre.push(() => { if (!OPS && !loadingOps) loadOps(true); });
+    if (BOOT.leader) pre.push(() => { if (!goalsAt) loadGoals(); });
+    if (BOOT.vol) pre.push(() => { if (!VOL) loadVol(true); });
+    if (BOOT.coordinator) pre.push(() => { if (!ADMIN) loadAdmin(); });
+    pre.forEach((f, i) => setTimeout(() => { if (TOK) f(); }, 2500 + i * 1200));
+  }
 }
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
@@ -2617,7 +2639,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024025608";
+  var BUILD = "20261024030231";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
