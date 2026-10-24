@@ -366,7 +366,7 @@ form.vs>.vs-btn{width:100%}
             '<a class="vs-btn ghost" target="_blank" rel="noopener" href="' + escH(calLink("ReUp: " + d.name, d.date, d.time, 180, "Volunteering with The ReUp Movement.", d.address || d.place)) + '">Add to my calendar</a></div>';
         }).join("") + "</div>";
       }
-      html += '<p class="vs-note">A confirmation email is on its way and should arrive within a few minutes. Can\'t make a date? Reply to that email so we can fill your spot.</p>' +
+      html += '<p class="vs-note">We will email you a confirmation with your dates by the next morning. Can\'t make a date? Reply to that email so we can fill your spot.</p>' +
         '<button type="button" class="vs-btn ghost" data-vs-again>Sign up someone else</button></div>';
       root.innerHTML = html;
       root.querySelector("[data-vs-again]").onclick = function () { draw(); };
