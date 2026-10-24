@@ -704,7 +704,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 </head>
 <body>
 <header class="band pad">
-  <div class="wrap top"><span class="brand"><img src="https://thereupmovement.github.io/thereupmovement-site/hub/img0.png" alt="The ReUp Movement" width="114" height="40"></span><span class="only">Team Hub</span></div>
+  <div class="wrap top"><span class="brand"><img src="https://thereupmovement.github.io/thereupmovement-site/hub/img0.webp" alt="The ReUp Movement" width="114" height="40"></span><span class="only">Team Hub</span></div>
 </header>
 
 <main class="pad">
@@ -1067,10 +1067,10 @@ const PHOTOS = [
   { src: A + "img6.jpg", alt: "A volunteer hands gallons of milk through a car window at a drive-through distribution", caption: "Milk handed out, car by car." }
 ];
 const SHOP = [
-  { name: "Everybody Needs a ReUp Tee", price: "$25", url: "https://the-reup-shop.fourthwall.com/products/everybody-needs-a-reup-tee-front-print", img: A + "img7.jpg" },
-  { name: "Everybody Needs a ReUp Hoodie", price: "$50", url: "https://the-reup-shop.fourthwall.com/products/everybody-needs-a-reup-hoodie-black", img: A + "img8.jpg" },
-  { name: "New Beginning Hoodie", price: "$50", url: "https://the-reup-shop.fourthwall.com/products/new-beginning-hoodie", img: A + "img9.jpg" },
-  { name: "New Beginning Tote", price: "$22", url: "https://the-reup-shop.fourthwall.com/products/new-beginning-tote", img: A + "img10.jpg" }
+  { name: "Everybody Needs a ReUp Tee", price: "$25", url: "https://the-reup-shop.fourthwall.com/products/everybody-needs-a-reup-tee-front-print", img: A + "img7.webp" },
+  { name: "Everybody Needs a ReUp Hoodie", price: "$50", url: "https://the-reup-shop.fourthwall.com/products/everybody-needs-a-reup-hoodie-black", img: A + "img8.webp" },
+  { name: "New Beginning Hoodie", price: "$50", url: "https://the-reup-shop.fourthwall.com/products/new-beginning-hoodie", img: A + "img9.webp" },
+  { name: "New Beginning Tote", price: "$22", url: "https://the-reup-shop.fourthwall.com/products/new-beginning-tote", img: A + "img10.webp" }
 ];
 const COVERS = { work: "img11", schedule: "img3b", eventday: "img2b", forms: "img12", ops: "img4b", goals: "img13" };
 setTimeout(() => Object.values(COVERS).forEach(c => { const i = new Image(); i.src = A + c + ".webp"; }), 2500);
@@ -2639,7 +2639,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024030231";
+  var BUILD = "20261024030804";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
