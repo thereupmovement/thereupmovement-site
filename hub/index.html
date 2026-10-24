@@ -739,6 +739,48 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .rsvpseg{grid-template-columns:1fr 1fr}
 .wgoing{display:grid;gap:4px;background:#DDEFE3;color:#1E5C38;border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14.5px}
 .wgoing b{font-size:15px}
+.vs{display:grid;gap:18px}
+.vs-lead{margin:0;color:var(--muted)}
+.vs-sec{border:0;margin:0;padding:0;display:grid;gap:14px}
+.vs-sec legend{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:10px}
+.vs-field{display:grid;gap:6px}
+.vs-field>span{font-weight:700}
+.vs-field small,.vs-date small{display:block;color:var(--muted);font-size:14px;font-weight:400}
+.vs-field input[type=text],.vs-field input[type=tel],.vs-field input[type=email],.vs-field textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}
+.vs-field textarea{min-height:88px;resize:vertical}
+.vs-field input:focus-visible,.vs-field textarea:focus-visible{outline:3px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+.vs-opts{display:grid;gap:8px}
+.vs-two{grid-template-columns:1fr 1fr}
+.vs-chips{display:flex;flex-wrap:wrap}
+.vs-opt,.vs-date{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;box-sizing:border-box;cursor:pointer;line-height:1.35}
+.vs-opt input,.vs-date input{flex:none;width:20px;height:20px;margin:1px 0 0;accent-color:var(--ink)}
+.vs-opt:has(input:checked),.vs-date:has(input:checked){border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.vs-opt:has(input:focus-visible),.vs-date:has(input:focus-visible){outline:3px solid var(--ink);outline-offset:2px}
+.vs-dates{display:grid;gap:8px}
+.vs-date b{font-weight:800}
+.vs-tag{display:inline-block;margin-top:4px;font-style:normal;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.vs-agree{font-weight:700}
+.vs-note{margin:0;color:var(--muted);font-size:15px}
+.vs-std{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+.vs-std summary{font-weight:700;cursor:pointer;min-height:24px}
+.vs-std ol{margin:10px 0 0;padding-left:22px;display:grid;gap:8px;font-size:15px}
+.vs-std p{font-size:15px;margin:10px 0 0}
+.vs-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}
+.vs-err{margin:0;font-weight:700;color:var(--red-text,var(--red,#7B2121))}
+.vs-err:empty{display:none}
+.vs-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:800;min-height:52px;padding:12px 20px;border-radius:14px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);text-decoration:none;cursor:pointer;text-align:center}
+.vs-btn.ghost{background:transparent;color:var(--ink)}
+.vs-btn:disabled{opacity:.6;cursor:default}
+.vs-btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+form.vs>.vs-btn{width:100%}
+.vs-h{margin:0;font-size:24px;line-height:1.2}
+.vs-h:focus{outline:none}
+.vs-card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.vs-card p{margin:0}
+.vs-row{display:flex;flex-wrap:wrap;gap:8px}
+.vs-dl{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.vs-dl:first-of-type{border-top:0;padding-top:0}
+@media (max-width:360px){.vs-two{grid-template-columns:1fr}}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -884,6 +926,7 @@ const goingLine = e => {
   const y = goingList(e).filter(x => x.a === "yes").length, me = BOOT.work ? myGoing(e) : "";
   return (y ? ` &middot; ${y} from the team going` : "") + (me === "yes" ? ` <span class="tag going">You're going</span>` : me === "no" ? ` <span class="tag">Can't make it</span>` : "");
 };
+const SIGNUP_LINK = "https://thereupmovement.github.io/thereupmovement-site/#signup";
 const VOLUNTEER_FORM = (FORMS.find(f => f.title === "Sign up for an event") || {}).url || "";
 
 /* ============ HELPERS ============ */
@@ -986,7 +1029,7 @@ function openEvent(e) {
     ${e.kind === "Distribution" ? `<p class="small">On the day: check-in table, needs forms, and every volunteer knows the rules on the line.</p>` : ""}
     ${rsvpHTML(e)}
     <div class="btns">
-      ${BOOT.work && RSVP_KINDS.includes(e.kind) ? "" : ["Distribution", "Event"].includes(e.kind) ? `<a class="btn" href="${VOLUNTEER_FORM}" target="_blank" rel="noopener">I can help at this one</a>` : ""}
+      ${BOOT.work && RSVP_KINDS.includes(e.kind) ? "" : ["Distribution", "Event"].includes(e.kind) && e.vol !== false ? `<button class="btn" type="button" id="toSignup">I can help at this one</button>` : ""}
       ${e.address ? `<a class="btn ghost" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(e.address)}" target="_blank" rel="noopener">Get directions</a>` : ""}
       ${e.status !== "tentative" ? `<a class="btn ghost" href="${calLink(e)}" target="_blank" rel="noopener">Add to my calendar</a>` : ""}
       ${e.kind === "Distribution" ? `<button class="btn ghost" type="button" id="toRules">See event-day rules</button>` : ""}
@@ -994,9 +1037,24 @@ function openEvent(e) {
     </div>`);
   const r = $("toRules"); if (r) r.addEventListener("click", () => { sheet.close(); go("eventday"); });
   wireRsvp(e);
+  const su = $("toSignup"); if (su) su.addEventListener("click", () => openSignup({ date: e.date, name: e.name }));
 }
 
+function openSignup(preset, f) {
+  openSheet(`<div class="k">Volunteers</div>
+    <h3 id="sheetTitle">Sign up for an event</h3>
+    ${f && f.share ? `<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" id="copyLink">Copy the sign-up link to send</button></div><p class="small" id="copyNote" style="overflow-wrap:anywhere;margin:0">${esc(SIGNUP_LINK)}</p>` : ""}
+    <div id="vsbox" style="margin-top:12px"></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  window.ReUpSignup.mount($("vsbox"), { api: run, preset: preset || null });
+  const c = $("copyLink");
+  if (c) c.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(SIGNUP_LINK); c.textContent = "Copied"; }
+    catch (err) { const r = document.createRange(); r.selectNodeContents($("copyNote")); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); c.textContent = "Link selected below"; }
+  });
+}
 function openForm(f) {
+  if (f.native === "volunteer") return openSignup(null, f);
   openSheet(`<div class="k">${esc(f.group)}${f.time ? " &middot; " + esc(f.time) : ""}</div>
     <h3 id="sheetTitle">${esc(f.title)}</h3>
     <div class="facts">
@@ -2261,13 +2319,22 @@ function editEvent(i, presetDate) {
     <div class="tsec"><div class="tl">Street address</div><input class="ainput" id="aeaddr" type="text" value="${v("address")}" placeholder="Only a public place, never someone's home"></div>
     <div class="tsec"><div class="tl">Who</div><input class="ainput" id="aewho" type="text" value="${v("who")}" placeholder="For example Charles leads"></div>
     <div class="tsec"><div class="tl">Note</div><textarea class="tarea" id="aenote" placeholder="Anything the team should know">${v("note")}</textarea></div>
-    ${isNew ? `<label class="icheck"><input type="checkbox" id="aevol" checked> Also put distributions and events on the volunteer sign-up</label>` : `<p class="small">Changing a date here does not change the volunteer sign-up or the community page. Tell the team in the Inbox if a date moves.</p>`}
+    <div class="tsec"><div class="tl">Volunteers</div>
+      <label class="icheck"><input type="checkbox" id="aevol"${(e ? e.volOn : true) ? " checked" : ""}> Open for volunteer sign-up</label>
+      <p class="small" style="margin:6px 0 10px">Volunteers see it on the sign-up in the Hub and on the community page as soon as you save. Distributions and events are open unless you switch this off.</p>
+      <label class="arow2" style="display:block">How many volunteers it needs<input class="ainput" id="aeneed" type="number" min="0" max="500" inputmode="numeric" value="${e && e.need !== undefined && e.need !== "" ? esc(String(e.need)) : ""}" placeholder="Leave blank if you're not sure"></label></div>
+    ${isNew ? "" : `<p class="small">A new date shows on the volunteer sign-up right away. The community page's dates update on Monday. Tell the team in the Inbox if a date moves.</p>`}
     ${isNew ? "" : `<div class="btns"><button class="btn ghost" type="button" id="aedel">Remove from the Schedule</button></div>`}`);
   wireChips("akind", false, st, "kind"); wireChips("astat", false, st, "status");
+  /* Until the switch is touched, it follows the kind: distributions and events are open, other kinds are not. */
+  let volTouched = false;
+  $("aevol").addEventListener("change", () => { volTouched = true; });
+  document.querySelectorAll("[data-akind]").forEach(b => b.addEventListener("click", () => { if (!volTouched && isNew) $("aevol").checked = ["Distribution", "Event"].includes(st.kind); }));
   $("aeclose").addEventListener("click", () => sheet.close());
   $("aesave").addEventListener("click", async () => {
-    const entry = { name: $("aename").value, date: $("aedate").value, kind: st.kind, status: st.status, start: $("aestart").value, end: $("aeend").value, place: $("aeplace").value, address: $("aeaddr").value, who: $("aewho").value, note: $("aenote").value };
-    if (await adminCall("adminSaveEvent", [i, entry, !!($("aevol") && $("aevol").checked)], isNew ? "Added to the Schedule." : "Saved.")) sheet.close();
+    const entry = { name: $("aename").value, date: $("aedate").value, kind: st.kind, status: st.status, start: $("aestart").value, end: $("aeend").value, place: $("aeplace").value, address: $("aeaddr").value, who: $("aewho").value, note: $("aenote").value, need: $("aeneed").value };
+    if (volTouched || isNew) entry.vol = $("aevol").checked;
+    if (await adminCall("adminSaveEvent", [i, entry, false], isNew ? "Added to the Schedule." : "Saved.")) sheet.close();
   });
   const d = $("aedel"); if (d) d.addEventListener("click", async () => { if (confirm("Remove " + e.name + " from the Schedule?") && await adminCall("adminSaveEvent", [i, null, false], "Removed.")) sheet.close(); });
 }
@@ -2886,6 +2953,158 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
     pre.forEach((f, i) => setTimeout(() => { if (TOK) f(); }, 2500 + i * 1200));
   }
 }
+
+/* ============ VOLUNTEER SIGN-UP: one form for the Hub and the community page ============
+   Dates come from the Hub Schedule (through the Hub server), so a date added there shows here right away.
+   Answers save to the volunteer sign-up sheet in the same columns as the Google Form. */
+(function () {
+  var escH = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var uid = 0;
+  function to24(t) {
+    var m = String(t || "").match(/(\d{1,2})(?::(\d{2}))?\s*([AP])M/i);
+    if (!m) return null;
+    var h = (+m[1]) % 12 + (/p/i.test(m[3]) ? 12 : 0);
+    return [h, +(m[2] || 0)];
+  }
+  function stamp(iso, hm) { return iso.replace(/-/g, "") + (hm ? "T" + String(hm[0]).padStart(2, "0") + String(hm[1]).padStart(2, "0") + "00" : ""); }
+  function calLink(title, iso, timeText, minutes, details, where) {
+    var hm = to24(timeText), dates;
+    if (hm) {
+      var end = new Date(2000, 0, 1, hm[0], hm[1] + (minutes || 120));
+      var endIso = iso;
+      if (end.getDate() !== 1) { var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + 1); endIso = d.toISOString().slice(0, 10); }
+      dates = stamp(iso, hm) + "/" + stamp(endIso, [end.getHours(), end.getMinutes()]);
+    } else {
+      var n = new Date(iso + "T12:00:00"); n.setDate(n.getDate() + 1);
+      dates = stamp(iso) + "/" + stamp(n.toISOString().slice(0, 10));
+    }
+    var p = new URLSearchParams({ action: "TEMPLATE", text: title, dates: dates, ctz: "America/Chicago", details: details || "", location: where || "" });
+    return "https://calendar.google.com/calendar/render?" + p.toString();
+  }
+
+  function mount(root, opts) {
+    opts = opts || {};
+    var id = "vs" + (++uid), F = null, sending = false;
+    root.innerHTML = '<div class="vs"><p class="vs-lead">Loading the dates...</p></div>';
+    opts.api("volForm", []).then(function (f) { F = f; draw(); }, function () {
+      root.innerHTML = '<div class="vs"><p class="vs-lead">The sign-up could not load right now. Check your connection and try again.</p><button type="button" class="vs-btn" data-vs-retry>Try again</button></div>';
+      root.querySelector("[data-vs-retry]").onclick = function () { mount(root, opts); };
+    });
+
+    function radios(name, list, cls) {
+      return '<div class="vs-opts ' + (cls || "") + '" role="radiogroup">' + list.map(function (x, i) {
+        return '<label class="vs-opt"><input type="radio" name="' + id + name + '" value="' + escH(x) + '"><span>' + escH(x) + "</span></label>";
+      }).join("") + "</div>";
+    }
+    function checks(name, list) {
+      return '<div class="vs-opts vs-chips">' + list.map(function (x) {
+        return '<label class="vs-opt"><input type="checkbox" name="' + id + name + '" value="' + escH(x) + '"><span>' + escH(x) + "</span></label>";
+      }).join("") + "</div>";
+    }
+    function draw() {
+      var o = F.orientation;
+      var dates = F.dates.length ? '<div class="vs-dates">' + F.dates.map(function (d) {
+        var pre = opts.preset && opts.preset.date === d.date && (!opts.preset.name || String(opts.preset.name).toLowerCase() === String(d.name).toLowerCase());
+        var sub = d.time || d.place;
+        return '<label class="vs-date"><input type="checkbox" name="' + id + 'dates" value="' + escH(d.label) + '"' + (pre ? " checked" : "") + '><span><b>' + escH(d.label.split(": ")[0]) + "</b> " + escH(d.name) +
+          (sub ? '<small>' + escH([d.time, d.place].filter(Boolean).join(" · ")) + "</small>" : "<small>Time and place coming soon</small>") +
+          (d.tentative ? '<em class="vs-tag">Date may change</em>' : "") + "</span></label>";
+      }).join("") + "</div>" : '<p class="vs-note">No dates are open right now. Sign up anyway and we will reach out when the next one is set.</p>';
+      root.innerHTML = '<form class="vs" novalidate>' +
+        '<input class="vs-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+        '<fieldset class="vs-sec"><legend>About you</legend>' +
+        '<label class="vs-field"><span>First and last name</span><input type="text" name="name" autocomplete="name" maxlength="60" required></label>' +
+        '<label class="vs-field"><span>Phone number</span><small>So we can reach you on event day.</small><input type="tel" name="phone" autocomplete="tel" inputmode="tel" maxlength="20" required></label>' +
+        '<label class="vs-field"><span>Email</span><small>Your confirmation and reminders come here.</small><input type="email" name="email" autocomplete="email" inputmode="email" maxlength="120" required></label>' +
+        '<div class="vs-field"><span id="' + id + 'stl">Have you volunteered with ReUp before?</span>' + radios("status", [F.returning, F.isNew], "vs-two") + "</div></fieldset>" +
+        '<fieldset class="vs-sec" data-vs-new hidden><legend>Orientation</legend>' +
+        '<p class="vs-note">Every new volunteer joins one short orientation call on Google Meet before their first event. ' + escH(o.length) + " minutes, Central time.</p>" +
+        '<div class="vs-field"><span>Pick your orientation session</span>' + radios("session", o.sessions.map(function (s) { return s.label; }).concat([F.noSession])) + "</div>" +
+        '<details class="vs-std"><summary>Read the volunteer standards</summary><ol>' + F.standards.map(function (s) { return "<li>" + escH(s) + "</li>"; }).join("") + "</ol><p>At your first event, a ReUp leader will sign you in as a volunteer.</p></details>" +
+        '<label class="vs-opt vs-agree"><input type="checkbox" name="agree"><span>' + escH(F.agree) + "</span></label>" +
+        '<div class="vs-field"><span>Are you 18 or older?</span><small>Volunteers under 18 serve with a parent or guardian who also signs up.</small>' + radios("adult", ["Yes", "No"], "vs-two") + "</div>" +
+        '<label class="vs-field"><span>Anything we should know to place you well?</span><small>For example: you cannot lift heavy boxes, or you need to sit.</small><textarea name="notes" rows="3" maxlength="500"></textarea></label></fieldset>' +
+        '<fieldset class="vs-sec"><legend>Pick your dates</legend><p class="vs-note">Tick every date you can make. We will email you a reminder before each one.</p>' + dates +
+        '<div class="vs-field"><span>What would you like to help with?</span>' + checks("help", F.help) + "</div></fieldset>" +
+        '<fieldset class="vs-sec"><legend>Last step</legend>' +
+        '<div class="vs-field"><span>May ReUp share photos or video of you from events on social media?</span>' + radios("photo", F.photo) + "</div>" +
+        '<div class="vs-field"><span>Can we email you about new volunteer dates and ReUp news?</span>' + radios("updates", ["Yes", "No"], "vs-two") + "</div>" +
+        '<div class="vs-field"><span>How did you hear about this?</span>' + radios("heard", F.heard.concat(["Other"])) +
+        '<input type="text" name="heardOther" maxlength="60" placeholder="Tell us where" hidden aria-label="Where did you hear about this?"></div></fieldset>' +
+        '<p class="vs-err" role="alert" aria-live="assertive"></p>' +
+        '<button type="submit" class="vs-btn">Sign me up</button></form>';
+      var form = root.querySelector("form");
+      var val = function (n) { var x = form.querySelector('[name="' + id + n + '"]:checked'); return x ? x.value : ""; };
+      form.addEventListener("change", function (ev) {
+        if (ev.target.name === id + "status") form.querySelector("[data-vs-new]").hidden = val("status") !== F.isNew;
+        if (ev.target.name === id + "heard") { var h = form.querySelector('[name="heardOther"]'); h.hidden = val("heard") !== "Other"; if (!h.hidden) h.focus(); }
+      });
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        if (sending) return;
+        var err = form.querySelector(".vs-err");
+        var heard = val("heard") === "Other" ? form.elements["heardOther"].value : val("heard");
+        var a = {
+          website: form.elements["website"].value, name: form.elements["name"].value, phone: form.elements["phone"].value, email: form.elements["email"].value, status: val("status"),
+          session: val("session"), agree: form.elements["agree"].checked, adult: val("adult"), notes: form.elements["notes"].value,
+          dates: [].map.call(form.querySelectorAll('[name="' + id + 'dates"]:checked'), function (x) { return x.value; }),
+          help: [].map.call(form.querySelectorAll('[name="' + id + 'help"]:checked'), function (x) { return x.value; }),
+          photo: val("photo"), updates: val("updates"), heard: heard
+        };
+        var miss = null;
+        if (a.name.trim().split(/\s+/).length < 2) miss = ["name", "Add your first and last name."];
+        else if (a.phone.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "").length !== 10) miss = ["phone", "Add a 10-digit phone number."];
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())) miss = ["email", "Add an email address we can reach you at."];
+        else if (!a.status) miss = [id + "status", "Say whether you have volunteered with ReUp before."];
+        else if (a.status === F.isNew && !a.session) miss = [id + "session", "Pick an orientation time."];
+        else if (a.status === F.isNew && !a.agree) miss = ["agree", "Read the volunteer standards and tick the box to agree."];
+        else if (a.status === F.isNew && !a.adult) miss = [id + "adult", "Say whether you are 18 or older."];
+        else if (F.dates.length && !a.dates.length) miss = [id + "dates", "Pick at least one date."];
+        else if (!a.photo) miss = [id + "photo", "Answer the photo question."];
+        else if (!a.updates) miss = [id + "updates", "Answer the email question."];
+        if (miss) {
+          err.textContent = miss[1];
+          var el = form.querySelector('[name="' + miss[0] + '"]');
+          if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); try { el.focus({ preventScroll: true }); } catch (e) {} }
+          return;
+        }
+        err.textContent = "";
+        sending = true;
+        var b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Signing you up...";
+        opts.api("volSignup", [a]).then(done, function (e) {
+          sending = false; b.disabled = false; b.textContent = "Sign me up";
+          var m = String((e && e.message) || "");
+          err.textContent = /^(Add|Say|Pick|Read|Answer|We already|Lots of)/.test(m) ? m : "That didn't go through. Check your connection and try again.";
+        });
+      });
+    }
+    function done(r) {
+      if (!r || !r.first) { root.innerHTML = '<div class="vs"><h3 class="vs-h">Thank you.</h3></div>'; return; }
+      var o = F.orientation, s = r.session && r.session.date ? r.session : null;
+      var html = '<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">You\'re signed up, ' + escH(r.first) + ".</h3>";
+      if (s) {
+        html += '<div class="vs-card"><b>Your orientation</b><p>' + escH(s.label) + ", Central time, on Google Meet (" + escH(o.length) + ' minutes).</p><div class="vs-row">' +
+          (o.link ? '<a class="vs-btn" href="' + escH(o.link) + '" target="_blank" rel="noopener">Join link</a>' : "") +
+          '<a class="vs-btn ghost" target="_blank" rel="noopener" href="' + escH(calLink("ReUp volunteer orientation", s.date, s.label.split(" at ")[1], o.length, "ReUp volunteer orientation on Google Meet. Join here: " + o.link, o.link)) + '">Add to my calendar</a></div></div>';
+      } else if (r.session) {
+        html += '<div class="vs-card"><b>Your orientation</b><p>We will text you to find a time that works.</p></div>';
+      }
+      if (r.dates && r.dates.length) {
+        html += '<div class="vs-card"><b>Your dates</b>' + r.dates.map(function (d) {
+          return '<div class="vs-dl"><p><b>' + escH(d.label) + "</b><br>" + escH([d.time, d.place].filter(Boolean).join(" · ") || "Time and place coming soon") + (d.tentative ? " (date may change)" : "") + "</p>" +
+            '<a class="vs-btn ghost" target="_blank" rel="noopener" href="' + escH(calLink("ReUp: " + d.name, d.date, d.time, 180, "Volunteering with The ReUp Movement.", d.address || d.place)) + '">Add to my calendar</a></div>';
+        }).join("") + "</div>";
+      }
+      html += '<p class="vs-note">A confirmation email is on its way and should arrive within a few minutes. Can\'t make a date? Reply to that email so we can fill your spot.</p>' +
+        '<button type="button" class="vs-btn ghost" data-vs-again>Sign up someone else</button></div>';
+      root.innerHTML = html;
+      root.querySelector("[data-vs-again]").onclick = function () { draw(); };
+      var h = root.querySelector(".vs-h"); if (h) { h.focus(); h.scrollIntoView({ block: "start" }); }
+      if (opts.onDone) opts.onDone(r);
+    }
+  }
+  window.ReUpSignup = { mount: mount };
+})();
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
 <script>
@@ -2997,7 +3216,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024051047";
+  var BUILD = "20261024053032";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
