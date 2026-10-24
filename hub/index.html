@@ -722,10 +722,14 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .calday b{font-size:14px;font-weight:700;line-height:1}
 .calday.past{opacity:.45}
 .calday.today{border:2px solid var(--ink)}
-.calday.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.caldots{display:flex;gap:3px;min-height:7px}
-.caldots i{width:7px;height:7px;border-radius:50%;background:var(--kc)}
-.calday.sel .caldots i{box-shadow:0 0 0 1.5px var(--bg)}
+.calday.sel{outline:3px solid var(--ink);outline-offset:2px}
+.calday.sel:not(.has){background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.calday.has{color:var(--bg);border-color:transparent}
+.calday.has b{font-weight:800}
+.calcount{font-size:10px;font-weight:800;line-height:1;opacity:.9}
+:root{--k-sort:#7E57B5}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--k-sort:#B79BE3} }
+:root[data-theme="dark"]{--k-sort:#B79BE3}
 .calsel{margin-top:14px}
 .calsel .month{margin-top:0}
 .k-Sorting{--kc:#7E57B5;--ks:rgba(126,87,181,.16)}
@@ -1073,6 +1077,15 @@ const isoDay = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2,
 function calToggle(id) {
   return `<div class="seg calseg" role="group" aria-label="Show as"><button type="button" data-cv="${id}|list" aria-pressed="${calView[id] !== "cal"}">List</button><button type="button" data-cv="${id}|cal" aria-pressed="${calView[id] === "cal"}">Calendar</button></div>`;
 }
+const CAL_KC = { Distribution: "var(--k-dist)", Event: "var(--s-fill)", Pickup: "var(--k-pick)", Sorting: "var(--k-sort)", Deadline: "var(--k-dead)" };
+/* A day with something on it is filled with that kind's color; two or more kinds split the square. */
+function calFill(ev) {
+  if (!ev.length) return "";
+  const cs = [];
+  ev.forEach(e => { const c = CAL_KC[e.kind] || "var(--k-info)"; if (cs.indexOf(c) < 0) cs.push(c); });
+  const bg = cs.length === 1 ? cs[0] : "linear-gradient(135deg," + cs.slice(0, 3).map((c, i, a) => c + " " + Math.round(i * 100 / a.length) + "% " + Math.round((i + 1) * 100 / a.length) + "%").join(",") + ")";
+  return ` style="background:${bg}"`;
+}
 function calHTML(id, events, dayList) {
   const todayIso = isoDay(new Date());
   if (!calMonth[id]) calMonth[id] = todayIso.slice(0, 7);
@@ -1090,7 +1103,7 @@ function calHTML(id, events, dayList) {
     const iso = calMonth[id] + "-" + String(d).padStart(2, "0"), ev = byDay[iso] || [];
     const cls = (iso === todayIso ? " today" : "") + (iso === calSel[id] ? " sel" : "") + (iso < todayIso ? " past" : "") + (ev.length ? " has" : "");
     const label = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) + (ev.length ? ", " + ev.map(e => e.name).join(", ") : "");
-    cells += `<button type="button" class="calday${cls}" data-cd="${id}|${iso}" aria-label="${esc(label)}" aria-pressed="${iso === calSel[id]}"><b>${d}</b><span class="caldots">${ev.slice(0, 3).map(e => `<i class="k-${esc(e.kind)}"></i>`).join("")}</span></button>`;
+    cells += `<button type="button" class="calday${cls}"${calFill(ev)} data-cd="${id}|${iso}" aria-label="${esc(label)}" aria-pressed="${iso === calSel[id]}"><b>${d}</b>${ev.length > 1 ? `<span class="calcount">${ev.length}</span>` : ""}</button>`;
   }
   const sel = calSel[id];
   return `<div class="cal"><div class="calhead"><button type="button" class="calnav" data-cm="${id}|-1" aria-label="Previous month"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
@@ -2984,7 +2997,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024043948";
+  var BUILD = "20261024051047";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
