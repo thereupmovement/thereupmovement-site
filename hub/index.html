@@ -807,9 +807,14 @@ form.vs>.vs-btn{width:100%}
 .vs-select:focus-visible{outline:3px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
 .vs-sel svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
 .vs-field input[type=date]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;width:100%;box-sizing:border-box}
+.rvdest{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:14px;line-height:1.4}
+.rvdest .vs-sel{margin-top:2px}
+.rvinfo .rvpost{color:#2e7d4f;font-weight:600}
+@media (prefers-color-scheme: dark){.rvinfo .rvpost{color:#7fd19f}}
 .opshead{margin:2px 0 10px}
 .opsqa{margin-bottom:18px}
 a.qab{text-decoration:none}
+.qab.wide{grid-column:1/-1}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -898,7 +903,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
         <div class="spot"><b>Check-in table</b><span>Every guest checks in. Hand out the needs form here too.</span></div>
         <div class="spot"><b>Head of the line</b><span>Keeps the line calm and moving.</span></div>
         <div class="spot"><b>Behind the line</b><span>Hands goods to each guest.</span></div>
-        <div class="spot"><b>End of the line</b><span>Restocks the table. Ask for help before it runs out.</span></div>
+        <div class="spot"><b>End of the line</b><span>Checks with each community guest that they received the number of items we told them. Manages crowd control, and makes sure everyone comes in at the front of the event, never from the back.</span></div>
       </div>
       <h2>Rules on the line</h2>
       <div class="card">
@@ -2805,7 +2810,8 @@ function opsActions() {
     ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { href: sortF.url }) : ""}
     ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { href: pickF.url }) : ""}
     ${tile(t(QICON["Snap a receipt"] || "", "Snap a receipt", "Gas, storage, supplies"), { money: "receipt" })}
-    ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}</div>`;
+    ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}
+    ${(+BOOT.rc) >= 0 ? `<button class="qab wide" type="button" data-openreview><i aria-hidden="true">${qi('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>')}</i><span><b>Approvals</b><small id="opsapprn">${(+BOOT.rc) > 0 ? BOOT.rc + " waiting" : "Nothing waiting"}</small></span></button>` : ""}</div>`;
 }
 function drawOps() {
   const d = OPS;
@@ -2823,6 +2829,7 @@ function drawOps() {
   $("ops").querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { opsFilter = b.dataset.f; drawOps(); }));
   $("ops").querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => { opsMap = b.dataset.map; drawOps(); }));
   $("ops").querySelectorAll("[data-openmoney]").forEach(b => b.addEventListener("click", () => openMoney(b.dataset.openmoney)));
+  $("ops").querySelectorAll("[data-openreview]").forEach(b => b.addEventListener("click", openReview));
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
   const mp = $("morePk"); if (mp) mp.addEventListener("click", () => { invAllPickups = !invAllPickups; drawOps(); });
@@ -3192,7 +3199,7 @@ function openMoney(which, f) {
   document.querySelectorAll("[data-rcw]").forEach(b => b.addEventListener("click", () => openMoney(b.dataset.rcw)));
   rcInfo().then(info => {
     if (!$("rcbox")) return;
-    if (info.reviewer) $("rcrev").innerHTML = `<button class="btn ghost" type="button" id="rcgo" style="width:100%;margin:0 0 6px">Review receipts and trips${BOOT.rc > 0 ? ` (${BOOT.rc} waiting)` : ""}</button>`;
+    if (info.reviewer) $("rcrev").innerHTML = `<button class="btn ghost" type="button" id="rcgo" style="width:100%;margin:0 0 6px">Approvals${BOOT.rc > 0 ? ` (${BOOT.rc} waiting)` : ""}</button>`;
     const g = $("rcgo"); if (g) g.addEventListener("click", openReview);
     if (which === "trip") drawTrip(info); else drawReceipt(info);
   }, e => { if ($("rcbox")) $("rcbox").innerHTML = `<p class="lead">${isAuth(e) ? "This needs your own Hub link." : "Couldn't load this right now. Check your connection and try again."}</p>`; });
@@ -3201,7 +3208,7 @@ function openMoney(which, f) {
 function drawReceipt(info) {
   const box = $("rcbox");
   box.innerHTML = `<form class="vs" novalidate>
-    <p class="vs-note">One receipt at a time, the same day you pay if you can. It goes to Janay and Dasia to check before anything goes in the books.</p>
+    <p class="vs-note">One receipt at a time, the same day you pay if you can. Janay or Dasia approves it, and then the Hub puts it in the budget by itself.</p>
     <div class="vs-field"><span>Photo of the receipt</span><small>Lay it flat so every number shows.</small>
       <label class="btn ghost" style="width:100%">Take or choose a photo<input type="file" accept="image/*" capture="environment" id="rcfile" hidden></label>
       <img id="rcprev" alt="Your receipt photo" hidden style="max-width:100%;max-height:260px;border-radius:12px;border:1px solid var(--line);object-fit:contain;background:var(--surface)"></div>
@@ -3211,6 +3218,7 @@ function drawReceipt(info) {
     <div class="vs-field"><span>What kind of cost</span>${rcOpts("rckind", info.kinds, "", "What kind of cost")}<input type="text" name="kindOther" maxlength="60" placeholder="Say what it was" hidden></div>
     <div class="vs-field"><span>Which event or job was this for</span>${rcOpts("rcjob", info.jobs.concat(["Something else"]), "", "Which event or job")}<input type="text" name="jobOther" maxlength="80" placeholder="Say which" hidden></div>
     <div class="vs-field"><span>How was this paid</span>${rcOpts("rcpaid", info.paid, "", "How it was paid")}<input type="text" name="paidOther" maxlength="40" placeholder="Say how" hidden></div>
+    <div class="vs-field"><span>Whose money was it</span><small>If it came out of your own pocket, the budget records that you put it in.</small>${rcOpts("rcwhose", info.whose || [], "", "Whose money was it")}<input type="text" name="whoseOther" maxlength="60" placeholder="Whose? First name is fine" hidden></div>
     <label class="vs-field"><span>Anything else we should know</span><small>Optional. Never type a full card or account number.</small><textarea name="notes" rows="2" maxlength="600"></textarea></label>
     <p class="vs-err" role="alert"></p>
     <button class="vs-btn" type="submit">Send the receipt</button></form>`;
@@ -3225,22 +3233,23 @@ function drawReceipt(info) {
     if (e.target.name === "rckind") form.elements["kindOther"].hidden = rcVal(form, "rckind") !== "Something else";
     if (e.target.name === "rcjob") form.elements["jobOther"].hidden = rcVal(form, "rcjob") !== "Something else";
     if (e.target.name === "rcpaid") form.elements["paidOther"].hidden = rcVal(form, "rcpaid") !== "Something else";
+    if (e.target.name === "rcwhose") form.elements["whoseOther"].hidden = rcVal(form, "rcwhose") !== "Someone else's money";
   });
   form.addEventListener("submit", async e => {
     e.preventDefault();
     if (rcBusy) return;
     const err = form.querySelector(".vs-err"), el = form.elements;
     const r = { amount: el["amount"].value, payee: el["payee"].value, date: el["date"].value, kind: rcVal(form, "rckind"), kindOther: el["kindOther"].value,
-      job: rcVal(form, "rcjob"), jobOther: el["jobOther"].value, paid: rcVal(form, "rcpaid"), paidOther: el["paidOther"].value, notes: el["notes"].value, photo: photo };
+      job: rcVal(form, "rcjob"), jobOther: el["jobOther"].value, paid: rcVal(form, "rcpaid"), paidOther: el["paidOther"].value, whose: rcVal(form, "rcwhose"), whoseOther: el["whoseOther"].value, notes: el["notes"].value, photo: photo };
     const miss = !photo ? "Add a photo of the receipt." : !(parseFloat(String(r.amount).replace(/[$,\s]/g, "")) > 0) ? "Put in the total from the receipt." : !r.payee.trim() ? "Say who you paid." :
-      !r.date ? "Pick the date you paid." : !r.kind ? "Pick what kind of cost it was." : !r.job ? "Say which event or job this was for." : !r.paid ? "Say how it was paid." : "";
+      !r.date ? "Pick the date you paid." : !r.kind ? "Pick what kind of cost it was." : !r.job ? "Say which event or job this was for." : !r.paid ? "Say how it was paid." : !r.whose ? "Say whose money it was." : r.whose === "Someone else's money" && !r.whoseOther.trim() ? "Say whose money it was." : "";
     if (miss) { err.textContent = miss; return; }
     err.textContent = ""; rcBusy = true;
     const b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Sending...";
     try {
       await run("saveReceipt", KEY, r);
       RCI = null;
-      box.innerHTML = `<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Sent. Thank you.</h3><p class="vs-note">${esc(rcMoney(String(r.amount).replace(/[$,\s]/g, "")))} to ${esc(r.payee)}. Janay or Dasia will check it and add it to the books.</p>
+      box.innerHTML = `<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Sent. Thank you.</h3><p class="vs-note">${esc(rcMoney(String(r.amount).replace(/[$,\s]/g, "")))} to ${esc(r.payee)}. Once Janay or Dasia approves it, it goes into the budget.</p>
         <button class="vs-btn" type="button" id="rcagain">Snap another receipt</button></div>`;
       $("rcagain").addEventListener("click", () => openMoney("receipt"));
     } catch (x) {
@@ -3324,7 +3333,7 @@ function drawTrip(info) {
 /* ---- Review, for Janay and Dasia with their PIN ---- */
 let rcView = "receipts";
 async function openReview() {
-  openSheet(`<div class="k">Money</div><h3 id="sheetTitle">Receipts and trips to review</h3><div id="rvbox"><p class="lead">Loading...</p></div>
+  openSheet(`<div class="k">Money</div><h3 id="sheetTitle">Approvals</h3><div id="rvbox"><p class="lead">Loading...</p></div>
     <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
   if (!TOK) { $("rvbox").innerHTML = `<p class="lead">Enter your PIN on the Leadership tab first, then come back here.</p><div class="btns"><button class="btn" type="button" id="rvpin">Go to Leadership</button></div>`; $("rvpin").addEventListener("click", () => { sheet.close(); go("goals"); }); return; }
   try { RCR = await run("getReceipts", KEY, TOK); drawReview(); }
@@ -3337,14 +3346,22 @@ function drawReview() {
   const recW = RCR.list.filter(r => open_(r, S)), recD = RCR.list.filter(r => !open_(r, S));
   const trW = RCR.trips.filter(t => open_(t, TS)), trD = RCR.trips.filter(t => !open_(t, TS));
   BOOT.rc = RCR.list.filter(r => r.status === S.review).length + RCR.trips.filter(t => t.status === TS.review).length; drawRcCard();
+  const open1 = r => r.status === S.review || r.status === S.question;
   const card = r => `<div class="rvcard" data-rid="${esc(r.id)}">
       <button type="button" class="rvthumb" data-rph="${esc(r.id)}" aria-label="See the full photo"><span>Photo</span></button>
       <div class="rvinfo"><b>${esc(rcMoney(r.amount))} to ${esc(r.payee)}</b>
-        <span>${esc(fmtDay(r.date))} &middot; ${esc(r.kind)}${r.cat ? ` &middot; Money Out: ${esc(r.cat)}` : ""}</span>
+        <span>${esc(fmtDay(r.date))} &middot; ${esc(r.kind)}</span>
         <span>${esc(r.job)} &middot; paid by ${esc(r.paid)} &middot; sent by ${esc(r.who)}</span>
+        ${r.whose ? `<span>${r.whose === "ReUp's account or card" ? "ReUp's money" : `${esc(r.paidBy || r.who)}'s own money`}</span>` : ""}
         ${r.notes ? `<span>Note: ${esc(r.notes)}</span>` : ""}
-        ${r.status !== S.review ? `<span class="rvst">${esc(r.status)}${r.by ? " by " + esc(r.by) : ""}${r.note ? ": " + esc(r.note) : ""}</span>` : ""}</div>
-      <div class="rvbtns">${r.status === S.review || r.status === S.question ? `<button class="btn" type="button" data-rv="added">Added to Money Out</button><button class="btn ghost" type="button" data-rv="notreup">Not a ReUp cost</button><button class="btn ghost" type="button" data-rv="question">Ask a question</button>` : `<button class="btn ghost" type="button" data-rv="review">Move back to review</button>`}</div></div>`;
+        ${r.status !== S.review ? `<span class="rvst">${esc(r.status)}${r.by ? " by " + esc(r.by) : ""}${r.note ? ": " + esc(r.note) : ""}</span>` : ""}
+        ${r.posted ? `<span class="rvpost">In the budget: ${esc(r.posted)}</span>` : ""}</div>
+      ${open1(r) ? `<div class="rvdest">${r.dest === "event"
+        ? `<span>Approving adds it to the cost of <b>${esc(r.eventName)}</b> on the budget's Events tab.</span>`
+        : `<span>Approving adds it to <b>Money Out</b> under:</span>${rcOpts("rvcat", RCR.cats || [], r.cat, "Money Out category")}`}
+        ${r.whose && r.whose !== "ReUp's account or card" ? `<span>It also goes on Founder Contributions for ${esc(r.paidBy || r.who)}, since it was their own money.</span>` : ""}</div>` : ""}
+      <div class="rvbtns">${open1(r) ? `<button class="btn" type="button" data-rv="added">Approve</button><button class="btn ghost" type="button" data-rv="notreup">Not a ReUp cost</button><button class="btn ghost" type="button" data-rv="question">Ask a question</button>`
+        : r.status === S.added ? `<button class="btn ghost" type="button" data-rv="review">Undo approval</button>` : `<button class="btn ghost" type="button" data-rv="review">Move back to review</button>`}</div></div>`;
   const trip = t => `<div class="rvcard" data-tid="${esc(t.id)}">
       ${t.photo ? `<button type="button" class="rvthumb" data-rph="${esc(t.id)}" aria-label="See the odometer photo"><span>Photo</span></button>` : `<div class="rvthumb none"><span>No photo</span></div>`}
       <div class="rvinfo"><b>${esc(t.miles)} miles &middot; ${esc(t.vehicle)}</b>
@@ -3385,9 +3402,23 @@ function drawReview() {
       }
       return;
     }
-    $("rvmsg").textContent = "Saving...";
-    try { RCR = await run(isTrip ? "reviewTrip" : "reviewReceipt", KEY, TOK, id, st, note); drawReview(); toast("Saved."); }
-    catch (e) { if (isAuth(e)) { sheet.close(); relock(); } else $("rvmsg").textContent = "That didn't save. Try again."; }
+    let cat = "";
+    if (!isTrip && st === "added") {
+      const sel = c.querySelector('[name="rvcat"]');
+      if (sel) { cat = sel.value; if (!cat) { $("rvmsg").textContent = "Pick the Money Out category first."; sel.focus(); return; } }
+    }
+    if (!isTrip && st === "review" && c.querySelector(".rvpost") && !confirmUndo(c)) return;
+    $("rvmsg").textContent = st === "added" ? "Approving and adding it to the budget..." : st === "review" && !isTrip ? "Taking it back out of the budget..." : "Saving...";
+    c.querySelectorAll("button").forEach(x => { x.disabled = true; });
+    try {
+      RCR = await run(isTrip ? "reviewTrip" : "reviewReceipt", KEY, TOK, id, st, note, cat); drawReview();
+      toast(st === "added" && RCR.posted ? "Approved. Added to " + RCR.posted.replace(/:.*$/, "") + "." : st === "review" && !isTrip ? "Undone. It's back in the list." : "Saved.");
+    }
+    catch (e) {
+      c.querySelectorAll("button").forEach(x => { x.disabled = false; });
+      if (isAuth(e)) { sheet.close(); relock(); }
+      else $("rvmsg").textContent = /^(Pick|This receipt|The budget)/.test(String(e.message)) ? e.message : "That didn't save. Nothing was changed in the budget. Try again.";
+    }
   }));
   // Thumbnails load one by one through the Hub, so nobody needs access to the Drive folder.
   box.querySelectorAll("[data-rph]").forEach(async b => {
@@ -3405,10 +3436,17 @@ function drawReview() {
     });
   });
 }
+function confirmUndo(c) {
+  const b = c.querySelector('[data-rv="review"]');
+  if (b && b.dataset.sure === "1") return true;
+  if (b) { b.dataset.sure = "1"; b.textContent = "Tap again to take it out of the budget"; b.classList.remove("ghost"); }
+  return false;
+}
 function drawRcCard() {
+  const on = $("opsapprn"); if (on) on.textContent = (+BOOT.rc || 0) > 0 ? `${BOOT.rc} waiting` : "Nothing waiting";
   const c = $("homerc"); if (!c) return;
   const n = +BOOT.rc || 0;
-  c.innerHTML = n > 0 ? `<button type="button" class="rchome" id="rchome"><b>${n} ${n === 1 ? "receipt or trip" : "receipts and trips"} to review</b><span>Check them and add them to the books.</span></button>` : "";
+  c.innerHTML = n > 0 ? `<button type="button" class="rchome" id="rchome"><b>${n} ${n === 1 ? "receipt or trip" : "receipts and trips"} to review</b><span>Approve them and the Hub adds them to the budget.</span></button>` : "";
   const b = $("rchome"); if (b) b.addEventListener("click", openReview);
 }
 </script>
@@ -3522,7 +3560,7 @@ function drawRcCard() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024070036";
+  var BUILD = "20261024072753";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
