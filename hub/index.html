@@ -802,6 +802,7 @@ form.vs>.vs-btn{width:100%}
 .rchome{display:grid;gap:2px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--ink);border-radius:14px;padding:14px 16px;margin:16px 0 0;cursor:pointer}
 .rchome b{font-size:17px}
 .rchome span{color:var(--muted);font-size:14px}
+.opsmoney{margin:10px 0 14px}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -2800,12 +2801,14 @@ function drawOps() {
   $("ops").querySelectorAll("textarea[data-note]").forEach(t => { if (t.value !== (t.dataset.orig || "")) openNotes[t.dataset.note] = t.value; });
   $("ops").innerHTML = `<div class="seg" role="group" aria-label="Ops section">
       <button type="button" data-ov="requests" aria-pressed="${opsView === "requests"}">Requests${open ? ` (${open} open)` : ""}</button>
-      <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>` +
+      <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>
+    <div class="btns two opsmoney"><button class="btn ghost" type="button" data-openmoney="receipt">Snap a receipt</button><button class="btn ghost" type="button" data-openmoney="trip">Log a trip</button></div>` +
     (opsView === "storage" ? drawInventory(d) : drawRequests(d));
   Object.entries(openNotes).forEach(([id, v]) => { const t = $("ops").querySelector(`textarea[data-note="${CSS.escape(id)}"]`); if (t) { t.value = v; t.closest("details").open = true; } });
   $("ops").querySelectorAll("[data-ov]").forEach(b => b.addEventListener("click", () => { opsView = b.dataset.ov; drawOps(); }));
   $("ops").querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { opsFilter = b.dataset.f; drawOps(); }));
   $("ops").querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => { opsMap = b.dataset.map; drawOps(); }));
+  $("ops").querySelectorAll("[data-openmoney]").forEach(b => b.addEventListener("click", () => openMoney(b.dataset.openmoney)));
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
   const mp = $("morePk"); if (mp) mp.addEventListener("click", () => { invAllPickups = !invAllPickups; drawOps(); });
@@ -3504,7 +3507,7 @@ function drawRcCard() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024064741";
+  var BUILD = "20261024065415";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
