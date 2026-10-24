@@ -641,6 +641,14 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .moreitem em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
 .ihead{font-family:var(--display);font-weight:400;font-size:40px;line-height:1;text-transform:uppercase;margin:6px 0 14px}
 .iseg{grid-template-columns:repeat(3,1fr)}
+.aseg{grid-template-columns:repeat(3,1fr)}
+.arow.off{opacity:.55}
+.atag{font-style:normal;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;background:#121212;color:#fff;border-radius:6px;padding:1px 6px;margin-left:4px}
+.ainput{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);min-height:44px}
+.abtns{display:flex;flex-wrap:wrap;gap:8px}
+.abtns .tbtn{width:auto;text-decoration:none;display:inline-flex;align-items:center}
+.arow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.arow2 label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:700}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -684,6 +692,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     <section class="view" id="v-inbox" hidden>
       <h2 class="ihead">Inbox</h2>
       <div id="inbox"><p class="lead">Loading messages...</p></div>
+    </section>
+
+    <section class="view" id="v-admin" hidden>
+      <h2 class="ihead">Admin</h2>
+      <div id="admin"><p class="lead">Loading...</p></div>
     </section>
 
     <section class="view" id="v-schedule" hidden>
@@ -947,6 +960,7 @@ const ICONS = {
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
   eventday: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
   work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11l2 2 4-4M8 17h8"/></svg>',
@@ -976,12 +990,13 @@ drawTabs();
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab)) tab = "home";
-  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals", "admin"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
   if ((tab === "ops" || tab === "goals") && typeof openLeader === "function") openLeader(tab);
   if (tab === "inbox" && typeof loadInbox === "function") { drawInbox(); loadInbox(!!INBOX); }
+  if (tab === "admin" && typeof openLeader === "function") openLeader(tab);
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -1848,13 +1863,163 @@ setInterval(() => { if (!document.hidden && BOOT.work && !inboxSending) loadInbo
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
-const MORE_SUB = { eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+const MORE_SUB = { admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
   openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
     <div class="btns"><button class="btn ghost" type="button" id="moreclose">Close</button></div>`);
   document.querySelectorAll("[data-more]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.more; sheet.close(); go(k); }));
   $("moreclose").addEventListener("click", () => sheet.close());
+}
+/* ============ ADMIN: people, schedule and forms, for the Hub admin (coordinator) ============ */
+let ADMIN = null, adminView = "people", adminBusy = false;
+const ADMIN_GUIDE = "https://docs.google.com/document/d/1nHkicSgTMaaYolcduelzUNvyQFfLhdNPrAL335pJaQY/edit";
+async function loadAdmin() {
+  if (!$("admin")) return;
+  if (!ADMIN) $("admin").innerHTML = `<p class="lead">Loading...</p>`;
+  try { ADMIN = await run("adminGet", KEY, TOK); drawAdmin(); }
+  catch (e) { if (isAuth(e)) relock(); else $("admin").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+}
+async function adminCall(fn, args, ok) {
+  if (adminBusy) return null;
+  adminBusy = true;
+  const m = $("amsg"); if (m) m.textContent = "Saving...";
+  try {
+    const r = await run(fn, KEY, TOK, ...args);
+    ADMIN = r; adminBusy = false; drawAdmin();
+    toast(r.note || ok);
+    return r;
+  } catch (e) {
+    adminBusy = false;
+    if (isAuth(e)) { relock(); return null; }
+    const msg = /^(Give|Someone|You cannot|Pick|That email|The link|Ask another)/.test(String(e.message)) ? e.message : "That didn't save. Try again.";
+    if ($("amsg")) $("amsg").textContent = msg; else toast(msg);
+    return null;
+  }
+}
+function copyText(t) {
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast("Copied."), () => prompt("Copy this:", t));
+  else prompt("Copy this:", t);
+}
+const evDate = s => dt(s).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+function drawAdmin() {
+  const box = $("admin");
+  if (!box || !ADMIN) return;
+  const A = ADMIN;
+  let html = `<div class="seg aseg" role="group" aria-label="Admin section">${[["people", "People"], ["schedule", "Schedule"], ["forms", "Forms"]].map(([k, l]) => `<button type="button" data-av="${k}" aria-pressed="${adminView === k}">${l}</button>`).join("")}</div>
+    ${ADMIN_GUIDE.indexOf("http") === 0 ? `<p class="small" style="margin:-4px 0 12px">New to this? <a class="wlink" href="${esc(ADMIN_GUIDE)}" target="_blank" rel="noopener">Open the Admin guide</a></p>` : ""}`;
+  if (adminView === "people") {
+    html += `<p class="small">Everyone with a Hub link. Tap a person to change their role, teams or email, switch their link off, reset their PIN or copy their link.</p>
+      <div class="wrows">${A.people.map(p => `<button type="button" class="wrow arow${p.active ? "" : " off"}" data-ap="${p.row}"><span class="wrname">${esc(p.name)}${p.coordinator ? ` <em class="atag">Admin</em>` : ""}<span class="idmlast">${esc(p.role)}${p.teams.length ? " &middot; " + esc(p.teams.join(", ")) : ""}${p.email ? " &middot; " + esc(p.email) : ""}</span></span>
+        <span class="wrmeta"><span>${p.active ? (p.seen ? "Opened " + esc(String(p.seen).replace(/, \d{4}/, "")) : "Hasn't opened it") : "Link off"}</span></span></button>`).join("")}</div>
+      <button class="btn" type="button" id="aaddp" style="margin-top:14px">Add a person</button>`;
+  } else if (adminView === "schedule") {
+    html += `<p class="small">What the team sees on the Schedule tab. Tap a date to change or remove it. New distributions and events can go on the volunteer sign-up at the same time.</p>
+      <div class="wrows">${A.events.map((e, i) => `<button type="button" class="wrow" data-ae="${i}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(evDate(e.date))} &middot; ${esc(e.kind)}${e.start ? " &middot; " + esc(e.start) : ""}</span></span><span class="wrmeta"><span>${esc(e.status)}</span></span></button>`).join("") || `<p class="small">Nothing on the schedule.</p>`}</div>
+      <button class="btn" type="button" id="aadde" style="margin-top:14px">Add a date</button>`;
+  } else {
+    html += `<p class="small">The forms on the Forms tab, Home and Event day. Tap one to change its words or link.</p>
+      <div class="wrows">${A.forms.map((f, i) => `<button type="button" class="wrow" data-af="${i}"><span class="wrname">${esc(f.title)}<span class="idmlast">${esc(f.group || "")}${f.sub ? " &middot; " + esc(f.sub) : ""}</span></span></button>`).join("")}</div>
+      <button class="btn" type="button" id="aaddf" style="margin-top:14px">Add a form</button>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-av]").forEach(b => b.addEventListener("click", () => { adminView = b.dataset.av; drawAdmin(); }));
+  box.querySelectorAll("[data-ap]").forEach(b => b.addEventListener("click", () => editPerson(+b.dataset.ap)));
+  box.querySelectorAll("[data-ae]").forEach(b => b.addEventListener("click", () => editEvent(+b.dataset.ae)));
+  box.querySelectorAll("[data-af]").forEach(b => b.addEventListener("click", () => editForm(+b.dataset.af)));
+  const ap = $("aaddp"); if (ap) ap.addEventListener("click", () => editPerson(0));
+  const ae = $("aadde"); if (ae) ae.addEventListener("click", () => editEvent(-1));
+  const af = $("aaddf"); if (af) af.addEventListener("click", () => editForm(-1));
+}
+const chipRow = (kind, opts, chosen, multi) => `<div class="wchips">${opts.map(o => `<button type="button" data-${kind}="${esc(o)}" aria-pressed="${multi ? chosen.includes(o) : chosen === o}">${esc(o)}</button>`).join("")}</div>`;
+function wireChips(kind, multi, state, key) {
+  document.querySelectorAll(`[data-${kind}]`).forEach(b => b.addEventListener("click", () => {
+    const v = b.dataset[kind];
+    if (multi) { state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : state[key].concat(v); }
+    else state[key] = v;
+    document.querySelectorAll(`[data-${kind}]`).forEach(x => x.setAttribute("aria-pressed", multi ? state[key].includes(x.dataset[kind]) : state[key] === x.dataset[kind]));
+  }));
+}
+function editPerson(row) {
+  const A = ADMIN, p = row ? A.people.find(x => x.row === row) : null, isNew = !p;
+  const st = { role: p ? p.role : "Team", teams: p ? p.teams.slice() : ["Events"] };
+  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a person" : "Person"}</div>
+    <input class="wtitle" id="apname" type="text" maxlength="40" placeholder="First name" value="${esc(p ? p.name : "")}" aria-label="Name">
+    <div class="tsec"><div class="tl">Role</div>${chipRow("arole", A.roles, st.role, false)}
+      <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Ops: Ops tab too. Team: Home, Schedule, Work, Inbox, Event day, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
+    <div class="tsec"><div class="tl">Teams</div>${chipRow("ateam", A.teams, st.teams, true)}</div>
+    <div class="tsec"><div class="tl">Email</div><input class="ainput" id="apemail" type="email" value="${esc(p ? p.email : "")}" placeholder="For announcements and messages" aria-label="Email"></div>
+    ${p ? `<div class="tsec"><div class="tl">Their link</div><p class="small" style="margin:0 0 8px;overflow-wrap:anywhere">${esc(p.link)}</p>
+      <div class="abtns"><button type="button" class="tbtn" id="apcopy">Copy link</button><a class="tbtn ghost" href="sms:?&body=${encodeURIComponent("Your ReUp Hub link: " + p.link)}" target="_top">Text it</a></div></div>
+      <div class="tsec"><div class="tl">More</div><div class="abtns">
+        <button type="button" class="tbtn ghost" id="apadmin">${p.coordinator ? "Remove as admin" : "Make admin"}</button>
+        ${p.pinSet ? `<button type="button" class="tbtn ghost" id="appin">Reset PIN</button>` : ""}
+        <button type="button" class="tbtn ghost" id="apnew">New link (old one stops)</button>
+        <button type="button" class="tbtn ghost" id="apoff">${p.active ? "Switch link off" : "Switch link on"}</button></div>
+        <p class="small" style="margin:6px 0 0">Reset PIN lets them pick a new one next time. Use a new link if theirs was forwarded.</p></div>` : ""}
+    <div class="btns"><button class="btn" type="button" id="apsave">${isNew ? "Add and get their link" : "Save"}</button><button class="btn ghost" type="button" id="apclose">Close</button></div>`);
+  wireChips("arole", false, st, "role"); wireChips("ateam", true, st, "teams");
+  $("apclose").addEventListener("click", () => sheet.close());
+  $("apsave").addEventListener("click", async () => {
+    const patch = { name: $("apname").value.trim(), role: st.role, teams: st.teams, email: $("apemail").value.trim() };
+    const before = A.people.map(x => x.row);
+    const r = await adminCall("adminSavePerson", [row || 0, patch], isNew ? "Added." : "Saved.");
+    if (r) { if (isNew) { const n = r.people.find(x => !before.includes(x.row)); if (n) editPerson(n.row); else sheet.close(); } else sheet.close(); }
+  });
+  if (!p) return;
+  $("apcopy").addEventListener("click", () => copyText(p.link));
+  $("apadmin").addEventListener("click", async () => { if (await adminCall("adminSavePerson", [row, { coordinator: !p.coordinator }], "Saved.")) editPerson(row); });
+  const pin = $("appin"); if (pin) pin.addEventListener("click", async () => { if (confirm("Reset " + p.name + "'s PIN? They pick a new one next time they open Ops or Leadership.") && await adminCall("adminSavePerson", [row, { resetPin: true }], "PIN reset.")) editPerson(row); });
+  $("apnew").addEventListener("click", async () => { if (confirm("Give " + p.name + " a new link? Their old link stops working right away.") && await adminCall("adminSavePerson", [row, { newLink: true }], "New link made. Send it to them.")) editPerson(row); });
+  $("apoff").addEventListener("click", async () => { if ((p.active ? confirm("Switch off " + p.name + "'s link? They can't open the Hub until you switch it back on.") : true) && await adminCall("adminSavePerson", [row, { active: !p.active }], p.active ? "Link switched off." : "Link switched on.")) editPerson(row); });
+}
+function editEvent(i) {
+  const A = ADMIN, e = i >= 0 ? A.events[i] : null, isNew = !e;
+  const st = { kind: e ? e.kind : "Distribution", status: e ? e.status : "tentative" };
+  const v = k => esc(e ? (e[k] || "") : "");
+  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a date" : "Schedule"}</div>
+    <input class="wtitle" id="aename" type="text" maxlength="80" placeholder="Name, for example Coke St" value="${v("name")}" aria-label="Name">
+    <div class="tsec"><div class="tl">Date</div><input class="ainput" id="aedate" type="date" value="${v("date")}" aria-label="Date"></div>
+    <div class="tsec"><div class="tl">Kind</div>${chipRow("akind", A.kinds, st.kind, false)}</div>
+    <div class="tsec"><div class="tl">Status</div>${chipRow("astat", A.statuses, st.status, false)}<p class="small" style="margin:6px 0 0">Tentative until it's confirmed with the place or partner.</p></div>
+    <div class="tsec"><div class="tl">Time</div><div class="arow2"><label>Starts<input class="ainput" id="aestart" type="time" value="${v("start")}"></label><label>Ends<input class="ainput" id="aeend" type="time" value="${v("end")}"></label></div></div>
+    <div class="tsec"><div class="tl">Place</div><input class="ainput" id="aeplace" type="text" value="${v("place")}" placeholder="Name of the place"></div>
+    <div class="tsec"><div class="tl">Street address</div><input class="ainput" id="aeaddr" type="text" value="${v("address")}" placeholder="Only a public place, never someone's home"></div>
+    <div class="tsec"><div class="tl">Who</div><input class="ainput" id="aewho" type="text" value="${v("who")}" placeholder="For example Charles leads"></div>
+    <div class="tsec"><div class="tl">Note</div><textarea class="tarea" id="aenote" placeholder="Anything the team should know">${v("note")}</textarea></div>
+    ${isNew ? `<label class="icheck"><input type="checkbox" id="aevol" checked> Also put distributions and events on the volunteer sign-up</label>` : `<p class="small">Changing a date here does not change the volunteer sign-up or the community page. Tell the team in the Inbox if a date moves.</p>`}
+    <div class="btns"><button class="btn" type="button" id="aesave">${isNew ? "Add to the Schedule" : "Save"}</button>${isNew ? "" : `<button class="btn ghost" type="button" id="aedel">Remove from the Schedule</button>`}<button class="btn ghost" type="button" id="aeclose">Close</button></div>`);
+  wireChips("akind", false, st, "kind"); wireChips("astat", false, st, "status");
+  $("aeclose").addEventListener("click", () => sheet.close());
+  $("aesave").addEventListener("click", async () => {
+    const entry = { name: $("aename").value, date: $("aedate").value, kind: st.kind, status: st.status, start: $("aestart").value, end: $("aeend").value, place: $("aeplace").value, address: $("aeaddr").value, who: $("aewho").value, note: $("aenote").value };
+    if (await adminCall("adminSaveEvent", [i, entry, !!($("aevol") && $("aevol").checked)], isNew ? "Added to the Schedule." : "Saved.")) sheet.close();
+  });
+  const d = $("aedel"); if (d) d.addEventListener("click", async () => { if (confirm("Remove " + e.name + " from the Schedule?") && await adminCall("adminSaveEvent", [i, null, false], "Removed.")) sheet.close(); });
+}
+function editForm(i) {
+  const A = ADMIN, f = i >= 0 ? A.forms[i] : null, isNew = !f;
+  const v = k => esc(f ? (f[k] || "") : "");
+  const flags = [["main", "Big button"], ["quick", "On Home"], ["eventday", "On Event day"], ["share", "Can be shared"]];
+  const st = { flags: flags.filter(([k]) => f && f[k]).map(([, l]) => l) };
+  openSheet(`<p class="tmsg wsticky" id="amsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "Add a form" : "Form"}</div>
+    <input class="wtitle" id="aftitle" type="text" maxlength="60" placeholder="Title, for example Snap a receipt" value="${v("title")}" aria-label="Title">
+    <div class="tsec"><div class="tl">Short line under the title</div><input class="ainput" id="afsub" type="text" value="${v("sub")}"></div>
+    <div class="tsec"><div class="tl">Group</div><input class="ainput" id="afgroup" type="text" value="${v("group")}" placeholder="Volunteers, Event day, Goods, Money or Share"></div>
+    <div class="tsec"><div class="tl">Link</div><input class="ainput" id="afurl" type="url" value="${v("url")}" placeholder="https://"></div>
+    <div class="tsec"><div class="tl">When to use it</div><textarea class="tarea" id="afwhen">${v("when")}</textarea></div>
+    <div class="tsec"><div class="tl">Who fills it out</div><input class="ainput" id="afwho" type="text" value="${v("who")}"></div>
+    <div class="tsec"><div class="tl">How long it takes</div><input class="ainput" id="aftime" type="text" value="${v("time")}" placeholder="About 1 minute"></div>
+    <div class="tsec"><div class="tl">Where it shows</div>${chipRow("aflag", flags.map(x => x[1]), st.flags, true)}</div>
+    <div class="btns"><button class="btn" type="button" id="afsave">${isNew ? "Add the form" : "Save"}</button>${isNew ? "" : `<button class="btn ghost" type="button" id="afdel">Remove</button>`}<button class="btn ghost" type="button" id="afclose">Close</button></div>`);
+  wireChips("aflag", true, st, "flags");
+  $("afclose").addEventListener("click", () => sheet.close());
+  $("afsave").addEventListener("click", async () => {
+    const entry = { title: $("aftitle").value, sub: $("afsub").value, group: $("afgroup").value, url: $("afurl").value, when: $("afwhen").value, who: $("afwho").value, time: $("aftime").value };
+    flags.forEach(([k, l]) => { entry[k] = st.flags.includes(l); });
+    if (await adminCall("adminSaveForm", [i, entry], isNew ? "Form added. Everyone sees it next time they open the Hub." : "Saved. Everyone sees it next time they open the Hub.")) sheet.close();
+  });
+  const d = $("afdel"); if (d) d.addEventListener("click", async () => { if (confirm("Remove " + f.title + " from the Hub? The form itself is not deleted.") && await adminCall("adminSaveForm", [i, null], "Removed.")) sheet.close(); });
 }
 /* ============ OPS (protected): requests from families and storage ============
    Lives in the database under "ops", which only Editors can read. Viewers never receive it
@@ -2114,10 +2279,10 @@ function relock() {
   try { localStorage.removeItem(TOKK); } catch (e) {}
   const shown = document.querySelector(".view:not([hidden])");
   const tab = shown ? shown.id.slice(2) : "";
-  if (tab === "ops" || tab === "goals") pinCard(tab);
+  if (tab === "ops" || tab === "goals" || tab === "admin") pinCard(tab);
 }
 function pinCard(tab) {
-  const box = tab === "ops" ? $("ops") : $("leaders");
+  const box = tab === "ops" ? $("ops") : tab === "admin" ? $("admin") : $("leaders");
   const choose = !BOOT.pinSet;
   const where = BOOT.leader ? "Ops and Goals" : "Ops";
   let first = "";
@@ -2175,6 +2340,7 @@ function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
   if (tab === "goals" && (force || !goalsAt || Date.now() - goalsAt > 300e3)) loadGoals();
+  if (tab === "admin") loadAdmin();
   if (tab === "goals" && typeof drawActivity === "function") { setLeadView(leadView); if (BOOT.work && (!WORK || !WORK.unlocked || WORK.stale || Date.now() - workAt > 60e3)) loadWork(true); }
 }
 // Keep Ops current while it is open: new requests and other people's updates show up within two minutes.
@@ -2191,6 +2357,7 @@ if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); dra
 if (BOOT.ops || BOOT.leader) {
   TABS.push(["ops", "Ops"]);
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
+  if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
   drawTabs();
   const want = start === "leaders" ? "goals" : start;
   go(TABS.some(([k]) => k === want) ? want : "home");
@@ -2233,7 +2400,7 @@ if (BOOT.ops || BOOT.leader) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024012213";
+  var BUILD = "20261024013509";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
