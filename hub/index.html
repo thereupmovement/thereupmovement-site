@@ -2144,16 +2144,16 @@ function drawVol() {
   if (volView === "dates") {
     const row = e => { const n = vCount(e.date), need = +e.needed || 0, pct = need ? Math.min(100, 100 * n / need) : (n ? 100 : 0);
       return `<button type="button" class="wrow vrow" data-ve="${e.date}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(vShort(e.date))}${e.time ? " &middot; " + esc(e.time) : ""}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</span>
-        <span class="vbar${need && n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span></span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span></span></button>`; };
+        ${need ? `<span class="vbar${n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span>` : ""}</span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span></span></button>`; };
     html += `<p class="small">Tap a date to see who's coming, confirm them, copy their numbers for a reminder text, and mark who came and their hours.</p>
       <div class="wrows">${up.map(row).join("") || `<p class="small">No volunteer dates coming up. Add one in Admin, Schedule.</p>`}</div>
       ${past.length ? `<details class="tmore vpast"><summary>Past dates: mark who came</summary><div class="wrows">${past.map(row).join("")}</div></details>` : ""}`;
   } else if (volView === "people") {
     const q = volQ.trim().toLowerCase();
     const filt = { all: () => true, new: vIsNew, orient: vNeedsOrient, nophoto: vNoPhotos };
-    const list = vPeople().filter(filt[volF] || filt.all).filter(p => !q || `${p.name} ${p.phone} ${p.email}`.toLowerCase().includes(q)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const list = (volF === "hidden" ? VOL.people.filter(p => p.hidden) : vPeople().filter(filt[volF] || filt.all)).filter(p => !q || `${p.name} ${p.phone} ${p.email}`.toLowerCase().includes(q)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
     html += `<div class="isearchwrap"><input class="isearch" type="search" id="volQ" placeholder="Search a name, phone or email" value="${esc(volQ)}" aria-label="Search volunteers"></div>
-      <div class="filters" role="group" aria-label="Show" style="margin:8px 0">${[["all", "Everyone"], ["new", "New"], ["orient", "Need orientation"], ["nophoto", "No photos"]].map(([k, l]) => `<button class="chip" type="button" data-vf="${k}" aria-pressed="${volF === k}">${l}</button>`).join("")}</div>
+      <div class="filters" role="group" aria-label="Show" style="margin:8px 0">${[["all", "Everyone"], ["new", "New"], ["orient", "Need orientation"], ["nophoto", "No photos"]].concat(VOL.people.some(p => p.hidden) ? [["hidden", "Hidden"]] : []).map(([k, l]) => `<button class="chip" type="button" data-vf="${k}" aria-pressed="${volF === k}">${l}</button>`).join("")}</div>
       <p class="small">${list.length} volunteer${list.length === 1 ? "" : "s"}. Phone numbers and emails stay inside the Hub.</p>
       <div class="wrows">${list.map(p => { const t = vTally(p); return `<button type="button" class="wrow" data-vp="${esc(p.id)}"><span class="wrname">${esc(p.name || "No name")}<span class="idmlast">${esc(p.phone || p.email || "")}</span><span class="vbs">${vBadges(p)}</span></span>
         <span class="wrmeta"><span>${p.dates.length} date${p.dates.length === 1 ? "" : "s"}${t.came ? " &middot; came " + t.came : ""}${t.hrs ? " &middot; " + t.hrs + " hrs" : ""}</span></span></button>`; }).join("") || `<p class="small">Nobody yet. People show up here as soon as they sign up on the volunteer form.</p>`}</div>`;
@@ -2616,7 +2616,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024020312";
+  var BUILD = "20261024020652";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
