@@ -806,7 +806,7 @@ form.vs>.vs-btn{width:100%}
 .vs-select{appearance:none;-webkit-appearance:none;width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;min-height:50px;padding:12px 44px 12px 14px;cursor:pointer}
 .vs-select:focus-visible{outline:3px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
 .vs-sel svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
-.vs-field input[type=date]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;width:100%;box-sizing:border-box}
+.vs-field input[type=date],.vs-field input[type=time]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;width:100%;box-sizing:border-box}
 .rvdest{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:14px;line-height:1.4}
 .rvdest .vs-sel{margin-top:2px}
 .rvinfo .rvpost{color:#2e7d4f;font-weight:600}
@@ -816,6 +816,12 @@ form.vs>.vs-btn{width:100%}
 a.qab{text-decoration:none}
 #ops .invbox{margin:0 0 14px}
 .qab.wide{grid-column:1/-1}
+.orcard{border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:0 0 16px;background:var(--card, var(--surface))}
+.orhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.orhead b{display:block;font-size:18px;margin:2px 0}
+.orhead span{color:var(--muted);font-size:14px}
+.orskips{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.orskips .vs-opt{margin:0}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -2496,12 +2502,13 @@ function drawVol() {
       <div class="wrows">${list.map(p => { const t = vTally(p); return `<button type="button" class="wrow" data-vp="${esc(p.id)}"><span class="wrname">${esc(p.name || "No name")}<span class="idmlast">${esc(p.phone || p.email || "")}</span><span class="vbs">${vBadges(p)}</span></span>
         <span class="wrmeta"><span>${p.dates.length} date${p.dates.length === 1 ? "" : "s"}${t.came ? " &middot; came " + t.came : ""}${t.hrs ? " &middot; " + t.hrs + " hrs" : ""}</span></span></button>`; }).join("") || `<p class="small">Nobody yet. People show up here as soon as they sign up on the volunteer form.</p>`}</div>`;
   } else {
-    html += `<p class="small">New volunteers pick a 30-minute call when they sign up. After the call, tap Done next to each person who joined.</p>
+    html += orientCard() + `<p class="small">New volunteers pick a call when they sign up. After the call, tap Done next to each person who joined.</p>
       ${V.orientation.length ? V.orientation.map(o => `<h3 class="area">${esc(o.label)}<span>${o.ids.length}</span></h3><div class="wrows">${o.ids.map(vPerson).filter(Boolean).map(p => `<div class="wrow vorow"><span class="wrname">${esc(p.name)}<span class="idmlast">${p.phone ? `<a href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : esc(p.email || "")}</span></span><button type="button" class="tbtn" data-vor="${esc(p.id)}">Done</button></div>`).join("")}</div>`).join("")
         : `<div class="empty">Nobody is waiting on orientation.</div>`}`;
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-vv]").forEach(b => b.addEventListener("click", () => { volView = b.dataset.vv; drawVol(); }));
+  const oe = $("orEdit"); if (oe) oe.addEventListener("click", openOrientEdit);
   box.querySelectorAll("[data-ve]").forEach(b => b.addEventListener("click", () => volEvent(b.dataset.ve)));
   box.querySelectorAll("[data-vp]").forEach(b => b.addEventListener("click", () => volPerson(b.dataset.vp)));
   box.querySelectorAll("[data-vf]").forEach(b => b.addEventListener("click", () => { volF = b.dataset.vf; drawVol(); }));
@@ -3456,6 +3463,66 @@ window.__rcRefresh = () => {
   const ops = $("ops");
   if (ops && ops.querySelector(".opsqa") && !ops.querySelector("[data-openreview]") && (+BOOT.rc) >= 0) { try { drawOps(); } catch (e) {} }
 };
+
+
+/* ============ ORIENTATION SETTINGS: change the day, time, length and skipped weeks from the Volunteers dashboard ============ */
+const OR_DAYNAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const orT12 = hhmm => { const [h, m] = String(hhmm || "00:00").split(":").map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
+const orEnd = (hhmm, len) => { const [h, m] = String(hhmm || "00:00").split(":").map(Number); const t = (h * 60 + m + (+len || 0)) % 1440; return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
+const orOften = w => +w === 1 ? "every week" : +w === 2 ? "every other week" : `every ${w} weeks`;
+const orDay = iso => dt(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+function orientCard() {
+  const o = VOL && VOL.orientSet; if (!o) return "";
+  return `<div class="orcard"><div class="orhead"><div><div class="tl">Orientation schedule</div>
+      <b>${esc(o.dayName)}s, ${esc(orT12(o.hhmm))} to ${esc(orT12(orEnd(o.hhmm, o.length)))}</b>
+      <span>${esc(orOften(o.weeks))} on Google Meet${o.skips.length ? ` &middot; skipping ${o.skips.map(orDay).map(esc).join(", ")}` : ""}</span></div>
+      <button type="button" class="tbtn" id="orEdit">Change</button></div>
+      <p class="small" style="margin:8px 0 0">Volunteers can pick: ${o.sessions.length ? o.sessions.map(s => esc(s.replace(/ at .*/, ""))).join(", ") : "no sessions right now"}.</p></div>`;
+}
+function openOrientEdit() {
+  const o = VOL && VOL.orientSet; if (!o) return;
+  const sel = (name, list, chosen, label) => `<div class="vs-sel"><select class="vs-select" name="${name}" aria-label="${esc(label)}">${list.map(([v, t]) => `<option value="${esc(String(v))}"${String(v) === String(chosen) ? " selected" : ""}>${esc(t)}</option>`).join("")}</select><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>`;
+  openSheet(`<div class="k">Volunteers</div><h3 id="sheetTitle">Orientation schedule</h3>
+    <form class="vs" id="orForm" novalidate>
+      <p class="vs-note">Saving updates the volunteer sign-up right away, moves the Google Calendar invite, and keeps the same Meet link.</p>
+      <div class="vs-field"><span>Day</span>${sel("day", OR_DAYNAMES.map((d, i) => [i, d]), o.day, "Day")}</div>
+      <label class="vs-field"><span>Start time</span><small>Central time.</small><input type="time" name="hhmm" value="${esc(o.hhmm)}" step="900"></label>
+      <div class="vs-field"><span>How long</span>${sel("length", [[15, "15 minutes"], [30, "30 minutes"], [45, "45 minutes"], [60, "1 hour"], [90, "1 hour 30 minutes"]], o.length, "How long")}</div>
+      <div class="vs-field"><span>How often</span>${sel("weeks", [[1, "Every week"], [2, "Every other week"], [3, "Every 3 weeks"], [4, "Every 4 weeks"]], o.weeks, "How often")}</div>
+      <div class="vs-field"><span>How many sessions volunteers can pick from</span>${sel("show", [1, 2, 3, 4, 5, 6, 8].map(n => [n, String(n)]), o.show, "How many sessions")}</div>
+      <div class="vs-field"><span>Skip a week</span><small>Tick any week with no orientation, like a holiday. Volunteers can't pick it, and it comes off the calendar.</small>
+        <div class="orskips">${o.upcoming.map(d => `<label class="vs-opt"><input type="checkbox" name="skip" value="${esc(d)}"${o.skips.includes(d) ? " checked" : ""}><span>${esc(orDay(d))}</span></label>`).join("") || `<p class="small">No upcoming sessions.</p>`}</div>
+        <small id="orSkipNote" hidden>These dates follow the current schedule. If you change the day or how often, save first, then skip weeks.</small></div>
+      <label class="vs-opt"><input type="checkbox" name="notify" checked><span>Email Walter and Kyana about this change</span></label>
+      <p class="vs-err" role="alert"></p>
+      <button class="vs-btn" type="submit">Save the schedule</button></form>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  const f = $("orForm");
+  f.addEventListener("change", () => { $("orSkipNote").hidden = String(f.elements["day"].value) === String(o.day) && String(f.elements["weeks"].value) === String(o.weeks); });
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = f.querySelector(".vs-err");
+    const s = { day: +f.elements["day"].value, hhmm: f.elements["hhmm"].value, length: +f.elements["length"].value, weeks: +f.elements["weeks"].value, show: +f.elements["show"].value,
+      skips: [...f.querySelectorAll('[name="skip"]:checked')].map(x => x.value), notify: f.elements["notify"].checked };
+    if (!/^\d{2}:\d{2}$/.test(s.hhmm)) { err.textContent = "Pick a start time."; return; }
+    // A new day or rhythm makes the listed weeks stale, so skips are only kept when both stay the same
+    if (s.day !== +o.day || s.weeks !== +o.weeks) s.skips = [];
+    if (volBusy) return;
+    volBusy = true; err.textContent = "";
+    const b = f.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Saving...";
+    try {
+      VOL = await run("saveOrientation", KEY, TOK, s); volAt = Date.now(); volBusy = false;
+      const r = VOL.orientSaved || {};
+      drawVol(); sheet.close();
+      toast(r.cal === "ok" ? `Saved. The sign-up and the calendar invite now say ${r.summary}.${r.mailed ? " Walter and Kyana got an email." : ""}`
+        : r.cal === "needs-permission" ? "Saved for the sign-up. The calendar invite didn't move yet: Dasia needs to connect the calendar once." : "Saved for the sign-up. The calendar invite didn't move, so let Dasia know.");
+    } catch (x) {
+      volBusy = false; b.disabled = false; b.textContent = "Save the schedule";
+      if (isAuth(x)) { sheet.close(); relock(); return; }
+      err.textContent = /^Pick/.test(String(x.message)) ? x.message : "That didn't save. Try again.";
+    }
+  });
+}
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
 <script>
@@ -3568,7 +3635,7 @@ window.__rcRefresh = () => {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261024140800";
+  var BUILD = "20261025142521";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
