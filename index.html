@@ -216,6 +216,13 @@ form.vs>.vs-btn{width:100%}
         <button class="vbtn" id="volSign" type="button" aria-expanded="false" aria-controls="signup">Sign up to volunteer</button></div></div>
     </div>
     <div class="signupbox" id="signup" hidden></div>
+    <div class="vs-card" id="mylink" style="margin-top:14px">
+      <b>Already volunteering with us?</b>
+      <p>Get the link to your own volunteer page again. We'll email it to the address you signed up with.</p>
+      <label class="vs-field"><span>Your email</span><input type="email" id="mlEmail" autocomplete="email" inputmode="email" maxlength="120"></label>
+      <div><button type="button" class="vs-btn ghost" id="mlSend">Email me my link</button></div>
+      <p class="vs-note" id="mlMsg" role="status" aria-live="polite"></p>
+    </div>
 
     <h2>Did ReUp help you?</h2>
     <a class="big dark" id="story" href="#" target="_blank" rel="noopener"><div><b>Share your story</b><span>Tell us what changed for you or your family.</span></div><div class="arrow" aria-hidden="true">&rarr;</div></a>
@@ -366,7 +373,7 @@ form.vs>.vs-btn{width:100%}
             '<a class="vs-btn ghost" target="_blank" rel="noopener" href="' + escH(calLink("ReUp: " + d.name, d.date, d.time, 180, "Volunteering with The ReUp Movement.", d.address || d.place)) + '">Add to my calendar</a></div>';
         }).join("") + "</div>";
       }
-      html += '<p class="vs-note">A confirmation email is on its way and should arrive within a few minutes. Can\'t make a date? Reply to that email so we can fill your spot.</p>' +
+      html += '<p class="vs-note">A confirmation email is on its way and should arrive within a few minutes. It has the link to your own volunteer page, where you can change a date, tell us you can\'t make it or move your orientation.</p>' +
         '<button type="button" class="vs-btn ghost" data-vs-again>Sign up someone else</button></div>';
       root.innerHTML = html;
       root.querySelector("[data-vs-again]").onclick = function () { draw(); };
@@ -534,6 +541,15 @@ if (!PHOTOS.length) { $("photos").previousElementSibling.hidden = true; $("photo
     if (scroll) box.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   btn.addEventListener("click", () => open(true));
+  // "Email me my link": the server only emails an address that is already on the volunteer list, and always answers the same way.
+  const ml = $("mlSend");
+  ml.addEventListener("click", () => {
+    const m = $("mlEmail").value.trim(), msg = $("mlMsg");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) { msg.textContent = "Add the email you signed up with."; $("mlEmail").focus(); return; }
+    ml.disabled = true; msg.textContent = "Sending...";
+    api("vpSendLink", [m]).then(() => { ml.disabled = false; msg.textContent = "If that email is on our list, your link is on its way. Check your inbox and spam."; },
+      () => { ml.disabled = false; msg.textContent = "That didn't go through. Check your connection and try again."; });
+  });
   if (location.hash === "#signup") open(true);
   window.addEventListener("hashchange", () => { if (location.hash === "#signup") open(true); });
 })();
