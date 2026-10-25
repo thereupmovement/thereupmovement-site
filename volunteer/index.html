@@ -143,13 +143,15 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
     api(fn, [code].concat(args)).then(function (r) {
       busy = false; document.body.removeAttribute("aria-busy");
       if (!r || !r.ok) return lost();
-      V = r; asking = ""; needEdit = {}; refOpen = false; draw(); if (msg) say(typeof msg === "function" ? msg(r) : msg);
+      V = norm(r); asking = ""; needEdit = {}; refOpen = false; draw(); if (msg) say(typeof msg === "function" ? msg(r) : msg);
     }, function (e) {
       busy = false; document.body.removeAttribute("aria-busy"); draw();
       say(/network|fetch/i.test(String(e && e.message)) ? "No connection. Try again in a moment." : String(e.message || "Something went wrong. Try again."));
     });
   }
 
+  /* A returning volunteer counts as oriented, so their quarterly refresher applies from day one. */
+  function norm(r) { if (r && r.refresher && r.orientation && !r.orientation.isNew) r.refresher.needed = true; return r; }
   function lost() {
     $("#nav").hidden = true; $("#me").hidden = true;
     $("#main").innerHTML = '<div class="center"><h1>Find your volunteer page</h1>' +
@@ -208,7 +210,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
         (m.cancelled ? '<button type="button" class="link" data-join="' + m.date + '">I can make it after all</button>'
           : asking === m.date ? '<div class="next" style="padding:0;background:transparent">' + askBox(m) + '</div>' : '<button type="button" class="link" data-ask="' + m.date + '">Can\'t make it?</button>') + '</div>';
     }).join("");
-    h += '<button type="button" class="btn dash" data-go="signup">Find another date to volunteer</button>';
+    h += '<button type="button" class="btn dash" data-go="signup">' + (live.length ? "Find another date to volunteer" : "Find a date to volunteer") + '</button>';
     h += '<section aria-label="Completed" style="display:flex;flex-direction:column;gap:10px;margin-top:6px"><div class="row" style="align-items:baseline"><h2>Completed</h2>' +
       (V.done.length ? '<span class="when" style="font-size:14px">' + V.eventsYear + (V.eventsYear === 1 ? " event, " : " events, ") + hrs(V.hoursYear) + ' this year</span>' : "") + '</div>' +
       (V.done.length ? V.done.map(function (c) {
@@ -372,7 +374,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
   $("#me").onclick = function () { go("me"); };
 
   if (!code) return lost();
-  api("vpGet", [code]).then(function (r) { if (!r || !r.ok) return lost(); V = r; draw(); }, function () {
+  api("vpGet", [code]).then(function (r) { if (!r || !r.ok) return lost(); V = norm(r); draw(); }, function () {
     $("#main").innerHTML = '<div class="center"><h1>Can\'t reach ReUp right now</h1><p class="lede">Check your connection and try again.</p><button type="button" class="btn brand" onclick="location.reload()">Try again</button></div>';
   });
 })();
