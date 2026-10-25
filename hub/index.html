@@ -3669,11 +3669,26 @@ function vWireOrient(box) {
 /* Loader: checks the personal link with the Hub server, then starts the page. */
 (function () {
   var API = "https://script.google.com/macros/s/AKfycbwubNwwouftKblej7oY9kmgoGzgDsNfihm7by44aD3D8slySgZPt4M5x-gCZs8lZ6z-rg/exec";
+  /* Every request carries this phone's PIN token at the end; the server takes it off and checks it.
+     If the server says the PIN is needed (expired, or reset by Dasia), the page reloads to the PIN screen. */
   window.api = function (fn, args) {
+    var a = (args || []).slice(), t = "";
+    try { t = localStorage.getItem("reupHubTok_" + (window.__hubKey || "")) || ""; } catch (e) {}
+    a.push(t);
     return fetch(API, { method: "POST", credentials: "omit", redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: fn, args: args || [] }) })
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: fn, args: a }) })
       .then(function (r) { if (!r.ok) throw new Error("network " + r.status); return r.json(); })
-      .then(function (r) { if (r && r.error) throw new Error(r.error); return r ? r.result : null; });
+      .then(function (r) {
+        if (r && r.error) {
+          if (r.error === "pin" && !window.__pinGate) {
+            window.__pinGate = true;
+            try { localStorage.removeItem("reupHubTok_" + (window.__hubKey || "")); localStorage.removeItem("reupHubBoot_" + (window.__hubKey || "")); } catch (e) {}
+            location.reload();
+          }
+          throw new Error(r.error);
+        }
+        return r ? r.result : null;
+      });
   };
   function note(msg, retry) {
     var b = document.getElementById("boot");
@@ -3719,6 +3734,9 @@ function vWireOrient(box) {
 
   var BK = "reupHubBoot_" + k, cached = null, tk = "";
   try { cached = JSON.parse(localStorage.getItem(BK) || "null"); tk = localStorage.getItem("reupHubTok_" + k) || ""; } catch (e) {}
+  window.__hubKey = k;
+  /* The PIN comes first: nothing from the Hub shows on a phone until its owner types their PIN (good for 30 days). */
+  if (!(/^\d+\.[\w-]+$/.test(tk) && +tk.split(".")[0] > Date.now())) { pinGate(k); return; }
   /* One request opens the Hub: the link check, Work and the Inbox together. */
   var startP = window.api("start", [k, tk]);
   window.__workT = window.__inboxT = Date.now();
@@ -3738,6 +3756,39 @@ function vWireOrient(box) {
       d.innerHTML = "<p>" + msg + "</p>"; document.body.appendChild(d);
       try { document.getElementById("sheet").close(); } catch (e) {}
     }
+  }
+  function pinGate(key) {
+    try { localStorage.removeItem("reupHubBoot_" + key); localStorage.removeItem("reupHubTok_" + key); } catch (e) {}
+    var b = document.getElementById("boot");
+    window.api("boot", [key]).then(function (r) {
+      if (!r || !r.ok) { closed(r); return; }
+      var choose = !r.pinSet, first = "";
+      b.innerHTML = '<div class="pinbox" style="max-width:360px;width:100%;margin:0 auto"><div class="pinic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>' +
+        '<h3>' + (choose ? "Choose your PIN" : "Enter your PIN") + '</h3><p id="gpl">' + (choose ? "Hi " + String(r.name || "").replace(/[<>&"]/g, "") + ". Pick 4 numbers you'll remember. You'll use them to open the ReUp Hub. Nobody else sees it, not even Dasia." : "Hi " + String(r.name || "").replace(/[<>&"]/g, "") + ". This phone stays unlocked for 30 days.") + '</p>' +
+        '<form id="pinf" autocomplete="off"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="' + (choose ? "Choose a 4-digit PIN" : "Your 4-digit PIN") + '" placeholder="&bull;&bull;&bull;&bull;"> <button class="btn" type="submit" id="gpb">' + (choose ? "Next" : "Unlock") + '</button></form>' +
+        '<p class="pinmsg" id="gpm" role="alert"></p><p class="small" style="margin:6px 0 0">' + (choose ? "Not all the same number, and not 4 in a row like 1234." : "Forgot your PIN? Ask Dasia to reset it, then choose a new one.") + '</p></div>';
+      var f = document.getElementById("pinf"), inp = document.getElementById("pin"), msg = document.getElementById("gpm"), btn = document.getElementById("gpb");
+      function submit() {
+        var pin = inp.value.trim();
+        if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your PIN is 4 numbers."; return; }
+        if (choose && !first) {
+          if (/^(\d)\1{3}$/.test(pin) || "01234567890".indexOf(pin) >= 0 || "09876543210".indexOf(pin) >= 0) { msg.textContent = "That one is too easy to guess. Try another."; inp.value = ""; inp.focus(); return; }
+          first = pin; inp.value = ""; msg.textContent = ""; document.getElementById("gpl").textContent = "Type the same 4 numbers again to confirm."; btn.textContent = "Save my PIN"; inp.focus(); return;
+        }
+        if (choose && pin !== first) { first = ""; inp.value = ""; msg.textContent = "Those didn't match. Start again."; btn.textContent = "Next"; inp.focus(); return; }
+        btn.disabled = true; msg.textContent = choose ? "Saving..." : "Checking...";
+        window.api(choose ? "setPin" : "unlock", [key, pin]).then(function (x) {
+          if (x && x.ok) { try { localStorage.setItem("reupHubTok_" + key, x.token); } catch (e) {} location.reload(); return; }
+          if (x && x.needSet) { pinGate(key); return; }
+          msg.textContent = (x && x.msg) || "That didn't work."; inp.value = ""; btn.disabled = !!(x && x.locked);
+          if (choose && /already set/i.test((x && x.msg) || "")) { setTimeout(function () { pinGate(key); }, 1800); return; }
+          if (!(x && x.locked)) inp.focus();
+        }, function () { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; });
+      }
+      f.addEventListener("submit", function (e) { e.preventDefault(); submit(); });
+      inp.addEventListener("input", function () { inp.value = inp.value.replace(/\D/g, "").slice(0, 4); if (inp.value.length === 4) submit(); });
+      setTimeout(function () { inp.focus(); }, 50);
+    }, function () { note("The Hub couldn't load. Check your connection.", true); });
   }
   function launch(r) {
     window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
@@ -3775,7 +3826,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261025195904";
+  var BUILD = "20261025221956";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

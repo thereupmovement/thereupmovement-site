@@ -58,6 +58,17 @@ a{color:inherit}
 
 .band{background:var(--red);color:var(--red-ink);padding-block:26px 64px}
 .brand{font-family:var(--display);font-size:14px;letter-spacing:.12em;text-transform:uppercase;opacity:.9}
+.brandrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.signin{font:inherit;font-weight:800;font-size:15px;min-height:44px;padding:0 18px;border-radius:999px;border:2px solid currentColor;background:transparent;color:inherit;cursor:pointer}
+.signin:focus-visible{outline:3px solid currentColor;outline-offset:2px}
+#signdlg{border:0;border-radius:20px;padding:0;width:min(420px,calc(100vw - 32px));background:var(--surface);color:var(--ink)}
+#signdlg::backdrop{background:rgba(0,0,0,.55)}
+.sd{display:grid;gap:12px;padding:22px 18px}
+.sd h2{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:28px}
+.sdopt{display:grid;gap:4px;padding:16px;border:1.5px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink);background:var(--bg)}
+.sdopt b{font-size:18px}.sdopt span{color:var(--muted);font-size:15px}
+.sdopt:focus-visible,.sdopt:hover{border-color:var(--ink)}
+.sdclose{font:inherit;font-weight:700;min-height:48px;border-radius:12px;border:0;background:transparent;color:var(--ink);text-decoration:underline;cursor:pointer}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(38px,10.5vw,56px);line-height:.98;margin:8px 0 0;text-transform:uppercase;text-wrap:balance}
 
 main{padding-block:0 48px}
@@ -183,10 +194,17 @@ form.vs>.vs-btn{width:100%}
 
 <header class="band side">
   <div class="wrap">
-    <div class="brand">The ReUp Movement</div>
+    <div class="brandrow"><div class="brand">The ReUp Movement</div><button type="button" class="signin" id="signin" aria-haspopup="dialog">Sign in</button></div>
     <h1>Everybody deserves a new beginning.</h1>
   </div>
 </header>
+
+<dialog id="signdlg" aria-labelledby="signh"><form method="dialog" class="sd">
+  <h2 id="signh">Sign in</h2>
+  <a class="sdopt" href="volunteer/"><b>I volunteer with ReUp</b><span>Your dates, orientation, hours and more. Opens from the link in your confirmation email.</span></a>
+  <a class="sdopt" href="hub/"><b>I'm on the ReUp team</b><span>The team Hub. You'll need your personal Hub link and your PIN.</span></a>
+  <button class="sdclose" value="close">Close</button>
+</form></dialog>
 
 <main class="side">
   <div class="wrap">
@@ -551,6 +569,9 @@ if (!PHOTOS.length) { $("photos").previousElementSibling.hidden = true; $("photo
       () => { ml.disabled = false; msg.textContent = "That didn't go through. Check your connection and try again."; });
   });
   if (location.hash === "#signup") open(true);
+  const sdl = $("signdlg");
+  $("signin").addEventListener("click", () => { if (sdl.showModal) sdl.showModal(); else location.href = "volunteer/"; });
+  sdl.addEventListener("click", e => { if (e.target === sdl) sdl.close(); });
   window.addEventListener("hashchange", () => { if (location.hash === "#signup") open(true); });
 })();
 
