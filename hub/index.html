@@ -367,6 +367,7 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .isearch{width:100%;font:inherit;font-size:16px;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
 .isearch:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .irow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+#adjAdd[hidden],#adjSet[hidden]{display:none}
 button.irow{width:100%;font:inherit;color:inherit;text-align:left;background:none;border:0;border-top:1px solid var(--line);cursor:pointer}
 button.irow:active{background:var(--line)}
 button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
@@ -2847,7 +2848,7 @@ function openAdjust(row) {
   const items = (((OPS || {}).inventory || {}).onHand || {}).items || [];
   const it = items.find(x => +x.row === row);
   if (!it) return;
-  const unit = String(it.unit || "").trim(), u = unit.toLowerCase();
+  const unit = String(it.unit || "").trim(), u = unit.toLowerCase(), plain = !u || /^(each|item|items|individual|individual item)$/.test(u);
   openSheet(`<div class="k">Change the count</div>
     <h3 id="sheetTitle">${esc(it.desc || it.sub || "Item")}</h3>
     <p class="vs-note" style="margin:0">Right now: <b>${esc(String(it.qty || 0))}${unit ? " " + esc(unit) : ""}</b>${it.loc ? " &middot; " + esc(it.loc) : ""}</p>
@@ -2855,9 +2856,9 @@ function openAdjust(row) {
       <div class="seg" role="group" aria-label="What happened">
         <button type="button" data-am="add" aria-pressed="true">Found more</button>
         <button type="button" data-am="set" aria-pressed="false">Fix the count</button></div>
-      <label class="vs-field" id="adjAdd"><span>How many more did you find?</span>${unit ? `<small>Count ${esc(u)}, the same way this item was logged.</small>` : ""}<input type="text" inputmode="numeric" name="n" maxlength="6" autocomplete="off"></label>
+      <label class="vs-field" id="adjAdd"><span>How many more did you find?</span>${plain ? "" : `<small>Counted in ${esc(u)}, the same way this item was logged.</small>`}<input type="text" inputmode="numeric" name="n" maxlength="6" autocomplete="off"></label>
       <div id="adjSet" hidden>
-        <label class="vs-field"><span>What is the right count?</span>${unit ? `<small>In ${esc(u)}.</small>` : ""}<input type="text" inputmode="numeric" name="to" maxlength="6" autocomplete="off"></label>
+        <label class="vs-field"><span>What is the right count?</span>${plain ? "" : `<small>Counted in ${esc(u)}, the same way this item was logged.</small>`}<input type="text" inputmode="numeric" name="to" maxlength="6" autocomplete="off"></label>
         <label class="vs-field" style="margin-top:14px"><span>Why is it changing?</span><small>For example: we counted wrong, or some are broken.</small><input type="text" name="why" maxlength="200"></label>
       </div>
       <p class="vs-err" role="alert"></p>
@@ -3774,7 +3775,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261025195758";
+  var BUILD = "20261025195904";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
