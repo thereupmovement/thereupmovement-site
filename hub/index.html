@@ -822,6 +822,19 @@ a.qab{text-decoration:none}
 .orhead span{color:var(--muted);font-size:14px}
 .orskips{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .orskips .vs-opt{margin:0}
+.valerts{display:grid;gap:8px;margin:0 0 14px}
+.valert{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-left:4px solid #B23A3A;border-radius:14px;padding:12px 14px;background:var(--card, var(--surface))}
+.valert.warn{border-left-color:#B7791F}
+.valert b{display:block}
+.valert span{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+.valert .tbtn{flex:none}
+.vtick{cursor:pointer;gap:12px;justify-content:flex-start}
+.vtick input{width:22px;height:22px;flex:none;accent-color:#7E1F1F}
+.vfnote{margin:-4px 0 8px}
+.vtall{margin:6px 0 10px}
+.vmarkbar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));padding:10px 0 4px;background:linear-gradient(transparent, var(--bg) 30%)}
+.vmarkbar .vs-btn{width:100%}
+.vmarkbar .vs-btn:disabled{opacity:.55}
 body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;padding:24px;text-align:center;background:var(--bg);color:var(--ink);font-size:17px;z-index:50}
 .bootmsg p{max-width:340px;margin:0}
@@ -2489,7 +2502,7 @@ function drawVol() {
     const row = e => { const n = vCount(e.date), need = +e.needed || 0, pct = need ? Math.min(100, 100 * n / need) : (n ? 100 : 0);
       return `<button type="button" class="wrow vrow" data-ve="${e.date}"><span class="wrname">${esc(e.name)}<span class="idmlast">${esc(vShort(e.date))}${e.time ? " &middot; " + esc(e.time) : ""}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</span>
         ${need ? `<span class="vbar${n < need ? " short" : ""}"><i style="width:${pct.toFixed(0)}%"></i></span>` : ""}</span><span class="wrmeta"><span><b>${n}</b>${need ? " of " + need : ""}</span>${vTeam(e.date).length ? `<span>Team ${vTeam(e.date).length}</span>` : ""}</span></button>`; };
-    html += `<p class="small">Tap a date to see who's coming, confirm them, copy their numbers for a reminder text, and mark who came and their hours.</p>
+    html += volAlerts() + `<p class="small">Tap a date to see who's coming, confirm them, copy their numbers for a reminder text, and mark who came and their hours.</p>
       <div class="wrows">${up.map(row).join("") || `<p class="small">No volunteer dates coming up. Add one in Admin, Schedule.</p>`}</div>
       ${past.length ? `<details class="tmore vpast"><summary>Past dates: mark who came</summary><div class="wrows">${past.map(row).join("")}</div></details>` : ""}`;
   } else if (volView === "people") {
@@ -2503,14 +2516,15 @@ function drawVol() {
         <span class="wrmeta"><span>${p.dates.length} date${p.dates.length === 1 ? "" : "s"}${t.came ? " &middot; came " + t.came : ""}${t.hrs ? " &middot; " + t.hrs + " hrs" : ""}</span></span></button>`; }).join("") || `<p class="small">Nobody yet. People show up here as soon as they sign up on the volunteer form.</p>`}</div>`;
   } else {
     html += orientCard() + `<p class="small">New volunteers pick a call when they sign up. After the call, tap Done next to each person who joined.</p>
-      ${V.orientation.length ? V.orientation.map(o => `<h3 class="area">${esc(o.label)}<span>${o.ids.length}</span></h3><div class="wrows">${o.ids.map(vPerson).filter(Boolean).map(p => `<div class="wrow vorow"><span class="wrname">${esc(p.name)}<span class="idmlast">${p.phone ? `<a href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : esc(p.email || "")}</span></span><button type="button" class="tbtn" data-vor="${esc(p.id)}">Done</button></div>`).join("")}</div>`).join("")
-        : `<div class="empty">Nobody is waiting on orientation.</div>`}`;
+      ${vOrientGroups()}`;
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-vv]").forEach(b => b.addEventListener("click", () => { volView = b.dataset.vv; drawVol(); }));
   const oe = $("orEdit"); if (oe) oe.addEventListener("click", openOrientEdit);
   box.querySelectorAll("[data-ve]").forEach(b => b.addEventListener("click", () => volEvent(b.dataset.ve)));
   box.querySelectorAll("[data-vp]").forEach(b => b.addEventListener("click", () => volPerson(b.dataset.vp)));
+  box.querySelectorAll("[data-vrec]").forEach(b => b.addEventListener("click", () => { const e = VOL.events.find(x => x.date === b.dataset.vrec); if (e) { copyText(vRecruitText(e)); toast("Copied. Paste it in the group chat, a story or a text."); } }));
+  vWireOrient(box);
   box.querySelectorAll("[data-vf]").forEach(b => b.addEventListener("click", () => { volF = b.dataset.vf; drawVol(); }));
   box.querySelectorAll("[data-vor]").forEach(b => b.addEventListener("click", () => volCall("saveVolunteer", [b.dataset.vor, { oriented: true }], "Marked done.")));
   const s = $("volQ"); if (s) s.addEventListener("input", () => { volQ = s.value; const pos = s.selectionStart; drawVol(); const n = $("volQ"); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} });
@@ -2531,7 +2545,8 @@ function volEvent(date) {
         <p class="small" style="margin:6px 0 0">${going.length} volunteer${going.length === 1 ? "" : "s"} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}. This number also goes on the volunteer sign-up sheet.</p>
         <p class="small" style="margin:6px 0 0">${vTeam(date).length ? "From the team: " + esc(vTeam(date).join(", ")) : "Nobody from the team has said they are going yet."}</p></div>
       ${nums.length && !isPast ? `<div class="tsec"><div class="tl">Reminder text</div><div class="abtns"><button type="button" class="tbtn" id="vnums">Copy ${nums.length} phone number${nums.length === 1 ? "" : "s"}</button><button type="button" class="tbtn ghost" id="vtext">Copy the reminder message</button></div>
-        <p class="small" style="margin:6px 0 0">Paste the numbers into a new group text, then paste the message.</p></div>` : ""}
+        <p class="small" style="margin:6px 0 0">Paste the numbers into a new group text, then paste the message.</p>${vRemindNote(date, going)}</div>` : ""}
+      ${!isPast && +e.needed > going.length ? `<div class="tsec"><div class="tl">${+e.needed - going.length} more needed</div><button type="button" class="tbtn" id="vrecone">Copy a recruiting post</button></div>` : ""}
       <div class="tsec"><div class="tl">${isPast ? "Who came" : "Who's coming"}</div>
         ${on.map(p => { const s = p.shifts[date] || {}, st = s.status || "signed"; return `<div class="vcard">
           <div class="vtop"><button type="button" class="vname" data-vpo="${esc(p.id)}">${esc(p.name || "No name")}</button>${p.phone ? `<a class="vcall" href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : ""}</div>
@@ -2545,6 +2560,7 @@ function volEvent(date) {
     $("vneedsave").addEventListener("click", () => volCall("setVolNeeded", [date, $("vneed").value], "Saved."));
     const n = $("vnums"); if (n) n.addEventListener("click", () => copyText(nums.join(", ")));
     const t = $("vtext"); if (t) t.addEventListener("click", () => copyText(msg));
+    const rc = $("vrecone"); if (rc) rc.addEventListener("click", () => { copyText(vRecruitText(e)); toast("Copied. Paste it in the group chat, a story or a text."); });
     document.querySelectorAll("[data-vs]").forEach(b => b.addEventListener("click", () => { const [id, st] = b.dataset.vs.split("|"); const p = vPerson(id); volCall("saveShift", [id, date, { status: st, name: p ? p.name : "", event: e.name }], vLabel(st) + "."); }));
     document.querySelectorAll("[data-vh]").forEach(i => i.addEventListener("change", () => volCall("saveShift", [i.dataset.vh, date, { hours: i.value }], "Hours saved.")));
     document.querySelectorAll("[data-vpo]").forEach(b => b.addEventListener("click", () => volPerson(b.dataset.vpo)));
@@ -2997,7 +3013,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
   drawTabs();
-  const want = start === "leaders" ? "goals" : start;
+  const want = start === "leaders" ? "goals" : (start || BOOT.start || "");
   go(TABS.some(([k]) => k === want) ? want : "home");
   // Load each protected tab in the background, one after another, so it is ready before anyone taps it.
   if (TOK) {
@@ -3523,6 +3539,67 @@ function openOrientEdit() {
     }
   });
 }
+
+
+/* ============ VOLUNTEERS, MORE: short-staffed alerts, reminder schedule, bulk orientation check-off ============ */
+const vAddDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const vLong = iso => dt(iso).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+function vRecruitText(e) {
+  const k = Math.max(0, (+e.needed || 0) - vCount(e.date));
+  return `The ReUp Movement needs ${k ? k + " more volunteer" + (k === 1 ? "" : "s") : "volunteers"} for ${e.name} on ${vLong(e.date)}${e.time ? ", " + e.time : ""}${e.place ? ", at " + e.place : ""}. Sign up here: ${SIGNUP_LINK}`;
+}
+/** Top of the Dates view: dates short of their target, and people coming who haven't done orientation. */
+function volAlerts() {
+  const V = VOL; if (!V) return "";
+  const today = V.today, soon = vAddDays(today, 21), near = vAddDays(today, 14);
+  const up = V.events.filter(e => e.date >= today && e.date <= soon);
+  const nextSession = V.orientSet && V.orientSet.sessions && V.orientSet.sessions[0] ? V.orientSet.sessions[0].replace(/ at .*/, "") : "";
+  const out = [];
+  up.filter(e => +e.needed > 0 && vCount(e.date) < +e.needed).forEach(e => {
+    const n = vCount(e.date), k = +e.needed - n;
+    out.push(`<div class="valert"><div><b>${esc(e.name)}, ${esc(vShort(e.date))}</b><span>${n} of ${esc(e.needed)} signed up. ${k} more needed.</span></div>
+      <button type="button" class="tbtn" data-vrec="${esc(e.date)}">Copy a recruiting post</button></div>`);
+  });
+  up.filter(e => e.date <= near).forEach(e => {
+    const un = vOn(e.date).filter(p => vStatus(p, e.date) !== "cancelled" && vNeedsOrient(p));
+    if (!un.length) return;
+    out.push(`<div class="valert warn"><div><b>${un.length} coming to ${esc(e.name)} ${un.length === 1 ? "hasn't" : "haven't"} done orientation</b>
+      <span>${un.map(p => esc(p.name || "No name")).join(", ")}. Call them before ${esc(vShort(e.date))}${nextSession ? `, or point them to ${esc(nextSession)}` : ""}.</span></div>
+      <button type="button" class="tbtn ghost" data-ve="${esc(e.date)}">See who</button></div>`);
+  });
+  return out.length ? `<div class="valerts">${out.join("")}</div>` : "";
+}
+/** In a date's sheet: when the automatic reminder email goes out. */
+function vRemindNote(date, going) {
+  const r = VOL && VOL.remind; if (!r || date < VOL.today) return "";
+  if (!r.on) return `<p class="small" style="margin:6px 0 0">Automatic reminder emails are turned off on the volunteer sheet.</p>`;
+  const send = vAddDays(date, -(+r.days || 1)), withEmail = going.filter(p => p.email).length;
+  const h = +r.hour, when = `${(h % 12) || 12} ${h >= 12 ? "PM" : "AM"}`;
+  return `<p class="small" style="margin:6px 0 0">${send < VOL.today ? "The reminder email already went out" : `Reminder email goes out automatically ${esc(vShort(send))} at ${when}`} to ${withEmail} volunteer${withEmail === 1 ? "" : "s"} with an email. The group text is for everyone else.</p>`;
+}
+/** Orientation view: tick everyone who joined the call, then save once. */
+function vOrientGroups() {
+  const V = VOL;
+  if (!V.orientation.length) return `<div class="empty">Nobody is waiting on orientation.</div>`;
+  const fu = {}; (V.followUps || []).forEach(x => { fu[x.session] = fu[x.session] || []; fu[x.session].push(x); });
+  return V.orientation.map(o => {
+    const people = o.ids.map(vPerson).filter(Boolean);
+    const f = fu[o.label] || [], pending = f.filter(x => !x.sent && x.email), sent = f.filter(x => x.sent);
+    const note = pending.length ? `<p class="small vfnote">Missed this one? Anyone not ticked gets a friendly email ${pending[0].due <= V.today ? "today" : "on " + esc(vShort(pending[0].due))} with the next sessions.</p>`
+      : sent.length ? `<p class="small vfnote">Follow-up email sent to ${sent.length}.</p>` : "";
+    return `<div class="vgroup"><h3 class="area">${esc(o.label)}<span>${people.length}</span></h3>${note}
+      <div class="wrows">${people.map(p => `<label class="wrow vorow vtick"><input type="checkbox" data-vtick="${esc(p.id)}"><span class="wrname">${esc(p.name)}<span class="idmlast">${esc(p.phone || p.email || "")}</span></span></label>`).join("")}</div>
+      ${people.length > 1 ? `<button type="button" class="more vtall">Tick everyone in this session</button>` : ""}</div>`;
+  }).join("") + `<div class="vmarkbar"><button type="button" class="vs-btn" id="vormark" disabled>Tick who joined, then save</button></div>`;
+}
+function vWireOrient(box) {
+  const btn = box.querySelector("#vormark"); if (!btn) return;
+  const ticked = () => [...box.querySelectorAll("[data-vtick]:checked")].map(x => x.dataset.vtick);
+  const sync = () => { const n = ticked().length; btn.disabled = !n; btn.textContent = n ? `Mark ${n} as done` : "Tick who joined, then save"; };
+  box.querySelectorAll("[data-vtick]").forEach(x => x.addEventListener("change", sync));
+  box.querySelectorAll(".vtall").forEach(b => b.addEventListener("click", () => { b.closest(".vgroup").querySelectorAll("[data-vtick]").forEach(x => { x.checked = true; }); sync(); }));
+  btn.addEventListener("click", () => { const ids = ticked(); if (ids.length) volCall("markOriented", [ids], `Marked ${ids.length} done.`); });
+}
 </script>
 <div id="boot" class="bootmsg" role="status"><div class="spin" aria-hidden="true"></div><p>Opening the Hub...</p></div>
 <script>
@@ -3600,7 +3677,7 @@ function openOrientEdit() {
     }
   }
   function launch(r) {
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
     var b = document.getElementById("boot"); if (b) b.remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -3635,7 +3712,7 @@ function openOrientEdit() {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261025142521";
+  var BUILD = "20261025143706";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
