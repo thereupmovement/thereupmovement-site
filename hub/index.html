@@ -367,6 +367,9 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .isearch{width:100%;font:inherit;font-size:16px;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
 .isearch:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .irow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+button.irow{width:100%;font:inherit;color:inherit;text-align:left;background:none;border:0;border-top:1px solid var(--line);cursor:pointer}
+button.irow:active{background:var(--line)}
+button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .irow:first-child{border-top:0}
 .irow b{display:block;font-size:15px} .irow span{display:block;font-size:13px;color:var(--muted)}
 .irow em{font-style:normal;font-family:var(--display);font-size:22px}
@@ -2782,8 +2785,8 @@ function drawInventory(d) {
     ${cats.length > 2 ? `<div class="filters" role="group" aria-label="Category" style="margin:8px 0 0">${cats.map(c => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${invCat === c}">${esc(c)}</button>`).join("")}</div>` : ""}
     <div class="ires">${!items.length
       ? `<div class="empty">Nothing is in storage right now. Items show up here, searchable, once they're sorted.</div>`
-      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}</p>
-        <div class="list">${shown.slice(0, limit).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em></div>`).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
+      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}${items.some(i => i.row) ? ". Found more, or a count is wrong? Tap the item." : ""}</p>
+        <div class="list">${shown.slice(0, limit).map(i => { const inner = `<div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em>`; return i.row ? `<button type="button" class="irow" data-adj="${+i.row}" aria-label="Change the count for ${esc(i.desc || i.sub || "this item")}">${inner}</button>` : `<div class="irow">${inner}</div>`; }).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
         ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
   // 1. Actions first, one tap straight into the form
   let html = listHtml; // What's in storage sits at the top, folded into its drop-down
@@ -2836,6 +2839,64 @@ function opsActions() {
     ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}
     ${(+BOOT.rc) >= 0 ? `<button class="qab wide" type="button" data-openreview><i aria-hidden="true">${qi('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>')}</i><span><b>Approvals</b><small id="opsapprn">${(+BOOT.rc) > 0 ? BOOT.rc + " waiting" : "Nothing waiting"}</small></span></button>` : ""}</div>`;
 }
+/* ============ Change a count (step 122, 25 Oct 2026) ============
+   Anyone who can open Ops can add units they found, or fix a wrong count with a reason.
+   The server (adjustCount in the ReUp Hub Apps Script) changes only the Quantity cell on that Item Log row,
+   adds a dated line to the row's Notes, and logs the change on the I6 Count Changes tab. */
+function openAdjust(row) {
+  const items = (((OPS || {}).inventory || {}).onHand || {}).items || [];
+  const it = items.find(x => +x.row === row);
+  if (!it) return;
+  const unit = String(it.unit || "").trim(), u = unit.toLowerCase();
+  openSheet(`<div class="k">Change the count</div>
+    <h3 id="sheetTitle">${esc(it.desc || it.sub || "Item")}</h3>
+    <p class="vs-note" style="margin:0">Right now: <b>${esc(String(it.qty || 0))}${unit ? " " + esc(unit) : ""}</b>${it.loc ? " &middot; " + esc(it.loc) : ""}</p>
+    <form class="vs" id="adjF" novalidate>
+      <div class="seg" role="group" aria-label="What happened">
+        <button type="button" data-am="add" aria-pressed="true">Found more</button>
+        <button type="button" data-am="set" aria-pressed="false">Fix the count</button></div>
+      <label class="vs-field" id="adjAdd"><span>How many more did you find?</span>${unit ? `<small>Count ${esc(u)}, the same way this item was logged.</small>` : ""}<input type="text" inputmode="numeric" name="n" maxlength="6" autocomplete="off"></label>
+      <div id="adjSet" hidden>
+        <label class="vs-field"><span>What is the right count?</span>${unit ? `<small>In ${esc(u)}.</small>` : ""}<input type="text" inputmode="numeric" name="to" maxlength="6" autocomplete="off"></label>
+        <label class="vs-field" style="margin-top:14px"><span>Why is it changing?</span><small>For example: we counted wrong, or some are broken.</small><input type="text" name="why" maxlength="200"></label>
+      </div>
+      <p class="vs-err" role="alert"></p>
+      <button class="vs-btn" type="submit">Save</button>
+      <button class="btn ghost" type="button" data-close>Cancel</button>
+    </form>`);
+  const f = $("adjF"), err = f.querySelector(".vs-err"), btn = f.querySelector(".vs-btn");
+  let mode = "add", busy = false;
+  f.querySelectorAll("[data-am]").forEach(b => b.addEventListener("click", () => {
+    mode = b.dataset.am;
+    f.querySelectorAll("[data-am]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("adjAdd").hidden = mode !== "add"; $("adjSet").hidden = mode !== "set"; err.textContent = "";
+    (mode === "add" ? f.elements.n : f.elements.to).focus();
+  }));
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (busy) return;
+    const raw = String((mode === "add" ? f.elements.n.value : f.elements.to.value) || "").trim();
+    const why = String(f.elements.why.value || "").trim();
+    if (!/^\d+$/.test(raw)) { err.textContent = mode === "add" ? "Put how many more you found, as a number." : "Put the right count, as a number."; return; }
+    if (mode === "add" && +raw < 1) { err.textContent = "Put how many more you found."; return; }
+    if (mode === "set" && !why) { err.textContent = "Say why the count is changing."; return; }
+    busy = true; btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      const r = await run("adjustCount", KEY, TOK, row, it.desc, mode, +raw, mode === "set" ? why : "");
+      if (r && r.ok) {
+        if (r.ops) { OPS = r.ops; OPSTAT = r.status || OPSTAT; }
+        sheet.close(); drawOps(); toast("Saved. " + (r.msg || ""));
+        return;
+      }
+      err.textContent = (r && r.msg) || "That didn't save. Try again.";
+    } catch (x) {
+      if (isAuth(x)) { sheet.close(); relock(); return; }
+      err.textContent = "That didn't save. Check your connection and try again.";
+    }
+    busy = false; btn.disabled = false; btn.textContent = "Save";
+  });
+  setTimeout(() => f.elements.n.focus(), 50);
+}
 function drawOps() {
   const d = OPS;
   if (!d) { $("ops").innerHTML = `<p class="lead">Nothing posted here yet.</p>`; return; }
@@ -2855,6 +2916,7 @@ function drawOps() {
   $("ops").querySelectorAll("[data-openreview]").forEach(b => b.addEventListener("click", openReview));
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
+  $("ops").querySelectorAll("[data-adj]").forEach(b => b.addEventListener("click", () => openAdjust(+b.dataset.adj)));
   const mp = $("morePk"); if (mp) mp.addEventListener("click", () => { invAllPickups = !invAllPickups; drawOps(); });
   const iq = $("invQ"); if (iq) iq.addEventListener("input", () => { invQ = iq.value; const pos = iq.selectionStart; drawOps(); const n = $("invQ"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } });
   $("ops").querySelectorAll("[data-req]").forEach(b => b.addEventListener("click", () => {
@@ -3712,7 +3774,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261025143706";
+  var BUILD = "20261025195512";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
