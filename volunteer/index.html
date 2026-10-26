@@ -46,6 +46,12 @@ h2{margin:0;font-family:Anton,Impact,sans-serif;font-weight:400;font-size:24px;t
 .btn.on{background:var(--okbg);color:var(--ok);border:1.5px solid var(--ok)}
 .btn[disabled]{opacity:.55}
 .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rel{background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.rel h2{font-size:22px}
+.rel p,.rel li{font-size:15px;line-height:1.5;margin:0}
+.rel ul{margin:0;padding-left:22px;display:grid;gap:8px}
+.rel label{display:flex;gap:12px;align-items:flex-start;font-size:15px;font-weight:700;line-height:1.4;min-height:44px}
+.rel input{width:24px;height:24px;flex:none;margin-top:1px;accent-color:var(--brand)}
 .todo{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}
 .todo .kicker{padding:12px 16px 4px}
 .todo button{width:100%;min-height:56px;display:flex;align-items:center;gap:12px;padding:8px 16px;border:0;border-top:1px solid var(--line2);background:#fff;text-align:left;color:var(--ink)}
@@ -179,9 +185,19 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
   }
   var mapLink = function (e) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(e.address || e.place || e.name); };
 
+  /* Volunteers who signed up before the liability release agree to it here before they add a new date. */
+  function relCard() {
+    var R = V.release;
+    if (!R || R.agreed) return "";
+    return '<section class="rel" id="rel" aria-label="' + esc(R.title) + '"><span class="kicker">One quick step</span><h2>' + esc(R.title) + '</h2><p>' + esc(R.intro) + '</p><ul>' +
+      R.points.map(function (x) { return "<li>" + esc(x).replace(/\*(.+?)\*/g, "<b>$1</b>") + "</li>"; }).join("") + '</ul>' +
+      '<label><input type="checkbox" id="relbox"><span>' + esc(R.agree) + '</span></label>' +
+      '<button type="button" class="btn brand" data-rel="1">I agree</button></section>';
+  }
   function home() {
     var today = V.today, live = V.mine.filter(function (m) { return !m.cancelled; }), next = live[0], o = V.orientation, h = "";
     h += '<div><p class="hi">Hi, ' + esc(V.first) + '</p><h1>' + (next ? "You're on for " + esc(short(next.date)) : "Ready when you are") + '</h1></div>';
+    h += relCard();
     var todos = [];
     if (o.isNew && o.session) todos.push(['Orientation: ' + o.session, 'Booked. Tap to join or move it.', 'training']);
     if (o.isNew && !o.session) todos.push(['Pick your orientation time', 'A 30-minute call before your first event', 'training']);
@@ -267,6 +283,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
 
   function signup() {
     var h = '<div><h1>Open dates</h1><p class="lede">One tap. We already have your details.</p></div>';
+    h += relCard();
     if (!V.open.length) return h + '<div class="card"><div class="name">No other dates are open right now</div><p class="small">New dates show up here as soon as they are set. You are already on every open date.</p></div>';
     return h + V.open.map(function (o) {
       var need = +o.needed || 0, pct = need ? Math.min(100, Math.round(100 * o.have / need)) : 0;
@@ -353,6 +370,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
     var d = t.dataset;
     if (d.tab) return go(d.tab);
     if (d.go) return go(d.go);
+    if (d.rel) { if (!$("#relbox").checked) { say("Tick the box to agree."); $("#relbox").focus(); return; } return call("vpRelease", [true], "Thanks. Your agreement is saved."); }
     if (d.ask) { asking = d.ask; draw(); var w = $("#why"); if (w) w.focus(); return; }
     if (d.keep) { asking = ""; draw(); return; }
     var nameOf = function (date) { var all = V.mine.concat(V.open); for (var i = 0; i < all.length; i++) if (all[i].date === date) return all[i].name; return "that date"; };

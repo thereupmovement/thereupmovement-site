@@ -764,6 +764,11 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .vs-date b{font-weight:800}
 .vs-tag{display:inline-block;margin-top:4px;font-style:normal;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .vs-agree{font-weight:700}
+.vs-rel{border:2.5px solid currentColor;border-radius:14px;padding:16px;display:grid;gap:10px}
+.vs-rel legend{color:inherit;font-weight:800;font-size:15px;letter-spacing:.04em;text-transform:uppercase;padding:0 6px;margin-left:-6px}
+.vs-rel p{margin:0;font-size:15px;line-height:1.5}
+.vs-rel ul{margin:0;padding-left:22px;display:grid;gap:8px;font-size:15px;line-height:1.5}
+.vs-rel .vs-opt{font-weight:700}
 .vs-note{margin:0;color:var(--muted);font-size:15px}
 .vs-std{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
 .vs-std summary{font-weight:700;cursor:pointer;min-height:24px}
@@ -3166,6 +3171,9 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
         '<div class="vs-field"><span>Can we email you about new volunteer dates and ReUp news?</span>' + radios("updates", ["Yes", "No"], "vs-two") + "</div>" +
         '<div class="vs-field"><span>How did you hear about this?</span>' + radios("heard", F.heard.concat(["Other"])) +
         '<input type="text" name="heardOther" maxlength="60" placeholder="Tell us where" hidden aria-label="Where did you hear about this?"></div></fieldset>' +
+        (F.release ? '<fieldset class="vs-sec vs-rel"><legend>' + escH(F.release.title) + '</legend><p>' + escH(F.release.intro) + '</p><ul>' +
+          F.release.points.map(function (x) { return "<li>" + escH(x).replace(/\*(.+?)\*/g, "<b>$1</b>") + "</li>"; }).join("") + "</ul>" +
+          '<label class="vs-opt"><input type="checkbox" name="release"><span>' + escH(F.release.agree) + "</span></label></fieldset>" : "") +
         '<p class="vs-err" role="alert" aria-live="assertive"></p>' +
         '<button type="submit" class="vs-btn">Sign me up</button></form>';
       var form = root.querySelector("form");
@@ -3184,7 +3192,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
           session: val("session"), agree: form.elements["agree"].checked, adult: val("adult"), notes: form.elements["notes"].value,
           dates: [].map.call(form.querySelectorAll('[name="' + id + 'dates"]:checked'), function (x) { return x.value; }),
           help: [].map.call(form.querySelectorAll('[name="' + id + 'help"]:checked'), function (x) { return x.value; }),
-          photo: val("photo"), updates: val("updates"), heard: heard
+          photo: val("photo"), updates: val("updates"), heard: heard, release: form.elements["release"] ? form.elements["release"].checked : undefined
         };
         var miss = null;
         if (a.name.trim().split(/\s+/).length < 2) miss = ["name", "Add your first and last name."];
@@ -3197,6 +3205,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
         else if (F.dates.length && !a.dates.length) miss = [id + "dates", "Pick at least one date."];
         else if (!a.photo) miss = [id + "photo", "Answer the photo question."];
         else if (!a.updates) miss = [id + "updates", "Answer the email question."];
+        else if (F.release && !a.release) miss = ["release", "Read the liability release at the bottom and tick the box to agree."];
         if (miss) {
           err.textContent = miss[1];
           var el = form.querySelector('[name="' + miss[0] + '"]');
@@ -3826,7 +3835,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261025221956";
+  var BUILD = "20261026024500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
