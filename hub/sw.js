@@ -1,6 +1,6 @@
 /* ReUp Hub offline helper. The page opens from the network when it can, and from the last saved copy when
    there is no signal. Images and fonts are kept so they show at once. Server requests are never stored. */
-const V = 'reup-hub-v1';
+const V = 'reup-hub-v2';
 const SCOPE = new URL('./', self.location).pathname;
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(

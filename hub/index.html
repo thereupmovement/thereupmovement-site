@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="ReUp Hub">
-<link rel="apple-touch-icon" href="app-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="app-192.png">
+<link rel="apple-touch-icon" href="reup-icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="reup-icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <title>ReUp Hub</title>
@@ -3835,7 +3835,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261026024500";
+  var BUILD = "20261026035500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
