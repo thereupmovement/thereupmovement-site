@@ -961,7 +961,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     </section>
 
     <section class="view" id="v-ops" hidden>
-      <div class="banner" data-cover="ops"><div><h2>Ops</h2><p>Who to call, where they are, and what we have to give.</p></div></div>
+      <div class="banner" data-cover="ops"><div><h2>Operations</h2><p>Who to call, where they are, and what we have to give.</p></div></div>
       <div id="ops"><p class="lead">Loading...</p></div>
     </section>
 
@@ -1610,6 +1610,7 @@ let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
+const LBL = x => x === "Ops" ? "Operations" : x;
 const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants", Volunteers: "t-volunteers" };
 const wOpen = t => t.status !== "done";
 const wLate = t => wOpen(t) && t.due && daysAway(t.due) < 0;
@@ -1818,8 +1819,8 @@ function drawWork() {
     const lateOrStuck = n => all.some(t => wOpen(t) && t.owners.includes(n) && (t.status === "stuck" || wLate(t)));
     const leaders = (W.people || []).filter(p => (p.leader || p.coordinator) && !lateOrStuck(p.name))
       .map(p => ({ name: p.name, n: all.filter(t => wOpen(t) && t.owners.includes(p.name)).length })).sort((a, b) => a.n - b.n).slice(0, 3);
-    html += `<div class="tpick" role="group" aria-label="Pick a team">${teams.map(t => `<button type="button" class="${TEAMCLS[t] || "t-all"}" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(t)}</button>`).join("")}</div>
-      <div class="tsum ${TEAMCLS[workTeam] || "t-all"}"><h2>${allTeams ? "The whole team" : esc(workTeam)}</h2>
+    html += `<div class="tpick" role="group" aria-label="Pick a team">${teams.map(t => `<button type="button" class="${TEAMCLS[t] || "t-all"}" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(LBL(t))}</button>`).join("")}</div>
+      <div class="tsum ${TEAMCLS[workTeam] || "t-all"}"><h2>${allTeams ? "The whole team" : esc(LBL(workTeam))}</h2>
         <div class="tnums"><div><b>${open.length}</b><span>to do</span></div><div class="${stuck.length ? "bad" : ""}"><b>${stuck.length}</b><span>stuck</span></div><div class="${late.length ? "bad" : ""}"><b>${late.length}</b><span>late</span></div><div class="good"><b>${doneWeek}</b><span>done this week</span></div></div></div>`;
     if (stuck.length || late.length) html += wgroup("Needs help now", "g-stuck", stuck.concat(late), {}, leaders.length ? `Leaders with the most room to help: <b>${leaders.map(l => `${esc(l.name)} (${l.n})`).join(", ")}</b>. Open a task and add a helper.` : "");
     html += wgroup("Nobody is on these yet", "g-nobody", nobody, {}, W.canManage ? "Open one and pick who owns it." : "");
@@ -2300,7 +2301,7 @@ function drawAdmin() {
   if (adminView === "people") {
     html += `<button class="btn aadd" type="button" id="aaddp">Add a person</button>
       <p class="small">Everyone with a Hub link. Tap a person to change their role, teams or email, switch their link off, reset their PIN or copy their link.</p>
-      <div class="wrows">${A.people.map(p => `<button type="button" class="wrow arow${p.active ? "" : " off"}" data-ap="${p.row}"><span class="wrname">${esc(p.name)}${p.coordinator ? ` <em class="atag">Admin</em>` : ""}<span class="idmlast">${esc(p.role)}${p.teams.length ? " &middot; " + esc(p.teams.join(", ")) : ""}${p.email ? " &middot; " + esc(p.email) : ""}</span></span>
+      <div class="wrows">${A.people.map(p => `<button type="button" class="wrow arow${p.active ? "" : " off"}" data-ap="${p.row}"><span class="wrname">${esc(p.name)}${p.coordinator ? ` <em class="atag">Admin</em>` : ""}<span class="idmlast">${esc(LBL(p.role))}${p.teams.length ? " &middot; " + esc(p.teams.join(", ")) : ""}${p.email ? " &middot; " + esc(p.email) : ""}</span></span>
         <span class="wrmeta"><span>${p.active ? (p.seen ? "Opened " + esc(String(p.seen).replace(/, \d{4}/, "")) : "Hasn't opened it") : "Link off"}</span></span></button>`).join("")}</div>`;
   } else if (adminView === "schedule") {
     html += `<button class="btn aadd" type="button" id="aadde">Add a date</button>
@@ -2331,7 +2332,7 @@ function drawAdmin() {
   wireCal(box, "adm", drawAdmin);
 }
 const aTop = (saveId, label, closeId) => `<div class="atop"><button class="btn" type="button" id="${saveId}">${label}</button><button class="btn ghost" type="button" id="${closeId}">Close</button></div><p class="tmsg" id="amsg" role="status" aria-live="polite"></p>`;
-const chipRow = (kind, opts, chosen, multi) => `<div class="wchips">${opts.map(o => `<button type="button" data-${kind}="${esc(o)}" aria-pressed="${multi ? chosen.includes(o) : chosen === o}">${esc(o)}</button>`).join("")}</div>`;
+const chipRow = (kind, opts, chosen, multi) => `<div class="wchips">${opts.map(o => `<button type="button" data-${kind}="${esc(o)}" aria-pressed="${multi ? chosen.includes(o) : chosen === o}">${esc(LBL(o))}</button>`).join("")}</div>`;
 function wireChips(kind, multi, state, key) {
   document.querySelectorAll(`[data-${kind}]`).forEach(b => b.addEventListener("click", () => {
     const v = b.dataset[kind];
@@ -2346,7 +2347,7 @@ function editPerson(row) {
   openSheet(`${aTop("apsave", isNew ? "Add and get their link" : "Save", "apclose")}<div class="k">${isNew ? "Add a person" : "Person"}</div>
     <input class="wtitle" id="apname" type="text" maxlength="40" placeholder="First name" value="${esc(p ? p.name : "")}" aria-label="Name">
     <div class="tsec"><div class="tl">Role</div>${chipRow("arole", A.roles, st.role, false)}
-      <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Ops: Ops tab too. Team: Home, Schedule, Work, Inbox, Event day, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
+      <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Operations: Operations tab too. Team: Home, Schedule, Work, Inbox, Event day, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
     <div class="tsec"><div class="tl">Teams</div>${chipRow("ateam", A.teams, st.teams, true)}</div>
     <div class="tsec"><div class="tl">Email</div><input class="ainput" id="apemail" type="email" value="${esc(p ? p.email : "")}" placeholder="For announcements and messages" aria-label="Email"></div>
     ${p ? `<div class="tsec"><div class="tl">Their link</div><p class="small" style="margin:0 0 8px;overflow-wrap:anywhere">${esc(p.link)}</p>
@@ -2368,7 +2369,7 @@ function editPerson(row) {
   if (!p) return;
   $("apcopy").addEventListener("click", () => copyText(p.link));
   $("apadmin").addEventListener("click", async () => { if (await adminCall("adminSavePerson", [row, { coordinator: !p.coordinator }], "Saved.")) editPerson(row); });
-  const pin = $("appin"); if (pin) pin.addEventListener("click", async () => { if (confirm("Reset " + p.name + "'s PIN? They pick a new one next time they open Ops or Leadership.") && await adminCall("adminSavePerson", [row, { resetPin: true }], "PIN reset.")) editPerson(row); });
+  const pin = $("appin"); if (pin) pin.addEventListener("click", async () => { if (confirm("Reset " + p.name + "'s PIN? They pick a new one next time they open Operations or Leadership.") && await adminCall("adminSavePerson", [row, { resetPin: true }], "PIN reset.")) editPerson(row); });
   $("apnew").addEventListener("click", async () => { if (confirm("Give " + p.name + " a new link? Their old link stops working right away.") && await adminCall("adminSavePerson", [row, { newLink: true }], "New link made. Send it to them.")) editPerson(row); });
   $("apoff").addEventListener("click", async () => { if ((p.active ? confirm("Switch off " + p.name + "'s link? They can't open the Hub until you switch it back on.") : true) && await adminCall("adminSavePerson", [row, { active: !p.active }], p.active ? "Link switched off." : "Link switched on.")) editPerson(row); });
 }
@@ -2910,7 +2911,7 @@ function drawOps() {
   const open = lst.filter(x => isOpen(stOf(x.id))).length;
   const openNotes = {};
   $("ops").querySelectorAll("textarea[data-note]").forEach(t => { if (t.value !== (t.dataset.orig || "")) openNotes[t.dataset.note] = t.value; });
-  $("ops").innerHTML = opsActions() + `<div class="seg" role="group" aria-label="Ops section">
+  $("ops").innerHTML = opsActions() + `<div class="seg" role="group" aria-label="Operations section">
       <button type="button" data-ov="requests" aria-pressed="${opsView === "requests"}">Requests${open ? ` (${open} open)` : ""}</button>
       <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>` +
     (opsView === "storage" ? drawInventory(d) : drawRequests(d));
@@ -3000,7 +3001,7 @@ function relock() {
 function pinCard(tab) {
   const box = tab === "ops" ? $("ops") : tab === "admin" ? $("admin") : tab === "vol" ? $("vol") : $("leaders");
   const choose = !BOOT.pinSet;
-  const where = [BOOT.ops && "Ops", BOOT.vol && "Volunteers", BOOT.leader && "Leadership", BOOT.coordinator && "Admin"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1") || "this tab";
+  const where = [BOOT.ops && "Operations", BOOT.vol && "Volunteers", BOOT.leader && "Leadership", BOOT.coordinator && "Admin"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1") || "this tab";
   let first = "";
   box.innerHTML = `<div class="pinbox"><div class="pinic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
     <h3>${choose ? "Choose your PIN" : "Enter your PIN"}</h3>
@@ -3076,7 +3077,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && TO
 drawImpact(BOOT.home ? BOOT.home.impact : null);
 if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader || BOOT.vol) {
-  if (BOOT.ops) TABS.push(["ops", "Ops"]);
+  if (BOOT.ops) TABS.push(["ops", "Operations"]);
   if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
@@ -3835,7 +3836,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261026035500";
+  var BUILD = "20261027003000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
