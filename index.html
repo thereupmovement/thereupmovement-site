@@ -258,6 +258,7 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
   .doors .tile:nth-child(-n+2){grid-column:span 3}
   .tile.wide{flex-direction:column;align-items:stretch}
   .nums{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+  .nums.six{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:26px}
   .facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
   .dates{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
   .dates .ev.feat{grid-column:1/-1}
@@ -784,14 +785,18 @@ const PUBLIC_API = HUB_API + "?public=1";
 const YEAR_TOTALS = {
   year: 2026, asOf: "October 26, 2026",
   tiles: [["922", "people reached this year, in Houston and Belize City"], ["204", "Houston households served since October 8"],
-    ["105", "people served in Belize City on August 15"], ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
+    ["105", "people served in Belize City on August 15"],
+    ["$87,515", "in donated goods given to Houston families, valued item by item"],
+    ["$134,138", "in donated goods sent to Belize City, as declared to customs"],
+    ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
 };
 const showYear = () => {
   $("liveNums").hidden = false;
+  $("liveNums").classList.add("six");
   $("liveNums").innerHTML = YEAR_TOTALS.tiles.map(x => `<div class="num"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("");
   $("impact-lab").textContent = `${YEAR_TOTALS.year} so far`;
   $("liveNote").hidden = false;
-  $("liveNote").textContent = `Counted from sign-in sheets and shipping records, as of ${YEAR_TOTALS.asOf}. Houston counts start with check-ins on October 8.`;
+  $("liveNote").textContent = `Counted from sign-in sheets, shipping and customs records, and the item-by-item inventory log, as of ${YEAR_TOTALS.asOf}. Houston counts start with check-ins on October 8.`;
 };
 
 // Where ReUp has served: every event recapped on ReUp's Instagram (Oct 2019 to Sep 2026), read post by post,
