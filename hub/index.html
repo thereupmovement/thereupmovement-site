@@ -311,6 +311,37 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .rnote textarea{width:100%;min-height:64px;margin-top:6px;font:inherit;font-size:15px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
 .rnote button{margin-top:6px;font:inherit;font-weight:700;font-size:14px;padding:8px 14px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
 .rnote .saved{display:block;margin-top:6px;white-space:pre-wrap;color:var(--ink)}
+/* Packages */
+.seg.seg3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seg.seg3 button{font-size:14.5px;padding:10px 4px}
+.pkbtn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:12px;font:inherit;font-weight:800;font-size:15px;padding:12px 14px;border-radius:12px;border:2px dashed var(--ink);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
+.pkbtn.has{border-style:solid;background:var(--bg)}
+.pkbtn.has span{font-weight:600}.pkbtn em{font-style:normal;font-weight:800;color:var(--red)}
+.pkbtn:focus-visible,.pkc2:focus-visible,.pkrow:focus-visible,.pksug button:focus-visible,.pkst button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.pkall{width:100%;margin:0 0 12px}.pkall:disabled{opacity:.55;cursor:default}
+.pkc2{display:block;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--muted);border-radius:14px;padding:14px;margin:0 0 10px;cursor:pointer}
+.pkc2.pk-ready{border-left-color:var(--red)}.pkc2.pk-packed{border-left-color:#B07A12}.pkc2.pk-delivered{border-left-color:#2E7D4F;opacity:.85}
+.pkpill{flex:none;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink)}
+.pkline{margin-top:8px;font-size:14.5px;color:var(--muted)}
+.pkrow em.pkwho{font-family:var(--body);font-style:normal;font-weight:800;font-size:14px;color:var(--ink);text-transform:none;letter-spacing:0}
+.pkwords{margin:0}
+.pklist{display:grid;gap:10px}
+.pkl{border:1.5px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:8px;background:var(--bg)}
+.pkl.st-packed{border-color:#2E7D4F}.pkl.st-none{border-color:var(--line);opacity:.75}
+.pkl-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.pkl-top b{display:block;font-size:16.5px}.pkl-top span{display:block;color:var(--muted);font-size:14px}
+.pkx{flex:none;font:inherit;font-size:13px;font-weight:700;background:transparent;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:4px}
+.pkuse{font-size:15px}.pkuse strong{color:var(--red)}.pkuse.none{color:var(--muted);font-size:14px}
+.pksug{display:grid;gap:6px}.pksug>span{font-size:13px;color:var(--muted);font-weight:700}
+.pksug button{display:grid;gap:2px;text-align:left;font:inherit;font-weight:700;font-size:14.5px;padding:9px 12px;border-radius:10px;border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
+.pksug button small{font-weight:500;color:var(--muted);font-size:13px}
+.pkst{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pkst button{font:inherit;font-size:13.5px;font-weight:800;padding:10px 4px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.pkst button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pkn{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box}
+.pkadd{display:flex;gap:8px}.pkadd input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px}
+.pkadd .btn{flex:none;padding:0 16px}
+.vs-btn:disabled{opacity:.5;cursor:default}
 .empty{padding:18px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:14px}
 .mini{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px;color:var(--muted);margin:-2px 0 12px} .mini b{color:var(--ink)}
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:6px;list-style:none;counter-reset:sh;margin:0;padding:0}
@@ -2735,6 +2766,7 @@ function reqCard(x) {
     <div class="ask"><div class="lbl">What they asked for</div>${ask}</div>
     ${x.by ? `<div class="by"><b>Matters by:</b> ${esc(x.by)}</div>` : ""}
     ${old}
+    ${pkgBadge(x.id)}
     <div class="sbtns st-${s}" role="group" aria-label="Where this request stands">${RSTAT.map(([k, l]) => `<button type="button" class="st-${k}" data-req="${esc(x.id)}" data-s="${k}" aria-pressed="${picking ? pick.s === k : s === k}">${l}</button>`).join("")}</div>
     ${picker}
     ${stamp}
@@ -2780,6 +2812,226 @@ function drawRequests(d) {
     ${d.sheet ? `<a class="btn ghost" style="margin-top:12px" href="${esc(d.sheet)}" target="_blank" rel="noopener">Open the full form responses</a>` : ""}`;
   return html;
 }
+/* ============ Packages: build a family's package from their request (26 Oct 2026) ============
+   "Build packages" turns each open request into a list the warehouse can pull. Each line suggests matching
+   items from the Item Log with where they are. Approve it, pull it, pack it, deliver it.
+   Saved on the Packages tab of the Hub sheet (Packages.gs). Holds live there, never in the Item Log. */
+let PKGS = {}, PKG_OFF = false, PKGED = null, pkgBusy = false;
+const PKG_LABEL = { draft: "Draft", ready: "Ready to pull", packed: "Packed", delivered: "Delivered", cancelled: "Cancelled" };
+const PKG_RULES = [
+  { re: /^furniture$/i, t: "Furniture", kw: ["table", "chair", "couch", "sofa", "dresser", "desk", "shelf", "shelves", "stool", "ottoman", "cart", "bed frame", "nightstand", "furniture"], cats: ["Furniture"], pick: true },
+  { re: /bed/i, t: "Bedding", kw: ["comforter", "quilt", "duvet", "sheet", "pillow", "blanket", "bedding", "mattress"], q: x => `for a household of ${x.hh}` },
+  { re: /children/i, t: "Children's clothing and shoes", kw: ["kids", "youth", "child", "toddler", "boys", "girls"], q: x => `${x.kids || "?"} ${+x.kids === 1 ? "child" : "children"}`, sizes: true },
+  { re: /clothing/i, t: "Adult clothing", kw: ["shirt", "t-shirt", "pants", "jacket", "hoodie", "adult"], cats: ["Clothing"], sizes: true },
+  { re: /diaper|baby/i, t: "Diapers and baby supplies", kw: ["diaper", "wipes", "baby", "formula"], cats: ["Baby Supplies"], sizes: true },
+  { re: /hygiene/i, t: "Hygiene kit", kw: ["toothpaste", "toothbrush", "deodorant", "bar soap", "body wash", "shampoo", "lotion", "soap"], q: x => `one per person, ${x.hh}` },
+  { re: /cleaning/i, t: "Cleaning supplies", kw: ["mop", "bleach", "cleaner", "cleaning", "broom", "steam mop", "streak remover"] },
+  { re: /household items|small appliance/i, t: "Kitchen and household basics", kw: ["kitchen", "dish", "plate", "cookware", "pot", "pan", "utensil", "storage container", "meal prep", "mug", "table cloth"] },
+  { re: /^an appliance$/i, t: "Appliance", kw: ["appliance", "microwave", "washer", "dryer", "fridge", "refrigerator", "stove", "fan", "lamp"], pick: true },
+  { re: /school/i, t: "School supplies", kw: ["back pack", "backpack", "pencil", "notebook", "crayon", "school"], q: x => `${x.kids || "?"} ${+x.kids === 1 ? "child" : "children"}` },
+  { re: /food/i, t: "Food", kw: ["snack", "chips", "food"], cats: ["Food - non-perishable", "Food - perishable"] },
+  { re: /electronic/i, t: "Electronics", kw: ["charger", "fan", "flashlight", "electronic"], pick: true },
+  { re: /something else/i, t: "Something for the home", kw: [], pick: true }
+];
+const pkgNeeds = x => x.main ? [x.main] : (Array.isArray(x.old) ? x.old : []);
+const pkgSizes = s => (String(s || "").match(/\bsizes?\s*[0-9][0-9a-z\/.\- ]{0,6}|\b\d{1,2}\s?t\b|\b\d{1,2}\/\d{1,2}\b/gi) || []).map(z => z.trim()).join(", ");
+const pkgItems = () => ((((OPS || {}).inventory || {}).onHand || {}).items || []).filter(i => !/damaged/i.test(i.cond || ""));
+const pkgKey = i => `${i.row || ""}|${i.desc || i.sub || ""}`;
+function pkgHeld(exceptId) {
+  const h = {};
+  Object.entries(PKGS).forEach(([id, p]) => {
+    if (id === exceptId || !p || p.s === "cancelled" || p.s === "draft") return;
+    (p.lines || []).forEach(l => { if (l.k && l.st !== "none") h[l.k] = (h[l.k] || 0) + 1; });
+  });
+  return h;
+}
+function pkgLeft(k, exceptId) {
+  const i = pkgItems().find(o => pkgKey(o) === k);
+  if (!i) return 1; // not in the list any more (given out or renamed); don't nag
+  const held = pkgHeld(exceptId);
+  const mine = PKGED && PKGED.id === exceptId ? PKGED.lines.filter(l => l.k === k).length : 1;
+  return (+i.units || 0) - (held[k] || 0) - mine + 1;
+}
+function pkgSuggest(line, exceptId) {
+  const rule = PKG_RULES.find(r => r.t === line.r) || PKG_RULES.find(r => r.t === line.t) || null;
+  // Words someone typed (an added line, or the part after "Furniture:") count too; a need's own title does not
+  const t = String(line.t || "").toLowerCase();
+  const words = rule ? (t.indexOf(":") >= 0 ? t.slice(t.indexOf(":") + 1) : "") : t;
+  const kws = rule ? rule.kw.slice() : [];
+  const skip = /^(ask|which|piece|item|items|supplies|something|home|for|the|and|with|need|needs|some|size|sizes)$/;
+  words.split(/[^a-z]+/).filter(w => w.length > 2 && !skip.test(w)).forEach(w => kws.push(w.replace(/s$/, "")));
+  if (!kws.length && !(rule && rule.cats)) return [];
+  const held = pkgHeld(exceptId);
+  const has = (txt, k) => new RegExp("\\b" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(txt);
+  return pkgItems().map(i => {
+    const txt = `${i.desc} ${i.sub}`.toLowerCase();
+    const hit = kws.filter(k => has(txt, k)).length + (rule && rule.cats && rule.cats.indexOf(i.cat) >= 0 ? 1 : 0);
+    const left = (+i.units || 0) - (held[pkgKey(i)] || 0);
+    return { i, hit, left };
+  }).filter(o => o.hit && o.left > 0).sort((a, b) => b.hit - a.hit || b.left - a.left).slice(0, 3);
+}
+function pkgBuild(x, taken) {
+  const words = String(x.what || "");
+  const sizes = pkgSizes(words);
+  const lines = [];
+  pkgNeeds(x).forEach(n => {
+    const rule = PKG_RULES.find(r => r.re.test(String(n).trim()));
+    if (!rule) { lines.push({ t: String(n), q: "", k: "", loc: "", st: "", n: "" }); return; }
+    if (lines.some(l => l.r === rule.t)) return;
+    let t = rule.t;
+    if (rule.pick) {
+      const named = rule.kw.filter(k => new RegExp("\\b" + k, "i").test(words));
+      if (named.length) t = `${rule.t}: ${named.slice(0, 3).join(", ")}`;
+      else t = `${rule.t}: ask which piece`;
+    }
+    let q = rule.q ? rule.q(x) : "";
+    if (rule.sizes && sizes) { const z = /^size/i.test(sizes) ? sizes : `sizes ${sizes}`; q = q ? `${q}; ${z}` : z; }
+    lines.push({ r: rule.t, t, q, k: "", loc: "", st: "", n: "" });
+  });
+  if (!lines.length) lines.push({ t: "Ask what they need most", q: "", k: "", loc: "", st: "", n: "" });
+  // Put the best suggestion on each line, so the warehouse sees where to look. "Ask which piece" lines only get suggestions.
+  taken = taken || {};
+  lines.forEach(l => {
+    if (/ask which/.test(l.t)) return;
+    const s = pkgSuggest(l, x.id).find(o => (taken[pkgKey(o.i)] || 0) < o.left);
+    if (s) { l.k = pkgKey(s.i); l.loc = s.i.loc || ""; l.use = s.i.desc || s.i.sub || ""; taken[l.k] = (taken[l.k] || 0) + 1; }
+  });
+  return { s: "draft", lines };
+}
+const pkgClean = p => ({ s: p.s, lines: p.lines.map(l => ({ t: l.t, q: l.q || "", k: l.k || "", u: l.use || "", r: l.r || "", loc: l.loc || "", st: l.st || "", n: l.n || "" })) });
+const pkgOpen = p => (p.lines || []).map(l => Object.assign({}, l, { use: l.u || "" }));
+async function loadPkgs() {
+  if (PKG_OFF) return;
+  try { PKGS = await run("getPackages", KEY, TOK) || {}; if (OPS) drawOps(); }
+  catch (e) { if (isAuth(e)) relock(); else if (/unknown/.test(String(e && e.message))) { PKG_OFF = true; if (OPS) drawOps(); } }
+}
+async function savePkgs(list) {
+  if (PKG_OFF) { toast("Packages turn on after the server update. Ask Dasia."); return false; }
+  pkgBusy = true;
+  try { PKGS = await run("savePackages", KEY, TOK, list) || PKGS; pkgBusy = false; return true; }
+  catch (e) {
+    pkgBusy = false;
+    if (isAuth(e)) { relock(); return false; }
+    if (/unknown/.test(String(e && e.message))) { PKG_OFF = true; toast("Packages turn on after the server update. Ask Dasia."); return false; }
+    toast("That didn't save. Check your connection and try again."); return false;
+  }
+}
+async function pkgBuildAll() {
+  const lst = ((OPS && OPS.list) || []).filter(x => isOpen(stOf(x.id)) && !(PKGS[x.id] && PKGS[x.id].s !== "cancelled"));
+  if (!lst.length) { toast("Every open request already has a package."); return; }
+  const taken = {};
+  const list = lst.slice().sort((a, b) => a.id.localeCompare(b.id)).map(x => Object.assign({ id: x.id }, pkgClean(pkgBuild(x, taken))));
+  if (await savePkgs(list)) { opsView = "packages"; drawOps(); toast(`Built ${list.length} package${list.length === 1 ? "" : "s"}. Check each one, then approve it.`); }
+}
+function pkgOpenSheet(id) {
+  const x = ((OPS && OPS.list) || []).find(r => r.id === id);
+  if (!x) return;
+  const cur = PKGS[id];
+  PKGED = cur && cur.s !== "cancelled" ? { id, s: cur.s, lines: pkgOpen(cur) } : Object.assign({ id, fresh: true }, pkgBuild(x));
+  pkgDraw(true);
+}
+function pkgDraw(first) {
+  const p = PKGED, x = ((OPS && OPS.list) || []).find(r => r.id === p.id) || {};
+  const kids = +x.kids ? `, ${x.kids} ${+x.kids === 1 ? "child" : "children"}` : "";
+  const locked = p.s === "delivered";
+  const lineHtml = (l, i) => {
+    const sug = !l.k && !locked ? pkgSuggest(l, p.id) : [];
+    const st = l.st || "";
+    return `<div class="pkl st-${st || "pull"}">
+      <div class="pkl-top"><div><b>${esc(l.t)}</b>${l.q ? `<span>${esc(l.q)}</span>` : ""}</div>${locked ? "" : `<button type="button" class="pkx" data-pkdel="${i}" aria-label="Remove ${esc(l.t)}">Remove</button>`}</div>
+      ${l.k && !locked && pkgLeft(l.k, p.id) < 1 ? `<div class="pkuse none">Already held for another family. Tap Change and pick another.</div>` : ""}
+      ${l.k ? `<div class="pkuse">Use: <b>${esc(l.use || l.k.split("|").slice(1).join("|"))}</b>${l.loc ? ` &middot; <strong>${esc(l.loc)}</strong>` : ""}${locked ? "" : ` <button type="button" class="linkish" data-pkun="${i}">Change</button>`}</div>`
+        : sug.length ? `<div class="pksug"><span>In storage now, tap to use:</span>${sug.map(o => `<button type="button" data-pkuse="${i}" data-k="${esc(pkgKey(o.i))}" data-loc="${esc(o.i.loc || "")}" data-name="${esc(o.i.desc || o.i.sub || "")}">${esc(o.i.desc || o.i.sub)}<small>${esc(o.i.loc || "")} &middot; ${o.left} left</small></button>`).join("")}</div>`
+        : `<div class="pkuse none">Nothing logged that fits yet. Look on the shelves, and log it with Sort an item.</div>`}
+      ${p.s === "ready" || p.s === "packed" ? `<div class="pkst" role="group" aria-label="Pulled?"><button type="button" data-pkst="${i}" data-v="" aria-pressed="${!st}">Still to pull</button><button type="button" data-pkst="${i}" data-v="packed" aria-pressed="${st === "packed"}">Packed</button><button type="button" data-pkst="${i}" data-v="none" aria-pressed="${st === "none"}">Don't have it</button></div>` : ""}
+      ${locked ? (l.n ? `<div class="small">${esc(l.n)}</div>` : "") : `<input type="text" class="pkn" data-pkn="${i}" value="${esc(l.n || "")}" maxlength="200" placeholder="Note: what went in, size, how many" aria-label="Note for ${esc(l.t)}">`}
+    </div>`;
+  };
+  const done = p.lines.length && p.lines.every(l => l.st === "packed" || l.st === "none");
+  const foot = p.s === "draft" ? `<button class="vs-btn" type="button" data-pkgo="ready">Approve: ready to pull</button><button class="btn ghost" type="button" data-pkgo="draft">Save draft</button>`
+    : p.s === "ready" ? `<button class="vs-btn" type="button" data-pkgo="packed"${done ? "" : " disabled"}>Mark packed</button>${done ? "" : `<p class="small" style="margin:0">Mark every line Packed or Don't have it first.</p>`}<button class="btn ghost" type="button" data-pkgo="ready">Save</button>`
+    : p.s === "packed" ? `<button class="vs-btn" type="button" data-pkgo="delivered">Mark delivered</button><p class="small" style="margin:0">This also marks their request Filled.</p><button class="btn ghost" type="button" data-pkgo="packed">Save</button>`
+    : `<p class="small" style="margin:0">Delivered${(PKGS[p.id] || {}).delBy ? " by " + esc(PKGS[p.id].delBy) : ""}.</p>`;
+  $("sheetBody").innerHTML = `<div class="grab" aria-hidden="true"></div><div class="k">Package &middot; ${esc(PKG_LABEL[p.s] || "Draft")}</div>
+    <h3 id="sheetTitle">${esc(x.name || "Request")}</h3>
+    <p class="vs-note" style="margin:0">Household of ${esc(String(x.hh || "?"))}${kids}${x.area ? " &middot; " + esc(x.area) : ""} &middot; asked ${esc(shortDay(x.date || p.id))}</p>
+    ${x.what ? `<p class="words pkwords">&ldquo;${esc(x.what)}&rdquo;</p>` : ""}
+    ${p.fresh ? `<p class="note" style="margin:0">Built from their request. Check it, then save or approve.</p>` : ""}
+    <div class="pklist">${p.lines.map(lineHtml).join("")}</div>
+    ${locked ? "" : `<form class="pkadd" id="pkAdd"><input type="text" name="t" maxlength="200" placeholder="Add something: a toaster, a twin sheet set" aria-label="Add a line"><button type="submit" class="btn ghost">Add</button></form>`}
+    <div class="btns">${foot}${p.s !== "delivered" && !p.fresh ? `<button type="button" class="linkish" data-pkgo="cancelled" style="align-self:center">Cancel this package</button>` : ""}<button class="btn ghost" type="button" data-close>Close</button></div>`;
+  const body = $("sheetBody");
+  const close = body.querySelector("[data-close]"); if (close) close.addEventListener("click", () => sheet.close());
+  const keepNotes = () => body.querySelectorAll("[data-pkn]").forEach(t => { p.lines[+t.dataset.pkn].n = t.value; });
+  body.querySelectorAll("[data-pkdel]").forEach(b => b.addEventListener("click", () => { keepNotes(); p.lines.splice(+b.dataset.pkdel, 1); pkgDraw(); }));
+  body.querySelectorAll("[data-pkun]").forEach(b => b.addEventListener("click", () => { keepNotes(); const l = p.lines[+b.dataset.pkun]; l.k = ""; l.loc = ""; l.use = ""; pkgDraw(); }));
+  body.querySelectorAll("[data-pkuse]").forEach(b => b.addEventListener("click", () => { keepNotes(); const l = p.lines[+b.dataset.pkuse]; l.k = b.dataset.k; l.loc = b.dataset.loc; l.use = b.dataset.name; pkgDraw(); }));
+  body.querySelectorAll("[data-pkst]").forEach(b => b.addEventListener("click", () => { keepNotes(); p.lines[+b.dataset.pkst].st = b.dataset.v; pkgDraw(); }));
+  const add = $("pkAdd");
+  if (add) add.addEventListener("submit", e => { e.preventDefault(); keepNotes(); const t = String(add.elements.t.value || "").trim(); if (!t) return; p.lines.push({ t, q: "", k: "", loc: "", st: "", n: "" }); pkgDraw(); const n = $("pkAdd"); if (n) n.elements.t.focus(); });
+  body.querySelectorAll("[data-pkgo]").forEach(b => b.addEventListener("click", async () => {
+    if (pkgBusy) return;
+    keepNotes();
+    const to = b.dataset.pkgo;
+    if (to === "cancelled" && !confirmInline(b)) return;
+    b.disabled = true;
+    const ok = await savePkgs([Object.assign({ id: p.id }, pkgClean({ s: to, lines: p.lines }))]);
+    if (!ok) { b.disabled = false; return; }
+    if (to === "delivered") saveReq(p.id, { s: "filled", fillBy: (BOOT && BOOT.name) || "Team" });
+    sheet.close(); drawOps();
+    toast(to === "draft" ? "Draft saved." : to === "cancelled" ? "Package cancelled." : `Saved. ${PKG_LABEL[to]}.`);
+  }));
+  if (first) { if (typeof sheet.showModal === "function") { if (!sheet.open) sheet.showModal(); } else sheet.setAttribute("open", ""); }
+}
+// A second tap confirms. No browser pop-ups.
+function confirmInline(b) {
+  if (b.dataset.sure) return true;
+  b.dataset.sure = "1"; b.textContent = "Tap again to cancel this package";
+  setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Cancel this package"; } }, 4000);
+  return false;
+}
+function pkgBadge(id) {
+  const p = PKGS[id];
+  if (PKG_OFF) return "";
+  if (!p || p.s === "cancelled") return `<button type="button" class="pkbtn" data-pkopen="${esc(id)}">Build package</button>`;
+  const n = (p.lines || []).length;
+  return `<button type="button" class="pkbtn has pk-${p.s}" data-pkopen="${esc(id)}"><span>Package: <b>${esc(PKG_LABEL[p.s])}</b> &middot; ${n} item${n === 1 ? "" : "s"}</span><em>Open</em></button>`;
+}
+function drawPackages(d) {
+  if (PKG_OFF) return `<div class="empty">Packages turn on after Dasia's server update tonight.</div>`;
+  const lst = Array.isArray(d.list) ? d.list : [];
+  const byId = Object.fromEntries(lst.map(x => [x.id, x]));
+  const all = Object.entries(PKGS).filter(([id, p]) => p && p.s !== "cancelled" && byId[id]);
+  const cnt = { draft: 0, ready: 0, packed: 0, delivered: 0 };
+  all.forEach(([, p]) => { cnt[p.s] = (cnt[p.s] || 0) + 1; });
+  const need = lst.filter(x => isOpen(stOf(x.id)) && !(PKGS[x.id] && PKGS[x.id].s !== "cancelled")).length;
+  let html = `<div class="mini"><span><b>${cnt.draft}</b> draft</span><span><b>${cnt.ready}</b> ready to pull</span><span><b>${cnt.packed}</b> packed</span><span><b>${cnt.delivered}</b> delivered</span></div>
+    <button class="vs-btn pkall" type="button" id="pkAll"${need ? "" : " disabled"}>${need ? `Build packages for ${need} open request${need === 1 ? "" : "s"}` : "Every open request has a package"}</button>
+    <details class="how"><summary>How packages work</summary><ol>
+      <li><b>Build packages</b> makes a list for each family from what they asked for. Where the Item Log has something that fits, it shows the item and where it is.</li>
+      <li>Open each one, fix it, and tap <b>Approve</b>. Approved items are held for that family.</li>
+      <li>At the warehouse, use the <b>Pull list</b> below. Mark each line <b>Packed</b> or <b>Don't have it</b>, then <b>Mark packed</b>.</li>
+      <li>After drop-off, tap <b>Mark delivered</b>. Their request moves to Filled.</li></ol>
+      <p class="small">Not logged yet? Use Sort an item, and it shows up here as a suggestion.</p></details>`;
+  // Pull list: every line still to pull on approved packages, grouped by where it is
+  const pulls = [];
+  all.filter(([, p]) => p.s === "ready").forEach(([id, p]) => pkgOpen(p).forEach((l, i) => { if (!l.st) pulls.push({ id, i, l, who: (byId[id].name || "").split(" ")[0] }); }));
+  if (pulls.length) {
+    const g = {};
+    pulls.forEach(o => { const k = o.l.loc || "Not matched yet: look on the shelves"; (g[k] = g[k] || []).push(o); });
+    html += `<h2>Pull list</h2><p class="lead" style="margin-top:-4px">${pulls.length} thing${pulls.length === 1 ? "" : "s"} to pull for ${new Set(pulls.map(o => o.id)).size} famil${new Set(pulls.map(o => o.id)).size === 1 ? "y" : "ies"}. Tap a family to mark what you packed.</p>` +
+      Object.keys(g).sort((a, b) => (a.startsWith("Not matched")) - (b.startsWith("Not matched")) || a.localeCompare(b)).map(k => `<h3 class="area">${esc(k)}<span>${g[k].length}</span></h3><div class="list">${g[k].map(o => `<button type="button" class="irow pkrow" data-pkopen="${esc(o.id)}"><div><b>${esc(o.l.use || o.l.t)}</b><span>${esc(o.l.use ? o.l.t : (o.l.q || ""))}</span></div><em class="pkwho">${esc(o.who || "Family")}</em></button>`).join("")}</div>`).join("");
+  }
+  const order = ["ready", "packed", "draft", "delivered"];
+  const cards = all.slice().sort((a, b) => order.indexOf(a[1].s) - order.indexOf(b[1].s) || a[0].localeCompare(b[0]));
+  html += `<h2>Packages</h2>` + (cards.length ? cards.map(([id, p]) => {
+    const x = byId[id], ls = pkgOpen(p), packed = ls.filter(l => l.st === "packed").length, none = ls.filter(l => l.st === "none").length;
+    return `<button type="button" class="pkc2 pk-${p.s}" data-pkopen="${esc(id)}"><div class="rq-top"><div><div class="rq-name">${esc(x.name || "Request")}</div><div class="rq-meta">Household of ${esc(String(x.hh || "?"))} &middot; ${ls.length} item${ls.length === 1 ? "" : "s"}${p.s === "ready" || p.s === "packed" ? ` &middot; ${packed} packed${none ? `, ${none} we don't have` : ""}` : ""}</div></div><span class="pkpill">${esc(PKG_LABEL[p.s])}</span></div>
+      <div class="pkline">${ls.slice(0, 4).map(l => esc(l.t)).join(" &middot; ")}${ls.length > 4 ? " &middot; ..." : ""}</div></button>`;
+  }).join("") : `<div class="empty">No packages yet. Tap the button above.</div>`);
+  return html;
+}
+
 let invQ = "", invCat = "All", invAllPickups = false, invOpen = false;
 document.addEventListener("toggle", e => { if (e.target && e.target.id === "invBox") invOpen = e.target.open; }, true);
 const shortDate = iso => iso ? dt(iso.slice(0, 10)).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
@@ -2925,10 +3177,12 @@ function drawOps() {
   const open = lst.filter(x => isOpen(stOf(x.id))).length;
   const openNotes = {};
   $("ops").querySelectorAll("textarea[data-note]").forEach(t => { if (t.value !== (t.dataset.orig || "")) openNotes[t.dataset.note] = t.value; });
-  $("ops").innerHTML = opsActions() + `<div class="seg" role="group" aria-label="Operations section">
-      <button type="button" data-ov="requests" aria-pressed="${opsView === "requests"}">Requests${open ? ` (${open} open)` : ""}</button>
+  const pkReady = Object.values(PKGS).filter(p => p && (p.s === "ready" || p.s === "draft")).length;
+  $("ops").innerHTML = opsActions() + `<div class="seg seg3" role="group" aria-label="Operations section">
+      <button type="button" data-ov="requests" aria-pressed="${opsView === "requests"}">Requests${open ? ` (${open})` : ""}</button>
+      <button type="button" data-ov="packages" aria-pressed="${opsView === "packages"}">Packages${pkReady ? ` (${pkReady})` : ""}</button>
       <button type="button" data-ov="storage" aria-pressed="${opsView === "storage"}">Inventory</button></div>` +
-    (opsView === "storage" ? drawInventory(d) : drawRequests(d));
+    (opsView === "storage" ? drawInventory(d) : opsView === "packages" ? drawPackages(d) : drawRequests(d));
   Object.entries(openNotes).forEach(([id, v]) => { const t = $("ops").querySelector(`textarea[data-note="${CSS.escape(id)}"]`); if (t) { t.value = v; t.closest("details").open = true; } });
   $("ops").querySelectorAll("[data-ov]").forEach(b => b.addEventListener("click", () => { opsView = b.dataset.ov; drawOps(); }));
   $("ops").querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { opsFilter = b.dataset.f; drawOps(); }));
@@ -2938,6 +3192,8 @@ function drawOps() {
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
   $("ops").querySelectorAll("[data-adj]").forEach(b => b.addEventListener("click", () => openAdjust(+b.dataset.adj)));
+  $("ops").querySelectorAll("[data-pkopen]").forEach(b => b.addEventListener("click", () => pkgOpenSheet(b.dataset.pkopen)));
+  const pka = $("pkAll"); if (pka) pka.addEventListener("click", async () => { if (pkgBusy) return; pka.disabled = true; pka.textContent = "Building..."; await pkgBuildAll(); });
   const mp = $("morePk"); if (mp) mp.addEventListener("click", () => { invAllPickups = !invAllPickups; drawOps(); });
   const iq = $("invQ"); if (iq) iq.addEventListener("input", () => { invQ = iq.value; const pos = iq.selectionStart; drawOps(); const n = $("invQ"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } });
   $("ops").querySelectorAll("[data-req]").forEach(b => b.addEventListener("click", () => {
@@ -3056,6 +3312,7 @@ async function loadOps(quiet) {
     const r = await run("getOps", KEY, TOK);
     opsAt = Date.now();
     if (!saving && !(pick && quiet)) { OPS = r.ops; OPSTAT = r.status || {}; drawOps(); }
+    if (!pkgBusy) loadPkgs();
   } catch (e) {
     if (isAuth(e)) relock();
     else if (!OPS) $("ops").innerHTML = `<p class="lead">Couldn't load this right now. Pull down to refresh, or try again in a minute.</p>`;
@@ -3850,7 +4107,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261027011000";
+  var BUILD = "20261027055000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
