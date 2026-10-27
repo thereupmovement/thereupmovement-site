@@ -854,7 +854,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 </head>
 <body>
 <header class="band pad">
-  <div class="wrap top"><span class="brand"><img src="https://thereupmovement.github.io/thereupmovement-site/hub/img0.webp?v=yu1" alt="The ReUp Movement" width="114" height="40"></span><span class="only">Team Hub</span></div>
+  <div class="wrap top"><span class="brand"><img src="https://thereupmovement.org/hub/img0.webp?v=yu1" alt="The ReUp Movement" width="114" height="40"></span><span class="only">Team Hub</span></div>
 </header>
 
 <main class="pad">
@@ -916,7 +916,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-eventday" hidden>
       <div class="banner" data-cover="eventday"><div><h2>Event day</h2><p>Everything for the day, in the order it happens.</p></div></div>
-      <a class="guide" id="handbook" href="https://thereupmovement.github.io/thereupmovement-site/hub/event-lead-guide.pdf" target="_blank" rel="noopener"><span><b>Running this event?</b>Open the Event Lead Guide (PDF)</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+      <a class="guide" id="handbook" href="https://thereupmovement.org/hub/event-lead-guide.pdf" target="_blank" rel="noopener"><span><b>Running this event?</b>Open the Event Lead Guide (PDF)</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
       <h2>When you get there</h2>
       <div class="card">
         <div class="rule"><i>1</i><div><b>Find the event lead.</b><span>Get your spot. Stay for the five-minute huddle before the line opens.</span></div></div>
@@ -977,7 +977,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 <script type="text/plain" id="app">
 /* ============ DATA: comes from the server (Hub sheet, Data tab) ============ */
 const BOOT = window.BOOT || null;
-const KEY = BOOT.key, A = BOOT.asset || "https://thereupmovement.github.io/thereupmovement-site/hub/";
+const KEY = BOOT.key, A = BOOT.asset || "https://thereupmovement.org/hub/";
 const EVENTS = (BOOT.home && BOOT.home.events) || [];
 const MEETINGS = (BOOT.home && BOOT.home.meetings) || [];
 const FORMS = (BOOT.home && BOOT.home.forms) || [];
@@ -990,7 +990,7 @@ const goingLine = e => {
   const y = goingList(e).filter(x => x.a === "yes").length, me = BOOT.work ? myGoing(e) : "";
   return (y ? ` &middot; ${y} from the team going` : "") + (me === "yes" ? ` <span class="tag going">You're going</span>` : me === "no" ? ` <span class="tag">Can't make it</span>` : "");
 };
-const SIGNUP_LINK = "https://thereupmovement.github.io/thereupmovement-site/#signup";
+const SIGNUP_LINK = "https://thereupmovement.org/#signup";
 const VOLUNTEER_FORM = (FORMS.find(f => f.title === "Sign up for an event") || {}).url || "";
 
 /* ============ HELPERS ============ */
@@ -3850,7 +3850,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261027004500";
+  var BUILD = "20261027011000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
