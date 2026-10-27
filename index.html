@@ -187,6 +187,55 @@ form.vs>.vs-btn{width:100%}
 .vs-dl{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
 .vs-dl:first-of-type{border-top:0;padding-top:0}
 @media (max-width:360px){.vs-two{grid-template-columns:1fr}}
+
+/* Hidden on phones: top menu, campaign line, hero buttons, rotating photos */
+.topnav,.camp,.herobtns,.rot{display:none}
+.news{display:grid;gap:10px}
+.newsc{display:grid;gap:4px;background:var(--surface);border:2px solid var(--ink);border-radius:14px;padding:16px;text-decoration:none;color:var(--ink)}
+.newsc small{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--red-text)}
+.newsc b{font-size:18px}
+.newsc span{font-weight:700;color:var(--red-text);font-size:15px}
+.newsc:focus-visible,.topnav a:focus-visible,.herobtns a:focus-visible,.rotdots button:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.foot{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);font-size:15px;color:var(--muted);display:grid;gap:4px;text-align:center}
+.foot a{color:var(--ink);font-weight:700}
+
+/* Computer and wide tablet: wide layout. The phone layout above is unchanged. */
+@media (min-width:900px){
+  .wrap{max-width:1200px}
+  .logobar .wrap{display:flex;align-items:center;gap:24px}
+  .topnav{display:flex;flex-wrap:wrap;align-items:center;gap:22px;margin-left:auto;font-weight:600;font-size:15px}
+  .topnav a{text-decoration:none;color:var(--ink)}
+  .topnav a:hover{text-decoration:underline}
+  .topnav .signin{border-color:var(--ink);background:var(--ink);color:var(--bg);min-height:40px}
+  .band{padding-block:48px 84px}
+  .band .signin{display:none}
+  .hero{display:flex;flex-wrap:wrap;align-items:center;gap:40px}
+  .herotext{flex:1 1 460px;display:flex;flex-direction:column;gap:14px}
+  .band h1{font-size:76px;line-height:.95}
+  .camp{display:block;margin:0;font-size:22px;font-weight:700}
+  .herobtns{display:flex;flex-wrap:wrap;gap:12px}
+  .herobtns a{display:inline-flex;align-items:center;min-height:50px;padding:0 22px;border-radius:12px;font-weight:700;text-decoration:none;border:2px solid #fff;color:#fff}
+  .herobtns a.solid{background:#fff;color:#141111}
+  .rot{display:block;position:relative;flex:1 1 420px;max-width:560px;aspect-ratio:4/3;border-radius:18px;overflow:hidden;background:rgba(0,0,0,.2)}
+  .rot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .9s ease}
+  .rot img.on{opacity:1}
+  .rotdots{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:6px}
+  .rotdots button{width:28px;height:28px;border:0;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center}
+  .rotdots button::after{content:"";width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+  .rotdots button[aria-current="true"]::after{background:#fff}
+  .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .tile{min-height:150px;padding:20px}
+  h2{font-size:44px;margin-top:56px}
+  .dates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+  .shopgrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+  .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;overflow:visible;margin:0;padding:0}
+  .strip img{width:100%;height:200px;max-width:none}
+  .duo{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+  .duo>.volcol{flex:3 1 520px;min-width:0}
+  .duo>.newscol{flex:2 1 320px;min-width:0}
+  .foot{text-align:left;grid-template-columns:1fr auto;align-items:center}
+}
+@media (min-width:900px) and (prefers-reduced-motion: reduce){.rot img{transition:none}}
 </style>
 </head>
 <body>
@@ -195,12 +244,27 @@ form.vs>.vs-btn{width:100%}
 <div class="logobar side"><div class="wrap">
   <img class="lg-light" src="assets/logo-light.png?v=yu1" alt="The ReUp Movement">
   <img class="lg-dark" src="assets/logo-dark.png?v=yu1" alt="The ReUp Movement">
+  <nav class="topnav" aria-label="Main">
+    <a href="#dates-h">Catch us serving</a>
+    <a href="#volunteer">Volunteer</a>
+    <a href="#" id="navGive" target="_blank" rel="noopener">Give items</a>
+    <a href="#shop">Shop</a>
+    <a href="#news">In the news</a>
+    <button type="button" class="signin" id="signin2" aria-haspopup="dialog">Sign in</button>
+  </nav>
 </div></div>
 
 <header class="band side">
   <div class="wrap">
-    <div class="brandrow"><div class="brand">The ReUp Movement</div><button type="button" class="signin" id="signin" aria-haspopup="dialog">Sign in</button></div>
-    <h1>Everybody deserves a new beginning.</h1>
+    <div class="hero">
+      <div class="herotext">
+        <div class="brandrow"><div class="brand">The ReUp Movement</div><button type="button" class="signin" id="signin" aria-haspopup="dialog">Sign in</button></div>
+        <h1>Everybody deserves a new beginning.</h1>
+        <p class="camp">Everybody needs a ReUp.</p>
+        <div class="herobtns"><a class="solid" href="#volunteer">Volunteer with us</a><a href="#dates-h">Where to catch us</a></div>
+      </div>
+      <div class="rot" id="rot" role="region" aria-roledescription="carousel" aria-label="Photos from ReUp events"></div>
+    </div>
   </div>
 </header>
 
@@ -228,6 +292,7 @@ form.vs>.vs-btn{width:100%}
     <h2>ReUp in action</h2>
     <div class="strip" id="photos" tabindex="0" aria-label="Photos from ReUp events"></div>
 
+    <div class="duo"><div class="volcol">
     <h2 id="volunteer">Volunteer with us</h2>
     <p class="lead">Two steps. Orientation comes first, then you pick your dates.</p>
     <div class="vol">
@@ -246,11 +311,20 @@ form.vs>.vs-btn{width:100%}
       <div><button type="button" class="vs-btn ghost" id="mlSend">Email me my link</button></div>
       <p class="vs-note" id="mlMsg" role="status" aria-live="polite"></p>
     </div>
+    </div>
+    <div class="newscol">
+    <h2 id="news">In the news</h2>
+    <div class="news">
+      <a class="newsc" href="https://shoutouthtx.com/meet-walter-barreda/" target="_blank" rel="noopener"><small>Shoutout HTX</small><b>Meet Walter Barreda</b><span>Read the interview</span></a>
+      <a class="newsc" href="http://voyagehouston.com/interview/meet-walter-barreda-reup-movement-southwest-houston/" target="_blank" rel="noopener"><small>Voyage Houston</small><b>Meet Walter Barreda</b><span>Read the interview</span></a>
+    </div>
+    </div></div>
 
     <h2>Did ReUp help you?</h2>
     <a class="big dark" id="story" href="#" target="_blank" rel="noopener"><div><b>Share your story</b><span>Tell us what changed for you or your family.</span></div><div class="arrow" aria-hidden="true">&rarr;</div></a>
 
     <p class="follow">See photos and news on Instagram: <a href="https://www.instagram.com/thereup_movement/" target="_blank" rel="noopener">@thereup_movement</a></p>
+    <div class="foot"><span>The ReUp Movement. Founded in 2017, incorporated in 2018.</span><a href="mailto:info@thereupmovement.org">info@thereupmovement.org</a></div>
   </div>
 </main>
 
@@ -536,6 +610,23 @@ if (STORE_URL) {
 $("photos").innerHTML = PHOTOS.map(p => `<figure><img src="${p.src}" alt="${esc(p.alt)}" loading="lazy"><figcaption>${esc(p.caption)}</figcaption></figure>`).join("");
 if (!PHOTOS.length) { $("photos").previousElementSibling.hidden = true; $("photos").hidden = true; }
 
+// Rotating photos in the opening band (computer layout). Landscape photos only; pauses on hover or focus, and stays still for reduced motion.
+(() => {
+  const rot = $("rot"), wide = PHOTOS.filter(p => !/photo5/.test(p.src));
+  if (!rot || !wide.length) return;
+  rot.innerHTML = wide.map((p, i) => `<img src="${p.src}" alt="${esc(p.alt)}" class="${i ? "" : "on"}"${i ? ' loading="lazy"' : ""}>`).join("") +
+    `<div class="rotdots">${wide.map((p, i) => `<button type="button" aria-label="Photo ${i + 1} of ${wide.length}" aria-current="${i === 0}"></button>`).join("")}</div>`;
+  const imgs = [...rot.querySelectorAll("img")], dots = [...rot.querySelectorAll(".rotdots button")];
+  let cur = 0, paused = false;
+  const show = n => { cur = (n + imgs.length) % imgs.length; imgs.forEach((im, i) => im.classList.toggle("on", i === cur)); dots.forEach((d, i) => d.setAttribute("aria-current", i === cur)); };
+  dots.forEach((d, i) => d.addEventListener("click", () => show(i)));
+  ["mouseenter", "focusin"].forEach(ev => rot.addEventListener(ev, () => paused = true));
+  ["mouseleave", "focusout"].forEach(ev => rot.addEventListener(ev, () => paused = false));
+  const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!still) setInterval(() => { if (!paused && !document.hidden) show(cur + 1); }, 5000);
+})();
+{ const g = GRID.find(t => t.title === "Give items"); const n = $("navGive"); if (n && g && g.href) n.href = g.href; else if (n) n.hidden = true; }
+
 // Volunteering
 (() => {
   const now = new Date(), o = ORIENTATION;
@@ -579,7 +670,7 @@ if (!PHOTOS.length) { $("photos").previousElementSibling.hidden = true; $("photo
   });
   if (location.hash === "#signup") open(true);
   const sdl = $("signdlg");
-  $("signin").addEventListener("click", () => { if (sdl.showModal) sdl.showModal(); else location.href = "volunteer/"; });
+  ["signin", "signin2"].forEach(id => { const b = $(id); if (b) b.addEventListener("click", () => { if (sdl.showModal) sdl.showModal(); else location.href = "volunteer/"; }); });
   sdl.addEventListener("click", e => { if (e.target === sdl) sdl.close(); });
   window.addEventListener("hashchange", () => { if (location.hash === "#signup") open(true); });
 })();
