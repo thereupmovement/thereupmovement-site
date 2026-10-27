@@ -413,7 +413,7 @@ form.vs>.vs-btn{width:100%}
 <main>
   <section class="live" id="impact" aria-labelledby="impact-h">
     <div class="in">
-      <div class="lab">By the record</div>
+      <div class="lab" id="impact-lab">By the record</div>
       <h2 id="impact-h">Every event adds to the count.</h2>
       <div class="nums" id="liveNums"></div>
       <div class="facts">
@@ -779,6 +779,21 @@ const HERO = [
 // every time a team member saves an event wrap-up. Only totals and photos marked OK to post are public.
 const PUBLIC_API = HUB_API + "?public=1";
 
+// This year's totals, from records only: Houston check-in forms (since October 8), the Belize City sign-in sheet
+// (August 15) and the bill of lading for container 1. Shown until the Hub sends live totals after each wrap-up.
+const YEAR_TOTALS = {
+  year: 2026, asOf: "October 26, 2026",
+  tiles: [["922", "people reached this year, in Houston and Belize City"], ["204", "Houston households served since October 8"],
+    ["105", "people served in Belize City on August 15"], ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
+};
+const showYear = () => {
+  $("liveNums").hidden = false;
+  $("liveNums").innerHTML = YEAR_TOTALS.tiles.map(x => `<div class="num"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("");
+  $("impact-lab").textContent = `${YEAR_TOTALS.year} so far`;
+  $("liveNote").hidden = false;
+  $("liveNote").textContent = `Counted from sign-in sheets and shipping records, as of ${YEAR_TOTALS.asOf}. Houston counts start with check-ins on October 8.`;
+};
+
 // Where ReUp has served: every event recapped on ReUp's Instagram (Oct 2019 to Sep 2026), read post by post,
 // plus events logged since. One pin per place; events whose post names no neighborhood share one Houston pin. Flyers with no recap are left out, and posts about the same event count once.
 // Only figures with a record behind them are shown. Events wrapped in the Hub from now on add their own pins.
@@ -900,7 +915,7 @@ if (STORE_URL) {
     const nums = [[t.households, "households served this season"], [t.people, "people in those homes"], [t.volunteerHours, "volunteer hours"], [t.events, "events wrapped"]]
       .filter(x => x[0] > 0);
     if (nums.length) $("liveNums").innerHTML = nums.map(x => `<div class="num"><b>${fmt(x[0])}</b><span>${x[1]}</span></div>`).join("");
-    else $("liveNums").hidden = true; $("liveNote").hidden = true;
+    else { $("liveNums").hidden = true; $("liveNote").hidden = true; }
     if (d.updated) $("liveNote").innerHTML = `Counts update on their own after every event. Last update: ${esc(new Date(d.updated).toLocaleDateString("en-US", { month: "long", day: "numeric" }))}.${tag}`;
     else if (sample) $("liveNote").innerHTML += tag;
     const L = d.lastEvent;
@@ -957,8 +972,8 @@ if (STORE_URL) {
       updated: "2026-10-31T20:00:00" }, true);
     return;
   }
-  fetch(PUBLIC_API, { credentials: "omit" }).then(r => r.ok ? r.json() : null).then(r => { const d = r && (r.result || r); if (d && (d.totals || d.lastEvent)) draw(d, false); else { $("liveNums").hidden = true; $("liveNote").hidden = true; showMap([]); } })
-    .catch(() => { $("liveNums").hidden = true; $("liveNote").hidden = true; showMap([]); });
+  fetch(PUBLIC_API, { credentials: "omit" }).then(r => r.ok ? r.json() : null).then(r => { const d = r && (r.result || r); if (d && (d.totals || d.lastEvent)) draw(d, false); else { showYear(); showMap([]); } })
+    .catch(() => { showYear(); showMap([]); });
 })();
 
 // Volunteering
