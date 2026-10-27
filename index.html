@@ -104,6 +104,9 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,12vw,96px);li
 
 /* Sections */
 .sec{padding:48px 0}
+/* Black is the base. A few sections flip to white or maroon to break up the page. */
+.pop-white{--bg:#FFFFFF; --surface:#F4F2F0; --ink:#141111; --muted:#5E5A57; --line:#DEDAD6; --red:#7B2121; --red-text:#7B2121; --red-soft:#F3E3E2; background:var(--bg); color:var(--ink); color-scheme:light}
+.pop-red{--bg:#7B2121; --surface:#6A1C1C; --ink:#FFFFFF; --muted:#F1D9D6; --line:rgba(255,255,255,.28); --red:#141111; --red-text:#F3D9A0; --red-soft:#5E1818; background:var(--bg); color:var(--ink)}
 .sec.tint{background:var(--surface)}
 .dates{display:grid;gap:10px}
 .ev{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:62px minmax(0,1fr);gap:14px}
@@ -470,7 +473,7 @@ form.vs>.vs-btn{width:100%}
     </div>
   </section>
 
-  <section class="split rev" id="give" aria-labelledby="give-h">
+  <section class="split rev pop-white" id="give" aria-labelledby="give-h">
     <div class="sp-img"><img src="assets/give-couch-carry.webp" alt="ReUp's founder carries a couch to the truck for a delivery" loading="lazy"><img class="inset" src="assets/give-dresser.webp" alt="A volunteer moves a dresser out of an apartment for delivery" loading="lazy"></div>
     <div class="sp-txt">
       <div class="lab">If you have something to give</div>
@@ -514,7 +517,7 @@ form.vs>.vs-btn{width:100%}
     </div>
   </section>
 
-  <section class="sec" id="about" aria-labelledby="about-h">
+  <section class="sec pop-white" id="about" aria-labelledby="about-h">
     <div class="in abgrid">
       <div class="abtxt">
         <div class="lab">If you're curious</div>
@@ -548,7 +551,7 @@ form.vs>.vs-btn{width:100%}
     <div class="iin"><div class="lab">ReUp International</div><h2 id="intl-h">What we gather in Houston, our partners put to work in Belize City.</h2><p>Our partner in Belize City, God Ordained &amp; Established, uses the goods we send to serve and train its own community. Container 2 is being packed now.</p></div>
   </section>
 
-  <section class="sec" aria-labelledby="rec-h">
+  <section class="sec pop-red" aria-labelledby="rec-h">
     <div class="in recgrid">
       <img src="assets/walter-award.webp" alt="Founder Walter Barreda holds his President's Volunteer Service Award certificate" loading="lazy">
       <div>
