@@ -28,18 +28,15 @@
    (need, give, volunteer, shop), then dates with directions and calendar links, the shop, photos, volunteering, stories.
    Public page: no team content. */
 :root{
-  --bg:#F4F2F0; --surface:#FFFFFF; --ink:#141111; --muted:#5E5A57; --line:#DEDAD6;
-  --red:#7B2121; --red-ink:#FFFFFF; --red-soft:#F3E3E2; --red-text:#7B2121;
+  --bg:#121010; --surface:#1D1918; --ink:#F3EEEB; --muted:#A8A19C; --line:#352F2D;
+  --red:#8E2A2A; --red-ink:#FFFFFF; --red-soft:#3A1F1D; --red-text:#F1A39C; color-scheme:dark;
   --display:"Anton","Impact","Arial Narrow",sans-serif;
   --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#121010; --surface:#1D1918; --ink:#F3EEEB; --muted:#A8A19C; --line:#352F2D;
-  --red:#8E2A2A; --red-ink:#FFFFFF; --red-soft:#3A1F1D; --red-text:#F1A39C; color-scheme:dark;
-}}
-:root[data-theme="dark"]{
-  --bg:#121010; --surface:#1D1918; --ink:#F3EEEB; --muted:#A8A19C; --line:#352F2D;
-  --red:#8E2A2A; --red-ink:#FFFFFF; --red-soft:#3A1F1D; --red-text:#F1A39C; color-scheme:dark;
+/* Black is ReUp's base color: the page is dark on every device, whatever the device's own light or dark setting. */
+:root[data-theme="light"]{
+  --bg:#F4F2F0; --surface:#FFFFFF; --ink:#141111; --muted:#5E5A57; --line:#DEDAD6;
+  --red:#7B2121; --red-ink:#FFFFFF; --red-soft:#F3E3E2; --red-text:#7B2121; color-scheme:light;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -56,10 +53,9 @@ img{max-width:100%}
 .top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .tin{max-width:1240px;margin:0 auto;padding:10px max(20px,env(safe-area-inset-right,0px)) 10px max(20px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:20px}
 .tlogo img{height:36px;width:auto;display:block}
-.top .lg-dark,.foot .lg-light{display:none}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .top .lg-light{display:none} :root:not([data-theme="light"]) .top .lg-dark{display:block} }
-:root[data-theme="dark"] .top .lg-light{display:none}
-:root[data-theme="dark"] .top .lg-dark{display:block}
+.top .lg-light,.foot .lg-light{display:none}
+:root[data-theme="light"] .top .lg-dark{display:none}
+:root[data-theme="light"] .top .lg-light{display:block}
 .topnav{display:none}
 .signin{margin-left:auto;font:inherit;font-weight:800;font-size:15px;min-height:44px;padding:0 18px;border-radius:999px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
 .signin:focus-visible{outline:3px solid var(--red);outline-offset:2px}
@@ -72,29 +68,23 @@ img{max-width:100%}
 .sdopt:focus-visible,.sdopt:hover{border-color:var(--ink)}
 .sdclose{font:inherit;font-weight:700;min-height:48px;border-radius:12px;border:0;background:transparent;color:var(--ink);text-decoration:underline;cursor:pointer}
 
-/* Hero: red band with the tagline, a rotating photo in a box beside it, then the five doors */
-.hero{position:relative;color:#fff;background:#7B2121}
-.heroin{max-width:1240px;margin:0 auto;padding:36px max(20px,env(safe-area-inset-right,0px)) 28px max(20px,env(safe-area-inset-left,0px));display:grid;gap:18px;grid-template-areas:"text" "rot" "doors"}
-.herotext{grid-area:text;display:grid;gap:10px;align-content:center}
-.rot{grid-area:rot;position:relative;aspect-ratio:16/10;border-radius:18px;overflow:hidden;background:rgba(0,0,0,.25);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+/* Hero: rotating photos behind the tagline and the five doors, fading into black */
+.hero{position:relative;color:#fff;background:#141111;overflow:hidden}
+.rot{position:absolute;inset:0}
 .rot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.2s ease}
 .rot img.on{opacity:1}
-.rotdots{position:absolute;left:0;right:0;bottom:6px;display:flex;justify-content:center;gap:2px}
-.rotdots button{width:28px;height:28px;border:0;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center}
-.rotdots button::after{content:"";width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:0 0 0 1px rgba(0,0,0,.3)}
-.rotdots button[aria-current="true"]::after{background:#fff}
-.rotdots button:focus-visible{outline:3px solid #E0A526;outline-offset:-3px;border-radius:50%}
-.doorwrap{grid-area:doors;display:grid;gap:10px}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,17,17,.35) 0%,rgba(20,17,17,.55) 45%,rgba(18,16,16,.94) 100%)}
+.heroin{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:72px max(20px,env(safe-area-inset-right,0px)) 28px max(20px,env(safe-area-inset-left,0px));display:grid;gap:10px}
 .eyebrow{font-family:"Space Mono",ui-monospace,monospace;font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#F3D9A0}
-h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,12vw,96px);line-height:.92;margin:0;text-transform:uppercase;text-wrap:balance;max-width:900px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,12vw,96px);line-height:.92;margin:0;text-transform:uppercase;text-wrap:balance;max-width:900px;text-shadow:0 2px 18px rgba(0,0,0,.35)}
 .camp{margin:2px 0 0;font-size:clamp(18px,4.5vw,24px);font-weight:700}
-.ask{margin:4px 0 0;font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#F3D9A0}
+.ask{margin:22px 0 2px;font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#F3D9A0}
 .doors{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tile{display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:132px;background:rgba(255,255,255,.96);color:#141111;text-decoration:none;border-radius:16px;padding:14px}
 .tile svg{width:28px;height:28px;color:#7B2121}
 .tile b{display:block;font-family:var(--display);font-weight:400;font-size:22px;line-height:1.02;text-transform:uppercase}
 .tile span{display:block;font-size:14px;line-height:1.3;color:#5E5A57;margin-top:4px}
-.tile.main{background:#141111;color:#fff}.tile.main span{color:#D8D3CF}.tile.main svg{color:#E0A526}
+.tile.main{background:#141111;color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}.tile.main span{color:#D8D3CF}.tile.main svg{color:#E0A526}
 .tile.wide{grid-column:1/-1;min-height:0;flex-direction:row;align-items:center}
 .tile:focus-visible,.cta:focus-visible,.act:focus-visible,.prod:focus-visible,.big:focus-visible,.vbtn:focus-visible,.newsc:focus-visible,.topnav a:focus-visible{outline:3px solid #E0A526;outline-offset:3px}
 
@@ -259,8 +249,7 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 
 /* Tablet (iPad portrait and up): two and three columns, still one story per screen */
 @media (min-width:640px){
-  .heroin{padding-top:48px;padding-bottom:36px;gap:22px}
-  .rot{aspect-ratio:16/9}
+  .heroin{padding-top:96px;padding-bottom:32px}
   .doors{grid-template-columns:repeat(6,minmax(0,1fr))}
   .doors .tile{grid-column:span 2}
   .doors .tile:nth-child(-n+2){grid-column:span 3}
@@ -281,15 +270,9 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
   .storyc{grid-column:1/-1}
   .fgrid{grid-template-columns:2fr 1fr 1fr}
 }
-/* iPad landscape and wider: tagline on the left, rotating photo box on the right */
-@media (min-width:760px){
-  .heroin{grid-template-columns:minmax(0,11fr) minmax(0,10fr);grid-template-areas:"text rot" "doors doors";column-gap:32px;align-items:center}
-  .rot{aspect-ratio:4/3}
-  #hero-h{font-size:clamp(52px,6.6vw,104px)}
-}
 /* Laptop and desktop */
 @media (min-width:1024px){
-  .heroin{padding-top:56px;padding-bottom:44px;column-gap:48px;row-gap:36px}
+  .heroin{min-height:600px;align-content:end;padding-top:120px;padding-bottom:40px}
   .doors{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:6px}
   .doors .tile,.doors .tile:nth-child(-n+2){grid-column:auto}
   .sec,.recap{padding:80px 0}
@@ -326,7 +309,8 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 /* Wide desktop screens: keep the page centered and let photos, not empty space, fill the edges */
 @media (min-width:1500px){
   .in,.tin{max-width:1400px}
-  .heroin{max-width:1400px;column-gap:64px}
+  .heroin{max-width:1400px;min-height:680px}
+  h1{font-size:112px}
   .split{min-height:640px}
   .sp-img{min-height:640px}
   .sp-txt{max-width:600px}
@@ -406,17 +390,13 @@ form.vs>.vs-btn{width:100%}
 </header>
 
 <section class="hero" aria-labelledby="hero-h">
+  <div class="rot" id="rot" aria-hidden="true"></div>
   <div class="heroin">
-    <div class="herotext">
-      <div class="eyebrow">Houston, TX · Since 2017</div>
-      <h1 id="hero-h">Everybody deserves a new beginning.</h1>
-      <p class="camp">Everybody needs a ReUp.</p>
-    </div>
-    <div class="rot" id="rot" role="region" aria-roledescription="carousel" aria-label="Photos from ReUp events"></div>
-    <div class="doorwrap">
-      <p class="ask">What brings you here?</p>
-      <nav class="doors" id="grid" aria-label="What brings you here"></nav>
-    </div>
+    <div class="eyebrow">Houston, TX · Since 2017</div>
+    <h1 id="hero-h">Everybody deserves a new beginning.</h1>
+    <p class="camp">Everybody needs a ReUp.</p>
+    <p class="ask">What brings you here?</p>
+    <nav class="doors" id="grid" aria-label="What brings you here"></nav>
   </div>
 </section>
 
@@ -894,20 +874,18 @@ if (STORE_URL) {
   $("shopAll").href = STORE_URL;
 } else { ["shop", "shopgrid", "shopAll"].forEach(id => $(id).hidden = true); $("shop").nextElementSibling.hidden = true; }
 
-// Rotating photo in the box beside the tagline. Dots pick a photo; pauses on hover or focus, and stays still for reduced motion.
+// Rotating photos behind the opening. Pauses while someone is reading a door, and stays still for reduced motion.
 (() => {
   const rot = $("rot");
   if (!rot || !HERO.length) return;
-  rot.innerHTML = HERO.map((p, i) => `<img src="${p.src}" alt="${esc(p.alt)}" class="${i ? "" : "on"}"${i ? ' loading="lazy"' : ""}>`).join("") +
-    `<div class="rotdots">${HERO.map((p, i) => `<button type="button" aria-label="Photo ${i + 1} of ${HERO.length}" aria-current="${i === 0}"></button>`).join("")}</div>`;
-  const imgs = [...rot.querySelectorAll("img")], dots = [...rot.querySelectorAll(".rotdots button")];
+  rot.innerHTML = HERO.map((p, i) => `<img src="${p.src}" alt="" class="${i ? "" : "on"}"${i ? ' loading="lazy"' : ""}>`).join("");
+  const imgs = [...rot.querySelectorAll("img")];
   let cur = 0, paused = false;
-  const show = n => { imgs[cur].classList.remove("on"); dots[cur].setAttribute("aria-current", "false"); cur = n; imgs[cur].classList.add("on"); dots[cur].setAttribute("aria-current", "true"); };
-  dots.forEach((d, i) => d.onclick = () => show(i));
-  ["mouseenter", "focusin"].forEach(ev => rot.addEventListener(ev, () => paused = true));
-  ["mouseleave", "focusout"].forEach(ev => rot.addEventListener(ev, () => paused = false));
+  const doors = $("grid");
+  ["mouseenter", "focusin"].forEach(ev => doors.addEventListener(ev, () => paused = true));
+  ["mouseleave", "focusout"].forEach(ev => doors.addEventListener(ev, () => paused = false));
   const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!still && imgs.length > 1) setInterval(() => { if (paused || document.hidden) return; show((cur + 1) % imgs.length); }, 5500);
+  if (!still && imgs.length > 1) setInterval(() => { if (paused || document.hidden) return; imgs[cur].classList.remove("on"); cur = (cur + 1) % imgs.length; imgs[cur].classList.add("on"); }, 5500);
 })();
 
 // Live numbers, last-event recap and map. Filled from the Hub after every wrap-up; hidden if the Hub can't be reached.
