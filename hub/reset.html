@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ReUp Hub: set your password</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#121212;color:#f1edea;font:16px/1.4 Arial,sans-serif;padding:16px}
+.box{max-width:360px;width:100%;display:grid;gap:12px;text-align:left}
+h1{font-size:20px;margin:0 0 4px}
+p{margin:0}
+input{font:inherit;padding:12px;border-radius:10px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:48px;width:100%;box-sizing:border-box}
+.btn{font:inherit;padding:12px;border-radius:10px;border:none;background:#7B2121;color:#fff;min-height:48px;cursor:pointer}
+.btn:disabled{opacity:.6}
+.msg{font-size:14px;opacity:.85;min-height:1.2em}
+a{color:#F3D9A0}
+</style></head><body>
+<div class="box" id="box"><p>Loading…</p></div>
+<script>
+var API = "https://script.google.com/macros/s/AKfycbwubNwwouftKblej7oY9kmgoGzgDsNfihm7by44aD3D8slySgZPt4M5x-gCZs8lZ6z-rg/exec";
+function api(fn, args) {
+  return fetch(API, { method: "POST", credentials: "omit", redirect: "follow",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: fn, args: args || [] }) })
+    .then(function (r) { if (!r.ok) throw new Error("network " + r.status); return r.json(); })
+    .then(function (r) { if (r && r.error) throw new Error(r.error); return r ? r.result : null; });
+}
+var q = new URLSearchParams(location.search);
+var email = q.get("e") || "", token = q.get("t") || "";
+var box = document.getElementById("box");
+
+function showSetPassword() {
+  box.innerHTML =
+    '<h1>Set your password</h1>' +
+    '<p>For ' + (email.replace(/[<>&]/g, "") || "your account") + '</p>' +
+    '<input id="p1" type="password" autocomplete="new-password" placeholder="New password (8+ characters)">' +
+    '<input id="p2" type="password" autocomplete="new-password" placeholder="Type it again">' +
+    '<button class="btn" type="button" id="go">Save password and sign in</button>' +
+    '<p class="msg" id="msg"></p>';
+  document.getElementById("go").onclick = function () {
+    var p1 = document.getElementById("p1").value, p2 = document.getElementById("p2").value, msg = document.getElementById("msg"), btn = document.getElementById("go");
+    if (p1.length < 8) { msg.textContent = "Use at least 8 characters."; return; }
+    if (p1 !== p2) { msg.textContent = "Those two don't match."; return; }
+    btn.disabled = true; msg.textContent = "Saving…";
+    api("authSetPassword", [email, token, p1]).then(function (r) {
+      if (!r || !r.ok) { msg.textContent = (r && r.msg) || "That didn't work."; btn.disabled = false; return; }
+      try { localStorage.setItem("reupHubKey", r.key); localStorage.setItem("reupHubTok_" + r.key, r.token); } catch (e) {}
+      msg.textContent = "Saved. Opening the Hub…";
+      location.replace("./?k=" + encodeURIComponent(r.key));
+    }).catch(function () { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; });
+  };
+}
+
+function showRequestLink(note) {
+  box.innerHTML =
+    '<h1>Reset your password</h1>' +
+    (note ? '<p>' + note + '</p>' : '<p>Enter the email your ReUp Hub account uses.</p>') +
+    '<input id="em" type="email" autocomplete="email" placeholder="Email" value="' + (email.replace(/"/g, "") || "") + '">' +
+    '<button class="btn" type="button" id="go">Email me a link</button>' +
+    '<p class="msg" id="msg"></p>';
+  document.getElementById("go").onclick = function () {
+    var em = document.getElementById("em").value.trim(), msg = document.getElementById("msg"), btn = document.getElementById("go");
+    if (!em) { msg.textContent = "Enter your email first."; return; }
+    btn.disabled = true; msg.textContent = "Sending…";
+    api("authForgot", [em]).then(function (r) { msg.textContent = (r && r.msg) || "Check your email."; })
+      .catch(function () { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; });
+  };
+}
+
+if (email && token) showSetPassword();
+else showRequestLink();
+</script>
+</body></html>

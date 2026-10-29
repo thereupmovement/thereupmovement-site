@@ -881,6 +881,16 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .bootmsg .btn{width:auto}
 .spin{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--red);animation:spin 0.9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.ciBig{text-align:center;display:grid;gap:12px}
+.cicount b{font-size:42px;display:block;line-height:1}
+.cicount span{font-size:13px;opacity:.75;text-transform:uppercase;letter-spacing:.06em}
+.cibtn{font-size:19px;padding:20px;min-height:68px}
+.civrow{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:14px;border:1px solid #444;border-radius:10px;margin-bottom:8px;background:transparent;color:inherit;font:inherit}
+.civrow.on{background:#1d3b1d;border-color:#2d5a2d}
+.civstate{font-size:13px;opacity:.75}
+.formgrid{display:grid;gap:10px;margin:10px 0}
+.formgrid label{display:block;font-size:13px;opacity:.85}
+.formgrid input{display:block;width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:44px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -986,7 +996,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-goals" hidden>
       <div class="banner" data-cover="goals"><div><h2>Leadership</h2><p>Where ReUp stands on its goals, and how the team is moving.</p></div></div>
-      <div class="seg" role="group" aria-label="Leadership section"><button type="button" data-lv="goals" aria-pressed="true">Goals</button><button type="button" data-lv="team" aria-pressed="false">Team activity</button></div>
+      <div class="seg" role="group" aria-label="Leadership section"><button type="button" data-lv="overview" aria-pressed="true">Overview</button><button type="button" data-lv="goals" aria-pressed="false">Goals</button><button type="button" data-lv="team" aria-pressed="false">Team activity</button></div>
+      <div id="leadover" hidden><p class="lead">Loading...</p></div>
       <div id="activity" hidden></div>
       <div id="leaders"><p class="lead">Loading...</p></div>
     </section>
@@ -994,6 +1005,18 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
     <section class="view" id="v-ops" hidden>
       <div class="banner" data-cover="ops"><div><h2>Operations</h2><p>Who to call, where they are, and what we have to give.</p></div></div>
       <div id="ops"><p class="lead">Loading...</p></div>
+    </section>
+
+    <section class="view" id="v-checkin" hidden>
+      <div class="banner" data-cover="checkin"><div><h2>Check-in</h2><p>One tap to check in a guest or a volunteer. Keeps saving even if the wifi drops.</p></div></div>
+      <div class="card" id="ciEventPick"></div>
+      <div class="seg" role="group" aria-label="Check-in section">
+        <button type="button" data-civ="guests" aria-pressed="true">Guests</button>
+        <button type="button" data-civ="vols" aria-pressed="false">Volunteers</button>
+      </div>
+      <p class="small" id="ciPending" hidden></p>
+      <div id="ciGuests"></div>
+      <div id="ciVols" hidden></div>
     </section>
 
   </div>
@@ -1889,17 +1912,20 @@ function drawWork() {
   const nb = $("wnew"); if (nb) nb.addEventListener("click", () => openWork(""));
 }
 /* Leadership: who is moving, and what changed. Built from every task's update log, so nothing extra is tracked. */
-let actWho = "", actLimit = 30, leadView = "goals";
-try { leadView = localStorage.getItem("reupHubLeadView") === "team" ? "team" : "goals"; } catch (e) {}
-/* Leadership shows one section at a time, like Ops: Goals, or Team activity. */
+let actWho = "", actLimit = 30, leadView = "overview";
+try { const lv0 = localStorage.getItem("reupHubLeadView"); leadView = lv0 === "team" ? "team" : lv0 === "goals" ? "goals" : "overview"; } catch (e) {}
+let leadOverAt = 0;
+/* Leadership shows one section at a time: Overview, Goals, or Team activity. */
 function setLeadView(v) {
-  leadView = v === "team" ? "team" : "goals";
+  leadView = v === "team" ? "team" : v === "goals" ? "goals" : "overview";
   try { localStorage.setItem("reupHubLeadView", leadView); } catch (e) {}
-  const a = $("activity"), l = $("leaders");
+  const o = $("leadover"), a = $("activity"), l = $("leaders");
+  if (o) o.hidden = leadView !== "overview";
   if (a) a.hidden = leadView !== "team";
-  if (l) l.hidden = leadView === "team";
+  if (l) l.hidden = leadView !== "goals";
   document.querySelectorAll("[data-lv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lv === leadView));
   if (leadView === "team") drawActivity();
+  if (leadView === "overview" && (!leadOverAt || Date.now() - leadOverAt > 60e3)) loadOverview();
 }
 document.querySelectorAll("[data-lv]").forEach(b => b.addEventListener("click", () => setLeadView(b.dataset.lv)));
 const ago = iso => {
@@ -3328,6 +3354,36 @@ async function loadGoals() {
   catch (e) { if (isAuth(e)) relock(); else if (!goalsAt) $("leaders").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
   goalsLoading = false;
 }
+function loField_(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.length + (v.length === 1 ? " item" : " items");
+  if (typeof v === "object") { const keys = Object.keys(v); return keys.length ? keys.map(k => esc(k) + ": " + esc(String(v[k]))).join(", ") : "none"; }
+  return esc(String(v));
+}
+function drawOverview(d) {
+  const box = $("leadover"); if (!box) return;
+  const dn = d.decisionsNeeded || [], next = d.next30Days || [], cr = d.communityRequests || [];
+  box.innerHTML = `<h2>Overview</h2>
+    <p class="small" style="margin:-4px 0 10px">Everything that needs your eyes, in one place. Updated ${d.generatedAt ? ago(d.generatedAt) : "just now"}.</p>
+    <div class="card"><h3 class="area">Needs a decision<span>${dn.length}</span></h3>
+      ${dn.length ? dn.map(g => `<div class="rule"><div><b>${esc(g.title || g.id || "Untitled")}</b><span>${esc(g.status || "")}</span></div></div>`).join("") : `<p class="lead">Nothing waiting on a decision right now.</p>`}</div>
+    <div class="card"><h3 class="area">Next 30 days<span>${next.length}</span></h3>
+      ${next.length ? next.map(e => `<div class="rule"><div><b>${esc(e.name || e.title || "Event")}</b><span>${esc(e.date || e.when || "")}${e.place ? " \u00b7 " + esc(e.place) : ""}</span></div></div>`).join("") : `<p class="lead">Nothing on the Schedule in the next 30 days.</p>`}</div>
+    <div class="card"><h3 class="area">Community requests<span>${cr.length}</span></h3>
+      ${cr.length ? cr.map(r => `<div class="rule"><div><b>${esc(r.name || r.who || "Request")}</b><span>${esc(r.status || r.need || "")}</span></div></div>`).join("") : `<p class="lead">No open requests.</p>`}</div>
+    <div class="card"><h3 class="area">Receipts waiting<span>${d.receiptsWaiting == null ? "\u2014" : d.receiptsWaiting}</span></h3>
+      <p class="lead">Counts only \u2014 open Ops to review them.</p></div>
+    <div class="card"><h3 class="area">Volunteers</h3><p class="lead">${loField_(d.volunteers) || "Nothing to show yet."}</p></div>
+    <div class="card"><h3 class="area">Inventory</h3><p class="lead">${loField_(d.inventory) || "Nothing to show yet."}</p></div>
+    <p class="small" style="margin-top:4px">Goals and decisions in full detail are on the <a href="#" id="loGoalsLink" style="color:inherit;text-decoration:underline">Goals tab</a>.</p>`;
+  const link = $("loGoalsLink"); if (link) link.addEventListener("click", e => { e.preventDefault(); setLeadView("goals"); });
+}
+async function loadOverview() {
+  if (!$("leadover")) return;
+  if (!leadOverAt) $("leadover").innerHTML = `<p class="lead">Loading...</p>`;
+  try { const d = await run("getLeadership", KEY, TOK); leadOverAt = Date.now(); drawOverview(d); }
+  catch (e) { if (isAuth(e)) relock(); else if (!leadOverAt) $("leadover").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+}
 function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
   if (tab === "ops" && (force || !OPS || Date.now() - opsAt > 60e3)) loadOps();
@@ -3346,6 +3402,164 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOK && !$("v-ops").hidden && Date.now() - opsAt > 60e3) loadOps(true); });
 
 drawImpact(BOOT.home ? BOOT.home.impact : null);
+
+/* ============ CHECK-IN: guests (big button) and volunteer check-in/out, offline-safe ============ */
+let CI_EVENT = "", CI_VIEW = "guests", CI_COUNT = null, CI_BUSY = false;
+const CIQ_KEY = "reupCheckinQueue";
+function ciQueue() { try { return JSON.parse(localStorage.getItem(CIQ_KEY) || "[]"); } catch (e) { return []; } }
+function ciQueueSave(q) { try { localStorage.setItem(CIQ_KEY, JSON.stringify(q)); } catch (e) {} }
+function ciNewId() { try { return crypto.randomUUID(); } catch (e) { return Date.now() + "-" + Math.random().toString(36).slice(2); } }
+function ciEnqueue(fn, args) { const q = ciQueue(); q.push({ fn, args }); ciQueueSave(q); ciFlush(); }
+let ciFlushing = false;
+async function ciFlush() {
+  if (ciFlushing) return;
+  if (!ciQueue().length) return;
+  ciFlushing = true;
+  while (true) {
+    const cur = ciQueue();
+    if (!cur.length) break;
+    try { await run(cur[0].fn, ...cur[0].args); cur.shift(); ciQueueSave(cur); }
+    catch (e) { break; } /* offline or server hiccup: stop, the interval below retries */
+  }
+  ciFlushing = false;
+  ciUpdatePending();
+}
+window.addEventListener("online", ciFlush);
+setInterval(ciFlush, 20000);
+function ciUpdatePending() {
+  const n = ciQueue().length, el = $("ciPending");
+  if (!el) return;
+  el.hidden = !n;
+  el.textContent = n + (n === 1 ? " check-in" : " check-ins") + " waiting to sync";
+}
+function ciEventOptions() {
+  const cands = EVENTS.filter(e => daysAway(e.date) >= -1 && daysAway(e.date) <= 3);
+  const list = (cands.length ? cands : EVENTS);
+  return list.map(e => ({ label: e.name + " \u2014 " + stamp(e.date).split(",")[0], value: e.name + " (" + e.date + ")" }));
+}
+function ciDrawEventPick() {
+  const opts = ciEventOptions();
+  if (!CI_EVENT) { try { CI_EVENT = localStorage.getItem("reupCheckinEvent") || ""; } catch (e) {} }
+  if ((!CI_EVENT || !opts.some(o => o.value === CI_EVENT)) && opts.length) CI_EVENT = opts[0].value;
+  $("ciEventPick").innerHTML = `<label class="small" style="display:block;margin-bottom:4px">Event</label>
+    <select id="ciEventSel">${opts.length ? opts.map(o => `<option value="${esc(o.value)}"${o.value === CI_EVENT ? " selected" : ""}>${esc(o.label)}</option>`).join("") : `<option value="">No events on the Schedule</option>`}</select>`;
+  const sel = $("ciEventSel");
+  if (sel) sel.addEventListener("change", e => { CI_EVENT = e.target.value; try { localStorage.setItem("reupCheckinEvent", CI_EVENT); } catch (er) {} ciRefresh(); });
+}
+function drawCheckin() {
+  ciDrawEventPick();
+  $("v-checkin").querySelectorAll("[data-civ]").forEach(b => b.addEventListener("click", () => ciSetView(b.dataset.civ)));
+  ciSetView(CI_VIEW);
+  ciUpdatePending();
+  ciFlush();
+}
+function ciSetView(v) {
+  CI_VIEW = v === "vols" ? "vols" : "guests";
+  $("ciGuests").hidden = CI_VIEW !== "guests";
+  $("ciVols").hidden = CI_VIEW !== "vols";
+  $("v-checkin").querySelectorAll("[data-civ]").forEach(b => b.setAttribute("aria-pressed", b.dataset.civ === CI_VIEW));
+  ciRefresh();
+}
+function ciRefresh() { if (CI_VIEW === "guests") ciDrawGuests(); else loadCheckinVols(); }
+function ciDrawGuests() {
+  $("ciGuests").innerHTML = `<div class="card ciBig"><div class="cicount"><b id="ciCountNum">${CI_COUNT == null ? "\u2014" : CI_COUNT}</b><span>checked in</span></div>
+    <button class="btn cibtn" type="button" id="ciBigBtn">Check in a guest</button>
+    <button class="tbtn" type="button" id="ciPaperBtn">Enter from paper sign-in</button></div>`;
+  $("ciBigBtn").addEventListener("click", ciOpenGuestSheet);
+  $("ciPaperBtn").addEventListener("click", ciOpenPaperSheet);
+  ciLoadCount();
+}
+async function ciLoadCount() {
+  if (!CI_EVENT) return;
+  try { CI_COUNT = await run("ciLiveCount", CI_EVENT); const el = $("ciCountNum"); if (el) el.textContent = CI_COUNT; } catch (e) {}
+}
+function ciOpenGuestSheet() {
+  openSheet(`<div class="k">Check-in</div><h3 id="sheetTitle">New guest</h3>
+    <p class="lead">Name, household size and ZIP are optional. Nobody is turned away for skipping these \u2014 tap Check in any time.</p>
+    <form id="ciForm" class="formgrid">
+      <label>First name (optional)<input id="ciFirst" type="text" autocomplete="off"></label>
+      <label>Household size (optional)<input id="ciHH" type="number" inputmode="numeric" min="1" max="20"></label>
+      <label>ZIP (optional)<input id="ciZip" type="text" inputmode="numeric" maxlength="5"></label>
+      <button class="btn" type="submit">Check in</button>
+    </form>`);
+  $("ciForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const payload = { event: CI_EVENT, firstName: $("ciFirst").value.trim(), householdSize: $("ciHH").value.trim(), zip: $("ciZip").value.trim(), clientId: ciNewId() };
+    sheet.close();
+    if (CI_COUNT != null) { CI_COUNT++; const el = $("ciCountNum"); if (el) el.textContent = CI_COUNT; }
+    toast("Checked in.");
+    ciEnqueue("ciGuestCheckIn", [payload]);
+    ciUpdatePending();
+  });
+}
+function ciOpenPaperSheet() {
+  openSheet(`<div class="k">Check-in</div><h3 id="sheetTitle">Enter from paper sign-in</h3>
+    <p class="lead">One row per guest who signed in on paper. Add as many as you need, then save them all at once.</p>
+    <div id="ciPaperRows"></div>
+    <button class="tbtn" type="button" id="ciPaperAdd">Add a row</button>
+    <button class="btn" type="button" id="ciPaperSave" style="margin-top:10px">Save all</button>`);
+  const rows = [];
+  function addRow() {
+    const i = rows.length; rows.push({});
+    const d = document.createElement("div"); d.className = "formgrid"; d.style.marginBottom = "6px";
+    d.innerHTML = `<label>First name<input data-pf="${i}" type="text"></label><label>Household<input data-ph="${i}" type="number" min="1" max="20"></label><label>ZIP<input data-pz="${i}" type="text" maxlength="5"></label>`;
+    $("ciPaperRows").appendChild(d);
+  }
+  addRow();
+  $("ciPaperAdd").addEventListener("click", addRow);
+  $("ciPaperSave").addEventListener("click", async () => {
+    const entries = rows.map((_, i) => ({ event: CI_EVENT,
+      firstName: (document.querySelector(`[data-pf="${i}"]`) || {}).value || "",
+      householdSize: (document.querySelector(`[data-ph="${i}"]`) || {}).value || "",
+      zip: (document.querySelector(`[data-pz="${i}"]`) || {}).value || "" }));
+    try { await run("ciPaperBackup", entries, BOOT.name); sheet.close(); toast("Saved " + entries.length + " from paper."); ciLoadCount(); }
+    catch (e) { toast("Couldn't save. Try again when you have signal."); }
+  });
+}
+async function loadCheckinVols() {
+  $("ciVols").innerHTML = `<div id="ciVolList"><p class="lead">Loading...</p></div><button class="tbtn" type="button" id="ciWalkinBtn" style="margin-top:10px">Add a walk-in volunteer</button>`;
+  $("ciWalkinBtn").addEventListener("click", ciOpenWalkinSheet);
+  if (!CI_EVENT) return;
+  try { const list = await run("ciVolunteerRoster", CI_EVENT); ciDrawRoster(list); }
+  catch (e) { $("ciVolList").innerHTML = `<p class="lead">Couldn't load the roster. Try again.</p>`; }
+}
+function ciDrawRoster(list) {
+  $("ciVolList").innerHTML = list.length ? list.map(p => `<button type="button" class="civrow${p.checkedIn ? " on" : ""}" data-civtoggle="${esc(p.key)}">
+      <span>${esc(p.name)}</span><span class="civstate">${p.checkedIn ? "Checked in \u00b7 tap to check out" : "Tap to check in"}</span></button>`).join("")
+    : `<p class="lead">No volunteers on the roster yet.</p>`;
+  $("ciVolList").querySelectorAll("[data-civtoggle]").forEach(b => b.addEventListener("click", () => ciToggleVol(b.dataset.civtoggle, b)));
+}
+async function ciToggleVol(key, btn) {
+  if (CI_BUSY) return;
+  CI_BUSY = true; if (btn) btn.disabled = true;
+  try {
+    const r = await run("ciVolunteerToggle", CI_EVENT, key, {});
+    toast(r.name + (r.action === "checkedIn" ? " checked in." : " checked out."));
+    loadCheckinVols();
+  } catch (e) { toast("Couldn't save that. Try again."); }
+  CI_BUSY = false; if (btn) btn.disabled = false;
+}
+function ciOpenWalkinSheet() {
+  openSheet(`<div class="k">Check-in</div><h3 id="sheetTitle">Walk-in volunteer</h3>
+    <form id="ciWalkForm" class="formgrid">
+      <label>Name<input id="ciWalkName" type="text" required></label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:4px"><input id="ciWalkRelease" type="checkbox" required><span>I accept the liability release.</span></label>
+      <button class="btn" type="submit">Check in</button>
+    </form>`);
+  $("ciWalkForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("ciWalkName").value.trim();
+    if (!name || !$("ciWalkRelease").checked) return;
+    try { const r = await run("ciVolunteerToggle", CI_EVENT, "", { name, acceptedRelease: true, walkIn: true }); sheet.close(); toast(r.name + " checked in."); loadCheckinVols(); }
+    catch (e2) { toast("Couldn't check them in. Try again."); }
+  });
+}
+/* Keep the count and roster current while this screen is open, every 20s - same idea as the Ops polling above. */
+setInterval(() => {
+  if (document.hidden || $("v-checkin").hidden) return;
+  if (CI_VIEW === "guests") ciLoadCount(); else loadCheckinVols();
+}, 20000);
+
 if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.ops) TABS.push(["ops", "Operations"]);
@@ -3980,19 +4194,26 @@ function vWireOrient(box) {
   try { k = new URLSearchParams(location.search).get("k") || ""; } catch (e) {}
   try { if (k) localStorage.setItem("reupHubKey", k); else k = localStorage.getItem("reupHubKey") || ""; } catch (e) {}
   if (!k) {
-    /* No link on this phone (for example a home screen icon saved without it): let the person paste it once. */
     var b0 = document.getElementById("boot");
     b0.innerHTML = '<div style="max-width:340px;display:grid;gap:12px;text-align:left">' +
-      '<p style="margin:0">The ReUp Hub opens from your own personal link. Paste it here once and this phone will remember it.</p>' +
-      '<input id="klink" type="url" inputmode="url" autocomplete="off" placeholder="Paste your Hub link" style="font:inherit;padding:12px;border-radius:10px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:48px">' +
-      '<button class="btn" type="button" id="kgo">Open the Hub</button>' +
-      '<p id="kmsg" style="margin:0;font-size:14px;opacity:.8">No link? Ask Dasia for yours.</p></div>';
-    document.getElementById("kgo").onclick = function () {
-      var v = String(document.getElementById("klink").value || "").trim(), m = v.match(/[?&]k=([A-Za-z0-9_\-]{8,64})/) || v.match(/^([A-Za-z0-9_\-]{12,64})$/);
-      if (!m) { document.getElementById("kmsg").textContent = "That doesn't look like a Hub link. It ends with ?k= and a code."; return; }
-      try { localStorage.setItem("reupHubKey", m[1]); } catch (e) {}
-      location.replace(location.pathname + "?k=" + encodeURIComponent(m[1]));
+      '<p style="margin:0">Sign in to the ReUp Hub.</p>' +
+      '<input id="siEmail" type="email" inputmode="email" autocomplete="email" placeholder="Email" style="font:inherit;padding:12px;border-radius:10px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:48px">' +
+      '<input id="siPass" type="password" autocomplete="current-password" placeholder="Password" style="font:inherit;padding:12px;border-radius:10px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:48px">' +
+      '<button class="btn" type="button" id="siGo">Sign in</button>' +
+      '<p id="siMsg" style="margin:0;font-size:14px;opacity:.85"></p>' +
+      '<p style="margin:0;font-size:14px"><a href="reset.html" style="color:#F3D9A0">Forgot your password?</a></p></div>';
+    document.getElementById("siGo").onclick = function () {
+      var email = String(document.getElementById("siEmail").value || "").trim(), pass = document.getElementById("siPass").value,
+        msg = document.getElementById("siMsg"), btn = document.getElementById("siGo");
+      if (!email || !pass) { msg.textContent = "Enter your email and password."; return; }
+      btn.disabled = true; msg.textContent = "Checking\u2026";
+      window.api("authLogin", [email, pass]).then(function (r) {
+        if (!r || !r.ok) { msg.textContent = (r && r.msg) || "That didn't work."; btn.disabled = false; return; }
+        try { localStorage.setItem("reupHubKey", r.key); localStorage.setItem("reupHubTok_" + r.key, r.token); } catch (e) {}
+        location.replace(location.pathname + "?k=" + encodeURIComponent(r.key));
+      }).catch(function () { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; });
     };
+    document.getElementById("siPass").addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("siGo").click(); });
     return;
   }
   /* Home screen app: a manifest that opens this person's own link. */
