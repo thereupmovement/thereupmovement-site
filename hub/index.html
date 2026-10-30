@@ -895,8 +895,10 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 /* Overview's rule rows have no number icon (unlike the event-day checklists), so they shouldn't reserve the 28px icon column - that was squeezing titles into a sliver and wrapping them one word per line. */
 #leadover .rule{grid-template-columns:minmax(0,1fr)}
 /* The Overview cards were touching with no gap between them (one long, cramped column). Grid with a gap gives them real breathing room at every width, and the column count just changes at wider breakpoints below. */
-#leadover{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
-#leadover>h2,#leadover>p{grid-column:1/-1}
+#leadover{display:block}
+.lo-grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:12px}
+#workseg{grid-template-columns:repeat(3,1fr)}
+#workseg button{font-size:14px;padding:10px 6px}
 /* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
 #leadover .rule[data-openwork]{cursor:pointer}
 #leadover .rule[data-openwork]:hover{background:var(--surface2,rgba(0,0,0,.03))}
@@ -925,12 +927,12 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
   .spots{grid-template-columns:repeat(3,minmax(0,1fr))}
   .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .qa{grid-template-columns:repeat(4,minmax(0,1fr))}
-  #leadover{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (min-width:1080px){
   .wrap{max-width:1120px}
   .tabs .in{max-width:1120px}
-  #leadover{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .lo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 </style>
 </head>
@@ -1708,6 +1710,7 @@ function fillTask(keep) {
 /* ============ WORK: everyday tasks for the whole team ============ */
 let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
+try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team") workView = wv0; } catch (e) {}
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const LBL = x => x === "Ops" ? "Operations" : x;
@@ -1862,11 +1865,16 @@ function drawWork() {
   const W = WORK, box = $("work");
   if (!W) return;
   const me = W.me, all = W.tasks || [];
-  let html = `<div class="seg" role="group" aria-label="Work view">
+  let html = `<div class="seg" id="workseg" role="group" aria-label="Work view">
       <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
+      <button type="button" data-wv="overview" aria-pressed="${workView === "overview"}">Overview</button>
       <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button></div>`;
   if (W.canManage && !W.unlocked && !W.stale) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
-  if (workView === "mine") {
+  if (workView === "overview") {
+    /* The same overview leaders see, for everyone: what's stuck, late, finished (and whether anything was turned in), and what's coming. */
+    html += `<div class="whello"><h2>Team overview</h2><p class="small">What's stuck, what's late, what just got finished and whether anything was turned in with it. Tap any task to open it.</p></div>
+      <div class="lo-grid">${overviewCards()}</div>`;
+  } else if (workView === "mine") {
     const mine = all.filter(t => t.owners.includes(me));
     const open = mine.filter(wOpen).sort(wSort);
     /* Sorted by what needs attention first. Tasks that open later wait in their own fold until their date. */
@@ -1947,7 +1955,8 @@ function drawWork() {
   drawHomeWork();
   drawActivity();
   try { if ($("leadover") && !$("leadover").hidden) drawOverview(); } catch (e) {}
-  box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; drawWork(); }));
+  box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; try { localStorage.setItem("reupHubWorkView", workView); } catch (e) {} drawWork(); }));
+  if (workView === "overview") bindOverview(box, true); /* task rows are already wired to open below */
   box.querySelectorAll("[data-wunlock]").forEach(b => b.addEventListener("click", () => { if (TOK) loadWork(); else go("goals"); }));
   box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
   box.querySelectorAll("[data-wp]").forEach(b => b.addEventListener("click", () => { workPerson = workPerson === b.dataset.wp ? null : b.dataset.wp; drawWork(); }));
@@ -3441,9 +3450,9 @@ function wDoneRow(t, sub) {
 /* Overview: built on this phone from what the Hub already has open - the live Work list, the Schedule,
    Operations and the receipts count - instead of a separate server report. So it opens instantly, and a
    status change on the Work tab shows here the moment it happens (they read the same list). */
-function drawOverview() {
-  const box = $("leadover"); if (!box) return;
-  if (!WORK) { box.innerHTML = `<p class="lead">Loading...</p>`; return; }
+/* The overview cards, shared by Work (everyone on the team) and Leadership. Each card only appears for people
+   who can open what it points to: requests and inventory for Operations, approvals for Janay and Dasia. */
+function overviewCards() {
   const all = WORK.tasks || [];
   const recent = all.filter(t => wRecentDone(t, 14) && !t.goal).sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)));
   const stuck = all.filter(t => wOpen(t) && t.status === "stuck").sort(wSort);
@@ -3458,20 +3467,28 @@ function drawOverview() {
   const pick = inv && Array.isArray(inv.pickups) ? inv.pickups.filter(p => p.unlogged || (!p.rows && !/same day|not stored/i.test(p.where || ""))).length : 0;
   const rows = (list, max) => list.slice(0, max).map(t => wrow(t)).join("") + (list.length > max ? `<p class="small" style="margin:6px 2px 0">And ${list.length - max} more on the Work tab.</p>` : "");
   const card = (title, n, body, cls) => `<section class="card locard${cls ? " " + cls : ""}"><h3 class="area">${title}${n === null ? "" : `<span>${n}</span>`}</h3>${body}</section>`;
-  box.innerHTML = `<h2>Overview</h2>
-    <p class="small" style="margin:-4px 0 4px">Everything that needs your eyes, in one place. It reads the same list as the Work tab, so it is always current.</p>
-    ${card("Stuck", stuck.length, stuck.length ? `<div class="wrows">${rows(stuck, 6)}</div>` : `<p class="lead">Nobody is stuck right now.</p>`, stuck.length ? "lo-bad" : "")}
+  return `${card("Stuck", stuck.length, stuck.length ? `<div class="wrows">${rows(stuck, 6)}</div>` : `<p class="lead">Nobody is stuck right now.</p>`, stuck.length ? "lo-bad" : "")}
     ${card("Late", late.length, late.length ? `<div class="wrows">${rows(late, 6)}</div>` : `<p class="lead">Nothing is late.</p>`, late.length ? "lo-bad" : "")}
     ${card("Finished in the last 2 weeks", recent.length, recent.length ? `${noFile ? `<p class="small" style="margin:0 2px 6px">${plural(noFile, "task")} marked done with no file attached. Tap one to check the work.</p>` : ""}<div class="wrows">${recent.slice(0, 8).map(t => wDoneRow(t)).join("")}</div>${recent.length > 8 ? `<p class="small" style="margin:6px 2px 0">And ${recent.length - 8} more. See Work, then Teams.</p>` : ""}` : `<p class="lead">Nothing finished in the last two weeks.</p>`)}
-    ${card("Needs a decision", decide.length, decide.length ? `<div class="wrows">${rows(decide, 6)}</div>` : `<p class="lead">Nothing waiting on a decision.</p>`)}
+    ${!BOOT.leader ? "" : card("Needs a decision", decide.length, decide.length ? `<div class="wrows">${rows(decide, 6)}</div>` : `<p class="lead">Nothing waiting on a decision.</p>`)}
     ${card("Next 30 days", next.length, next.length ? `<div class="wrows">${next.slice(0, 6).map(e => `<div class="wrow wdone lo-ev"><span class="wrname">${esc(e.name || "Event")}</span><span class="wrmeta"><span class="wdue">${esc(dt(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}${e.place ? " · " + esc(e.place) : ""}</span></span></div>`).join("")}</div>` : `<p class="lead">Nothing on the Schedule in the next 30 days.</p>`)}
     ${BOOT.ops ? card("Community requests", lst ? reqNew + reqOut : null, lst ? `<p class="lead">${reqNew ? `<b>${reqNew}</b> new, nobody has called yet. ` : ""}${reqOut ? `<b>${reqOut}</b> reached out, waiting to be filled.` : ""}${!reqNew && !reqOut ? "Every request has been filled or closed." : ""}</p><button type="button" class="btn ghost" data-logo="ops" style="width:100%;margin-top:8px">Open requests</button>` : `<p class="lead">Loading...</p>`) : ""}
     ${BOOT.ops ? card("Inventory", null, inv ? `<div class="tnums lo-nums"><div><b>${(+oh.units || 0).toLocaleString()}</b><span>units in storage</span></div><div><b>${items.length}</b><span>kinds of item</span></div><div class="${pick ? "bad" : ""}"><b>${pick}</b><span>pickups to sort</span></div></div><button type="button" class="btn ghost" data-logo="inv" style="width:100%;margin-top:8px">Open inventory</button>` : OPS ? `<p class="lead">No inventory to show yet.</p>` : `<p class="lead">Loading...</p>`) : ""}
-    ${(+BOOT.rc) >= 0 ? card("Receipts and trips to approve", +BOOT.rc || 0, `<p class="lead">${(+BOOT.rc) > 0 ? "Waiting for Janay or Dasia." : "Nothing waiting."}</p>`) : ""}
-    <p class="small" style="margin-top:4px;grid-column:1/-1">Goals and grant readiness in full detail are on the <a href="#" id="loGoalsLink" style="color:inherit;text-decoration:underline">Goals tab</a>.</p>`;
-  const link = $("loGoalsLink"); if (link) link.addEventListener("click", e => { e.preventDefault(); setLeadView("goals"); });
-  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openOverviewWork(b.dataset.work)));
+    ${(+BOOT.rc) >= 0 ? card("Receipts and trips to approve", +BOOT.rc || 0, `<p class="lead">${(+BOOT.rc) > 0 ? "Waiting for Janay or Dasia." : "Nothing waiting."}</p>`) : ""}`;
+}
+function bindOverview(box, rowsBound) {
+  if (!rowsBound) box.querySelectorAll(".lo-grid [data-work]").forEach(b => b.addEventListener("click", () => openOverviewWork(b.dataset.work)));
   box.querySelectorAll("[data-logo]").forEach(b => b.addEventListener("click", () => { if (b.dataset.logo === "inv") opsView = "storage"; else { opsView = "requests"; opsFilter = "open"; } go("ops"); }));
+}
+function drawOverview() {
+  const box = $("leadover"); if (!box) return;
+  if (!WORK) { box.innerHTML = `<p class="lead">Loading...</p>`; return; }
+  box.innerHTML = `<h2>Overview</h2>
+    <p class="small" style="margin:-4px 0 4px">Everything that needs your eyes, in one place. The whole team sees this same view on the Work tab, under Overview.</p>
+    <div class="lo-grid">${overviewCards()}</div>
+    <p class="small" style="margin-top:4px">Goals and grant readiness in full detail are on the <a href="#" id="loGoalsLink" style="color:inherit;text-decoration:underline">Goals tab</a>.</p>`;
+  const link = $("loGoalsLink"); if (link) link.addEventListener("click", e => { e.preventDefault(); setLeadView("goals"); });
+  bindOverview(box);
 }
 function openLeader(tab, force) {
   if (!TOK) { pinCard(tab); return; }
@@ -4420,7 +4437,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261029220000";
+  var BUILD = "20261029223000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
