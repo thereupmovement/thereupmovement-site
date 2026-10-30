@@ -159,10 +159,19 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
   /* A returning volunteer counts as oriented, so their quarterly refresher applies from day one. */
   function norm(r) { if (r && r.refresher && r.orientation && !r.orientation.isNew) r.refresher.needed = true; return r; }
   /* A sign-in or a set-password link both end here: we have a fresh code, so load the page with it. */
+  /* The page shows the copy saved on this phone right away, then swaps in the fresh one when the server
+     answers (that takes a few seconds), so returning volunteers never sit on a spinner. It is only their own page. */
+  var VK = "reupVolView";
   function enter(newCode) {
     code = newCode;
     try { localStorage.setItem("reupVolCode", code); } catch (e) {}
-    api("vpGet", [code]).then(function (r) { if (!r || !r.ok) return lost(); V = norm(r); draw(); }, function () {
+    try { var c = JSON.parse(localStorage.getItem(VK) || "null"); if (c && c.code === code && c.v && c.v.me) { V = norm(c.v); draw(); } } catch (e) {}
+    api("vpGet", [code]).then(function (r) {
+      if (!r || !r.ok) { try { localStorage.removeItem(VK); } catch (e) {} V = null; return lost(); }
+      if (busy) return; /* a tap is saving right now; its own answer redraws the page */
+      V = norm(r); draw();
+    }, function () {
+      if (V) { say("Showing your saved page. Can't reach ReUp right now."); return; }
       $("#main").innerHTML = '<div class="center"><h1>Can\'t reach ReUp right now</h1><p class="lede">Check your connection and try again.</p><button type="button" class="btn brand" onclick="location.reload()">Try again</button></div>';
     });
   }
@@ -376,6 +385,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
 
   function draw() {
     if (!V) return;
+    try { localStorage.setItem(VK, JSON.stringify({ code: code, v: V })); } catch (e) {}
     $("#nav").hidden = false;
     var b = $("#me"); b.hidden = false;
     b.textContent = String(V.me.name || "").trim().split(/\s+/).map(function (w) { return w[0] || ""; }).join("").slice(0, 2).toUpperCase() || "Me";
