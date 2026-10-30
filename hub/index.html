@@ -891,6 +891,23 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .formgrid{display:grid;gap:10px;margin:10px 0}
 .formgrid label{display:block;font-size:13px;opacity:.85}
 .formgrid input{display:block;width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:44px;margin-top:4px}
+
+/* Tablet and desktop: the phone layout stays, it just gets more room so it isn't a narrow strip floating in a wide window. No sideways scrolling at any width. */
+@media (min-width:760px){
+  .wrap{max-width:900px}
+  .tabs .in{max-width:900px}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .spots{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .qa{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #leadover{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+  #leadover>h2,#leadover>p{grid-column:1/-1}
+}
+@media (min-width:1080px){
+  .wrap{max-width:1120px}
+  .tabs .in{max-width:1120px}
+  #leadover{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
