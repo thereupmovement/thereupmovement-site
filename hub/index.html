@@ -892,6 +892,9 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .formgrid label{display:block;font-size:13px;opacity:.85}
 .formgrid input{display:block;width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:44px;margin-top:4px}
 
+/* Overview's rule rows have no number icon (unlike the event-day checklists), so they shouldn't reserve the 28px icon column - that was squeezing titles into a sliver and wrapping them one word per line. */
+#leadover .rule{grid-template-columns:minmax(0,1fr)}
+
 /* Tablet and desktop: the phone layout stays, it just gets more room so it isn't a narrow strip floating in a wide window. No sideways scrolling at any width. */
 @media (min-width:760px){
   .wrap{max-width:900px}
