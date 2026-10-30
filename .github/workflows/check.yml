@@ -1,0 +1,26 @@
+# Runs on every change to the site. A red X on the change in GitHub means something below failed;
+# open it to read the plain-language message. See MAINTAINING.md.
+name: Check pages
+on:
+  push:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pages load without script errors, and the Hub build number matches
+        run: node .github/check-pages.js
+      - name: A Hub change raised the build number (so open phones reload)
+        if: github.event_name == 'push'
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -qx 'hub/index.html' && ! git diff --name-only HEAD~1 HEAD | grep -qx 'hub/version.json'; then
+            echo "hub/index.html changed but hub/version.json did not. Raise the build number in both (MAINTAINING.md, 'Publishing a change')."
+            exit 1
+          fi
+          echo "ok"
