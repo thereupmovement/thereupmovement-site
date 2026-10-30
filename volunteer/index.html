@@ -158,19 +158,41 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
 
   /* A returning volunteer counts as oriented, so their quarterly refresher applies from day one. */
   function norm(r) { if (r && r.refresher && r.orientation && !r.orientation.isNew) r.refresher.needed = true; return r; }
+  /* A sign-in or a set-password link both end here: we have a fresh code, so load the page with it. */
+  function enter(newCode) {
+    code = newCode;
+    try { localStorage.setItem("reupVolCode", code); } catch (e) {}
+    api("vpGet", [code]).then(function (r) { if (!r || !r.ok) return lost(); V = norm(r); draw(); }, function () {
+      $("#main").innerHTML = '<div class="center"><h1>Can\'t reach ReUp right now</h1><p class="lede">Check your connection and try again.</p><button type="button" class="btn brand" onclick="location.reload()">Try again</button></div>';
+    });
+  }
   function lost() {
     $("#nav").hidden = true; $("#me").hidden = true;
-    $("#main").innerHTML = '<div class="center"><h1>Find your volunteer page</h1>' +
-      '<p class="lede">Your page opens from the link in your ReUp confirmation email. Lost it? Put in the email you signed up with and we will send it again.</p>' +
-      '<label class="f">Your email<input id="lm" type="email" autocomplete="email" inputmode="email"></label>' +
-      '<button type="button" class="btn brand" id="ls">Email me my link</button>' +
+    $("#main").innerHTML = '<div class="center"><h1>Sign in</h1>' +
+      '<p class="lede">Use the email and password you set up with ReUp.</p>' +
+      '<label class="f">Email<input id="le" type="email" autocomplete="email" inputmode="email"></label>' +
+      '<label class="f">Password<input id="lp" type="password" autocomplete="current-password"></label>' +
+      '<button type="button" class="btn brand" id="lsin">Sign in</button>' +
+      '<p class="small"><a href="#" id="lforgot">Forgot your password, or never set one up?</a></p>' +
+      '<p class="small">Still have your old email link? Just open it and you\'re in, same as always.</p>' +
       '<p class="small">Not signed up yet? <a href="../#volunteer">Sign up to volunteer</a>.</p></div>';
-    $("#ls").onclick = function () {
-      var m = $("#lm").value.trim(), b = this;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)) { say("Add the email you signed up with."); $("#lm").focus(); return; }
+    $("#lsin").onclick = function () {
+      var em = $("#le").value.trim(), pw = $("#lp").value, b = this;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { say("Add the email you signed up with."); $("#le").focus(); return; }
+      if (!pw) { say("Add your password."); $("#lp").focus(); return; }
       b.disabled = true;
-      api("vpSendLink", [m]).then(function () { b.disabled = false; say("If that email is on our list, your link is on its way. Check your inbox and spam."); },
-        function () { b.disabled = false; say("That didn't go through. Try again in a moment."); });
+      api("vpAuthLogin", [em, pw]).then(function (r) {
+        b.disabled = false;
+        if (r && r.ok) return enter(r.code);
+        say((r && r.msg) || "That didn't work. Try again.");
+      }, function () { b.disabled = false; say("That didn't go through. Try again in a moment."); });
+    };
+    $("#lforgot").onclick = function (e) {
+      e.preventDefault();
+      var em = ($("#le").value || "").trim(), b = this;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { say("Put your email in the box above first."); $("#le").focus(); return; }
+      api("vpAuthResend", [em]).then(function (r) { say((r && r.msg) || "If that email is on our list, a link is on its way."); },
+        function () { say("That didn't go through. Try again in a moment."); });
     };
   }
 
@@ -392,9 +414,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
   $("#me").onclick = function () { go("me"); };
 
   if (!code) return lost();
-  api("vpGet", [code]).then(function (r) { if (!r || !r.ok) return lost(); V = norm(r); draw(); }, function () {
-    $("#main").innerHTML = '<div class="center"><h1>Can\'t reach ReUp right now</h1><p class="lede">Check your connection and try again.</p><button type="button" class="btn brand" onclick="location.reload()">Try again</button></div>';
-  });
+  enter(code);
 })();
 </script>
 </body>
