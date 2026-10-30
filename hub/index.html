@@ -3362,9 +3362,11 @@ function loField_(v) {
 }
 function drawOverview(d) {
   const box = $("leadover"); if (!box) return;
-  const dn = d.decisionsNeeded || [], next = d.next30Days || [], cr = d.communityRequests || [];
+  const dn = d.decisionsNeeded || [], next = d.next30Days || [], cr = d.communityRequests || [], rd = d.recentlyDone || [];
   box.innerHTML = `<h2>Overview</h2>
     <p class="small" style="margin:-4px 0 10px">Everything that needs your eyes, in one place. Updated ${d.generatedAt ? ago(d.generatedAt) : "just now"}.</p>
+    <div class="card"><h3 class="area">Recently completed<span>${rd.length}</span></h3>
+      ${rd.length ? rd.map(w => `<div class="rule"><div><b>${esc(w.title || "Task")}</b><span>${esc(w.owners || "")}${w.doneAt ? " · " + ago(w.doneAt) : ""}</span></div></div>`).join("") : `<p class="lead">Nothing finished in the last two weeks.</p>`}</div>
     <div class="card"><h3 class="area">Needs a decision<span>${dn.length}</span></h3>
       ${dn.length ? dn.map(g => `<div class="rule"><div><b>${esc(g.title || g.id || "Untitled")}</b><span>${esc(g.status || "")}</span></div></div>`).join("") : `<p class="lead">Nothing waiting on a decision right now.</p>`}</div>
     <div class="card"><h3 class="area">Next 30 days<span>${next.length}</span></h3>
