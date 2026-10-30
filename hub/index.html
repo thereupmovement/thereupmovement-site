@@ -894,6 +894,15 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
 /* Overview's rule rows have no number icon (unlike the event-day checklists), so they shouldn't reserve the 28px icon column - that was squeezing titles into a sliver and wrapping them one word per line. */
 #leadover .rule{grid-template-columns:minmax(0,1fr)}
+/* The Overview cards were touching with no gap between them (one long, cramped column). Grid with a gap gives them real breathing room at every width, and the column count just changes at wider breakpoints below. */
+#leadover{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
+#leadover>h2,#leadover>p{grid-column:1/-1}
+/* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
+#leadover .rule[data-openwork]{cursor:pointer}
+#leadover .rule[data-openwork]:hover{background:var(--surface2,rgba(0,0,0,.03))}
+/* The Leadership section has three tabs (Overview / Goals / Team activity), not the two the shared .seg toggle was built for - at 1fr 1fr it left the third button alone on its own half-width row. */
+#leadseg{grid-template-columns:repeat(3,1fr)}
+#leadseg button{font-size:14px;padding:10px 6px}
 
 /* Tablet and desktop: the phone layout stays, it just gets more room so it isn't a narrow strip floating in a wide window. No sideways scrolling at any width. */
 @media (min-width:760px){
@@ -903,8 +912,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
   .spots{grid-template-columns:repeat(3,minmax(0,1fr))}
   .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
   .qa{grid-template-columns:repeat(4,minmax(0,1fr))}
-  #leadover{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-  #leadover>h2,#leadover>p{grid-column:1/-1}
+  #leadover{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (min-width:1080px){
   .wrap{max-width:1120px}
@@ -1016,7 +1024,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-goals" hidden>
       <div class="banner" data-cover="goals"><div><h2>Leadership</h2><p>Where ReUp stands on its goals, and how the team is moving.</p></div></div>
-      <div class="seg" role="group" aria-label="Leadership section"><button type="button" data-lv="overview" aria-pressed="true">Overview</button><button type="button" data-lv="goals" aria-pressed="false">Goals</button><button type="button" data-lv="team" aria-pressed="false">Team activity</button></div>
+      <div class="seg" id="leadseg" role="group" aria-label="Leadership section"><button type="button" data-lv="overview" aria-pressed="true">Overview</button><button type="button" data-lv="goals" aria-pressed="false">Goals</button><button type="button" data-lv="team" aria-pressed="false">Team activity</button></div>
       <div id="leadover" hidden><p class="lead">Loading...</p></div>
       <div id="activity" hidden></div>
       <div id="leaders"><p class="lead">Loading...</p></div>
@@ -3374,11 +3382,26 @@ async function loadGoals() {
   catch (e) { if (isAuth(e)) relock(); else if (!goalsAt) $("leaders").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
   goalsLoading = false;
 }
-function loField_(v) {
-  if (v == null) return "";
+function loField_(v, depth) {
+  depth = depth || 0;
+  if (v == null || v === "") return "";
   if (Array.isArray(v)) return v.length + (v.length === 1 ? " item" : " items");
-  if (typeof v === "object") { const keys = Object.keys(v); return keys.length ? keys.map(k => esc(k) + ": " + esc(String(v[k]))).join(", ") : "none"; }
+  if (typeof v === "object") {
+    const keys = Object.keys(v);
+    if (!keys.length) return "none";
+    /* One level of nesting reads fine as "label: value" pairs. Past that, a full dump was printing raw "[object Object]" for things like inventory's pickups/onHand - summarized as a count instead. */
+    if (depth >= 1) return keys.length + (keys.length === 1 ? " field" : " fields");
+    return keys.map(k => esc(k) + ": " + (loField_(v[k], depth + 1) || "none")).join(", ");
+  }
   return esc(String(v));
+}
+/* A row for a finished task or an open decision opens that task's own sheet (same one the Work tab uses), so "where's the document someone uploaded" has an answer: click the row, see Files. */
+function openOverviewWork(id) {
+  if (!id || typeof openWork !== "function") return;
+  const has = () => WORK && (WORK.tasks || []).some(t => t.id === id);
+  if (has()) { openWork(id); return; }
+  if (typeof loadWork === "function") loadWork().then(() => openWork(id));
+  else openWork(id);
 }
 function drawOverview(d) {
   const box = $("leadover"); if (!box) return;
@@ -3386,9 +3409,9 @@ function drawOverview(d) {
   box.innerHTML = `<h2>Overview</h2>
     <p class="small" style="margin:-4px 0 10px">Everything that needs your eyes, in one place. Updated ${d.generatedAt ? ago(d.generatedAt) : "just now"}.</p>
     <div class="card"><h3 class="area">Recently completed<span>${rd.length}</span></h3>
-      ${rd.length ? rd.map(w => `<div class="rule"><div><b>${esc(w.title || "Task")}</b><span>${esc(w.owners || "")}${w.doneAt ? " · " + ago(w.doneAt) : ""}</span></div></div>`).join("") : `<p class="lead">Nothing finished in the last two weeks.</p>`}</div>
+      ${rd.length ? rd.map(w => `<div class="rule" data-openwork="${esc(w.id || "")}" role="button" tabindex="0" aria-label="Open ${esc(w.title || "task")}"><div><b>${esc(w.title || "Task")}</b><span>${esc(w.owners || "")}${w.doneAt ? " · " + ago(w.doneAt) : ""}</span></div></div>`).join("") : `<p class="lead">Nothing finished in the last two weeks.</p>`}</div>
     <div class="card"><h3 class="area">Needs a decision<span>${dn.length}</span></h3>
-      ${dn.length ? dn.map(g => `<div class="rule"><div><b>${esc(g.title || g.id || "Untitled")}</b><span>${esc(g.status || "")}</span></div></div>`).join("") : `<p class="lead">Nothing waiting on a decision right now.</p>`}</div>
+      ${dn.length ? dn.map(g => `<div class="rule" data-openwork="${esc(g.id || "")}" role="button" tabindex="0" aria-label="Open ${esc(g.title || g.id || "decision")}"><div><b>${esc(g.title || g.id || "Untitled")}</b><span>${esc(g.status || "")}</span></div></div>`).join("") : `<p class="lead">Nothing waiting on a decision right now.</p>`}</div>
     <div class="card"><h3 class="area">Next 30 days<span>${next.length}</span></h3>
       ${next.length ? next.map(e => `<div class="rule"><div><b>${esc(e.name || e.title || "Event")}</b><span>${esc(e.date || e.when || "")}${e.place ? " \u00b7 " + esc(e.place) : ""}</span></div></div>`).join("") : `<p class="lead">Nothing on the Schedule in the next 30 days.</p>`}</div>
     <div class="card"><h3 class="area">Community requests<span>${cr.length}</span></h3>
@@ -3399,6 +3422,11 @@ function drawOverview(d) {
     <div class="card"><h3 class="area">Inventory</h3><p class="lead">${loField_(d.inventory) || "Nothing to show yet."}</p></div>
     <p class="small" style="margin-top:4px">Goals and decisions in full detail are on the <a href="#" id="loGoalsLink" style="color:inherit;text-decoration:underline">Goals tab</a>.</p>`;
   const link = $("loGoalsLink"); if (link) link.addEventListener("click", e => { e.preventDefault(); setLeadView("goals"); });
+  box.querySelectorAll("[data-openwork]").forEach(row => {
+    const id = row.dataset.openwork; if (!id) return;
+    row.addEventListener("click", () => openOverviewWork(id));
+    row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOverviewWork(id); } });
+  });
 }
 async function loadOverview() {
   if (!$("leadover")) return;
