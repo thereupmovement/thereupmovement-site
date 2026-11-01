@@ -71,6 +71,15 @@ the check-in roster uses row numbers for this reason.
 owners and helpers and the uploader (Leaders, for Goals), by the email on their Access row
 (`shareUpload_` in Code.gs). `shareOldUploads` re-runs that for every file already on the Files tab.
 
+**Event close-out and the counts:** after a Distribution or Event, a leader or anyone on the Events team
+saves its numbers in the Hub ("Close out", on Home or on the event). One row per event goes on the
+**Results** tab of the Hub sheet (`closeoutGet`, `closeoutSave` in Code.gs). The Hub's Home households
+count (this quarter) and the website's "Year to date" Houston households and people (this year) are sums
+of that tab, so a close-out shows everywhere within seconds and the year resets itself on January 1. A
+row typed in by hand (date as yyyy-mm-dd) counts too; the 2026-10-26 row holds the numbers from before
+close-outs existed. The website's goods value and Belize City figures are still written in `index.html`
+(`YEAR_TOTALS`) and change only by editing it.
+
 **Logs:** every request writes its name, time taken and any error to Executions in the Apps Script
 editor (`doPost` in Code.gs). Start there when a screen is slow or fails.
 
