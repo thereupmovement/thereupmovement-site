@@ -4472,7 +4472,7 @@ function vWireOrient(box) {
     }, function () { note("The Hub couldn't load. Check your connection.", true); });
   }
   function launch(r) {
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), closer: !!r.closer, pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
     var b = document.getElementById("boot"); if (b) b.remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -4488,7 +4488,7 @@ function vWireOrient(box) {
       window.__startSeen = { at: Date.now(), ok: !!(r && r.ok), events: r && r.home && r.home.events ? r.home.events.length : -1 };
       if (!r || !r.ok) { closed(r); return; }
       keep(r);
-      var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol"].some(function (f) { return !!r[f] !== !!cached[f]; });
+      var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol", "closer"].some(function (f) { return !!r[f] !== !!cached[f]; });
       if (changed) { location.reload(); return; }
       window.BOOT.pinSet = !!r.pinSet;
       window.BOOT.rc = typeof r.rc === "number" ? r.rc : -1; if (window.__rcRefresh) window.__rcRefresh();
@@ -4507,7 +4507,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261031200000";
+  var BUILD = "20261031201500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
