@@ -1093,6 +1093,8 @@ const VOLUNTEER_FORM = (FORMS.find(f => f.title === "Sign up for an event") || {
 /* ============ HELPERS ============ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/* Links typed in by admins (forms, meetings) only open if they are real web addresses. */
+const safeUrl = u => /^https:\/\//i.test(String(u || "")) ? esc(u) : "#";
 const dt = d => new Date(d + "T12:00:00");
 const today = (() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; })();
 const daysAway = d => Math.round((dt(d) - today - 12 * 3600e3) / 864e5);
@@ -1224,7 +1226,7 @@ function openForm(f) {
       <div class="fact"><span>Who</span><div>${esc(f.who)}</div></div>
     </div>
     <div class="btns">
-      <a class="btn" href="${f.url}" target="_blank" rel="noopener">${f.group === "Share" ? "Open the page" : "Open the form"}</a>
+      <a class="btn" href="${safeUrl(f.url)}" target="_blank" rel="noopener">${f.group === "Share" ? "Open the page" : "Open the form"}</a>
       ${f.share ? `<button class="btn ghost" type="button" id="copyLink">Copy link to send</button>` : ""}
       <button class="btn ghost" type="button" data-close>Close</button>
     </div>
@@ -1252,7 +1254,7 @@ function drawMeetings() {
     const time = next.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
     const when = add === 0 ? `Today at ${time}` : add === 1 ? `Tomorrow at ${time}` : `${dayName}, ${next.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${time}`;
     return `<div class="meet"><div><div class="t">${esc(m.name)}</div><div class="s">Every ${dayName} at ${time} &middot; ${m.length}</div><div class="s"><b>Next:</b> ${when}</div></div>
-      <a class="join" href="${m.url}" target="_blank" rel="noopener">${live ? "Join now" : "Join"}</a></div>`;
+      <a class="join" href="${safeUrl(m.url)}" target="_blank" rel="noopener">${live ? "Join now" : "Join"}</a></div>`;
   }).join("");
 }
 
@@ -2379,12 +2381,14 @@ function openMore() {
 }
 /* Sign out: forget this person's link, unlock and saved copies on this device, then show the sign-in screen. */
 function signOutAsk() {
+  const waiting = ciQueue().length;
   openSheet(`<div class="k">Sign out</div><h3 id="sheetTitle">Sign out on this device?</h3>
-    <p class="small">You'll need your Hub link from your email to get back in.</p>
+    ${waiting ? `<p class="small"><b>${waiting} ${waiting === 1 ? "check-in has" : "check-ins have"} not synced yet.</b> Signing out deletes ${waiting === 1 ? "it" : "them"} from this device. Wait for a signal first if you can.</p>` : ""}
+    <p class="small">To get back in, sign in with your email and password, or open your Hub link.</p>
     <div class="btns"><button class="btn" type="button" id="outyes">Sign out</button><button class="btn ghost" type="button" id="outno">Cancel</button></div>`);
   $("outno").addEventListener("click", () => sheet.close());
   $("outyes").addEventListener("click", () => {
-    try { Object.keys(localStorage).filter(x => /^reupHub/.test(x) || x === TOKK).forEach(x => localStorage.removeItem(x)); } catch (e) {}
+    try { Object.keys(localStorage).filter(x => /^reupHub/.test(x) || /^reupCheckin/.test(x) || x === TOKK).forEach(x => localStorage.removeItem(x)); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     location.replace(location.pathname);
   });
@@ -3524,8 +3528,14 @@ async function ciFlush() {
   while (true) {
     const cur = ciQueue();
     if (!cur.length) break;
-    try { await run(cur[0].fn, ...cur[0].args); cur.shift(); ciQueueSave(cur); }
-    catch (e) { break; } /* offline or server hiccup: stop, the interval below retries */
+    try { await run(cur[0].fn, KEY, ...cur[0].args); cur.shift(); ciQueueSave(cur); }
+    catch (e) {
+      /* Offline, a server hiccup or the PIN screen: stop, the interval below retries.
+         Any other answer (the server turned this one down) would block the line forever, so drop it. */
+      const m = String((e && e.message) || e);
+      if (e instanceof TypeError || m === "pin" || /network|fetch|load failed|timed? ?out/i.test(m)) break;
+      cur.shift(); ciQueueSave(cur);
+    }
   }
   ciFlushing = false;
   ciUpdatePending();
@@ -3577,7 +3587,7 @@ function ciDrawGuests() {
 }
 async function ciLoadCount() {
   if (!CI_EVENT) return;
-  try { CI_COUNT = await run("ciLiveCount", CI_EVENT); const el = $("ciCountNum"); if (el) el.textContent = CI_COUNT; } catch (e) {}
+  try { CI_COUNT = await run("ciLiveCount", KEY, CI_EVENT); const el = $("ciCountNum"); if (el) el.textContent = CI_COUNT; } catch (e) {}
 }
 function ciOpenGuestSheet() {
   openSheet(`<div class="k">Check-in</div><h3 id="sheetTitle">New guest</h3>
@@ -3618,7 +3628,7 @@ function ciOpenPaperSheet() {
       firstName: (document.querySelector(`[data-pf="${i}"]`) || {}).value || "",
       householdSize: (document.querySelector(`[data-ph="${i}"]`) || {}).value || "",
       zip: (document.querySelector(`[data-pz="${i}"]`) || {}).value || "" }));
-    try { await run("ciPaperBackup", entries, BOOT.name); sheet.close(); toast("Saved " + entries.length + " from paper."); ciLoadCount(); }
+    try { await run("ciPaperBackup", KEY, entries); sheet.close(); toast("Saved " + entries.length + " from paper."); ciLoadCount(); }
     catch (e) { toast("Couldn't save. Try again when you have signal."); }
   });
 }
@@ -3626,20 +3636,20 @@ async function loadCheckinVols() {
   $("ciVols").innerHTML = `<div id="ciVolList"><p class="lead">Loading...</p></div><button class="tbtn" type="button" id="ciWalkinBtn" style="margin-top:10px">Add a walk-in volunteer</button>`;
   $("ciWalkinBtn").addEventListener("click", ciOpenWalkinSheet);
   if (!CI_EVENT) return;
-  try { const list = await run("ciVolunteerRoster", CI_EVENT); ciDrawRoster(list); }
+  try { const list = await run("ciVolunteerRoster", KEY, CI_EVENT); ciDrawRoster(list); }
   catch (e) { $("ciVolList").innerHTML = `<p class="lead">Couldn't load the roster. Try again.</p>`; }
 }
 function ciDrawRoster(list) {
-  $("ciVolList").innerHTML = list.length ? list.map(p => `<button type="button" class="civrow${p.checkedIn ? " on" : ""}" data-civtoggle="${esc(p.key)}">
+  $("ciVolList").innerHTML = list.length ? list.map(p => `<button type="button" class="civrow${p.checkedIn ? " on" : ""}" data-civtoggle="${esc(p.id)}">
       <span>${esc(p.name)}</span><span class="civstate">${p.checkedIn ? "Checked in \u00b7 tap to check out" : "Tap to check in"}</span></button>`).join("")
     : `<p class="lead">No volunteers on the roster yet.</p>`;
   $("ciVolList").querySelectorAll("[data-civtoggle]").forEach(b => b.addEventListener("click", () => ciToggleVol(b.dataset.civtoggle, b)));
 }
-async function ciToggleVol(key, btn) {
+async function ciToggleVol(id, btn) {
   if (CI_BUSY) return;
   CI_BUSY = true; if (btn) btn.disabled = true;
   try {
-    const r = await run("ciVolunteerToggle", CI_EVENT, key, {});
+    const r = await run("ciVolunteerToggle", KEY, CI_EVENT, id, {});
     toast(r.name + (r.action === "checkedIn" ? " checked in." : " checked out."));
     loadCheckinVols();
   } catch (e) { toast("Couldn't save that. Try again."); }
@@ -3656,7 +3666,7 @@ function ciOpenWalkinSheet() {
     e.preventDefault();
     const name = $("ciWalkName").value.trim();
     if (!name || !$("ciWalkRelease").checked) return;
-    try { const r = await run("ciVolunteerToggle", CI_EVENT, "", { name, acceptedRelease: true, walkIn: true }); sheet.close(); toast(r.name + " checked in."); loadCheckinVols(); }
+    try { const r = await run("ciVolunteerToggle", KEY, CI_EVENT, "", { name, acceptedRelease: true, walkIn: true }); sheet.close(); toast(r.name + " checked in."); loadCheckinVols(); }
     catch (e2) { toast("Couldn't check them in. Try again."); }
   });
 }
@@ -4302,6 +4312,12 @@ function vWireOrient(box) {
   var k = "";
   try { k = new URLSearchParams(location.search).get("k") || ""; } catch (e) {}
   try { if (k) localStorage.setItem("reupHubKey", k); else k = localStorage.getItem("reupHubKey") || ""; } catch (e) {}
+  /* The key is saved on this device now, so take it out of the address bar, where screenshots and copied links would show it.
+     iPhones keep it, because a home screen app there saves the page address itself. */
+  try {
+    var ios0 = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (k && !ios0 && location.search && localStorage.getItem("reupHubKey") === k) history.replaceState(null, "", location.pathname + location.hash);
+  } catch (e) {}
   if (!k) {
     var b0 = document.getElementById("boot");
     b0.innerHTML = '<div style="max-width:340px;display:grid;gap:12px;text-align:left">' +
@@ -4437,7 +4453,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261029223000";
+  var BUILD = "20261031180000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

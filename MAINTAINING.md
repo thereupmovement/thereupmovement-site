@@ -62,6 +62,22 @@ check, except names in `TP_OPEN` (the public ones: volunteer page, sign-in). Fil
 Portal.gs are not wrapped, so a Hub function added there must check the PIN itself, and a public one
 should be added to `TP_OPEN` too (volunteer.gs does this).
 
+The PIN check reads the **first argument as the person's key**, so every Hub call sends `KEY` first
+(`run("fn", KEY, ...)`). If the server function itself doesn't need the key, its `API_` entry takes it and
+drops it (see the `ci...` check-in entries in Code.gs). Never send someone's key to the page in a list:
+the check-in roster uses row numbers for this reason.
+
+**Uploaded files** go to the "ReUp Hub uploads" folder and are shared, as viewers, with the task's
+owners and helpers and the uploader (Leaders, for Goals), by the email on their Access row
+(`shareUpload_` in Code.gs). `shareOldUploads` re-runs that for every file already on the Files tab.
+
+**Logs:** every request writes its name, time taken and any error to Executions in the Apps Script
+editor (`doPost` in Code.gs). Start there when a screen is slow or fails.
+
+**Sign-in emails** (reset and setup links, team and volunteers) are limited to one per address per 30
+minutes and 40 an hour in all (`mailOk_` in Code.gs). Sign-in failures give one message whether or not
+the email has an account.
+
 ## The automatic check
 
 `.github/workflows/check.yml` runs `.github/check-pages.js` on every change:
