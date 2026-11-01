@@ -952,7 +952,6 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div id="homeapp"></div>
       <div id="homeinbox"></div>
       <div id="homerc"></div>
-      <div id="homeclose"></div>
       <div id="homework"></div>
       <div id="impactmap"></div>
       <div class="hsec"><h3>Coming up</h3><button class="hlink" type="button" id="toSchedule">Full schedule</button></div>
@@ -1198,12 +1197,11 @@ function openEvent(e) {
       ${e.status !== "tentative" ? `<a class="btn ghost" href="${calLink(e)}" target="_blank" rel="noopener">Add to my calendar</a>` : ""}
       ${e.kind === "Distribution" ? `<button class="btn ghost" type="button" id="toRules">See event-day rules</button>` : ""}
       ${BOOT.work && ["Distribution", "Event"].includes(e.kind) && n === 0 ? `<button class="btn" type="button" id="toCheckin">Open check-in</button>` : ""}
-      ${BOOT.closer && ["Distribution", "Event"].includes(e.kind) && n <= 0 ? `<button class="btn ghost" type="button" id="toClose">Close out this event</button>` : ""}
       <button class="btn ghost" type="button" data-close>Close</button>
     </div>`);
   const r = $("toRules"); if (r) r.addEventListener("click", () => { sheet.close(); go("eventday"); });
   const ck = $("toCheckin"); if (ck) ck.addEventListener("click", () => { sheet.close(); CI_EVENT = e.name + " (" + e.date + ")"; try { localStorage.setItem("reupCheckinEvent", CI_EVENT); } catch (er) {} go("checkin"); });
-  const co = $("toClose"); if (co) co.addEventListener("click", () => openCloseout(e));
+
   wireRsvp(e);
   const su = $("toSignup"); if (su) su.addEventListener("click", () => openSignup({ date: e.date, name: e.name }));
 }
@@ -1296,7 +1294,6 @@ function drawHome() {
   $("edforms").innerHTML = FORMS.filter(f => f.eventday).map(f => `<button class="tile ${f.main ? "main" : ""}" type="button" data-form="${FORMS.indexOf(f)}"><b>${esc(f.title)}</b><span>${esc(f.sub)}</span></button>`).join("");
   wireForms($("edforms"));
   drawRcCard();
-  drawCloseCard();
 }
 
 let kindFilter = "All";
@@ -1529,7 +1526,7 @@ function drawImpact(d) {
         ${people.value ? `<p><span>${esc(people.value)}</span> people served</p>` : ""}
         ${goods.value ? `<p><span>${esc(goods.value)}</span> in goods to families</p>` : ""}
       </div>
-      <div class="sfoot"><span>Counted since October 8. Updates each time an event is closed out.</span>${d.zips ? `<button type="button" id="maptog" aria-expanded="${showMap}">${showMap ? "Hide map" : "Where families live"}</button>` : ""}</div>
+      <div class="sfoot"><span>Counted since October 8. Updates on its own from check-ins and the Item Log.</span>${d.zips ? `<button type="button" id="maptog" aria-expanded="${showMap}">${showMap ? "Hide map" : "Where families live"}</button>` : ""}</div>
     </div>`;
   $("impactmap").innerHTML = d.zips && showMap ? `<div style="margin-top:12px">${zipMap(d.zips, "households")}</div>` : "";
   const mt = $("maptog"); if (mt) mt.addEventListener("click", () => { showMap = !showMap; drawImpact(IMPACT); });
@@ -4149,53 +4146,6 @@ function confirmUndo(c) {
   if (b) { b.dataset.sure = "1"; b.textContent = "Tap again to take it out of the budget"; b.classList.remove("ghost"); }
   return false;
 }
-/* ============ CLOSE OUT AN EVENT ============
-   After a Distribution or Event, a leader or someone on the Events team saves how many were served. The form
-   starts from the Hub's own check-ins; they add anyone counted on paper or the form. Home's households count and
-   the website's "Year to date" numbers come straight from these close-outs (server: closeoutGet, closeoutSave). */
-function drawCloseCard() {
-  const c = $("homeclose"); if (!c) return;
-  const done = (BOOT.home && BOOT.home.closed) || [];
-  const list = BOOT.closer ? ((BOOT.home && BOOT.home.closeable) || []).filter(e => done.indexOf(e.date + "|" + e.name) < 0) : [];
-  c.innerHTML = list.map((e, i) => `<button type="button" class="rchome" data-closeev="${i}"><b>Close out ${esc(e.name)}</b><span>${esc(fmtDay(e.date))}. Save how many were served, and Home and the website update.</span></button>`).join("");
-  c.querySelectorAll("[data-closeev]").forEach(b => b.addEventListener("click", () => openCloseout(list[+b.dataset.closeev])));
-}
-async function openCloseout(e) {
-  openSheet(`<div class="k">Close out</div><h3 id="sheetTitle">${esc(e.name)}</h3><p class="lead">Loading...</p>`);
-  let d;
-  try { d = await run("closeoutGet", KEY, e.date, e.name); }
-  catch (err) {
-    openSheet(`<div class="k">Close out</div><h3 id="sheetTitle">${esc(e.name)}</h3><p class="lead">${esc(/network|fetch/i.test(String(err.message)) ? "Couldn't reach the Hub. Check your connection and try again." : err.message)}</p>
-      <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
-    return;
-  }
-  const ci = d.fromCheckins || {}, s = d.saved, v = s || ci;
-  const num = (id, label, val, step) => `<label>${label}<input id="${id}" type="number" inputmode="${step ? "decimal" : "numeric"}" min="0"${step ? ` step="${step}"` : ""} value="${+val || 0}"></label>`;
-  openSheet(`<div class="k">Close out &middot; ${esc(fmtDay(e.date))}</div><h3 id="sheetTitle">${esc(e.name)}</h3>
-    <p class="small">${ci.households || ci.volunteers ? `Check-ins on the Hub counted ${ci.households} households, ${ci.people} people, ${ci.volunteers} volunteers and ${ci.hours} volunteer hours.` : "Nobody was checked in on the Hub for this event."} Add anyone counted on the paper sign-in sheet or the form, then save.${s ? " This event was closed out before. Saving replaces those numbers." : ""}</p>
-    <form id="coForm" class="formgrid">
-      ${num("coHH", "Households served", v.households)}
-      ${num("coPP", "People in those households", v.people)}
-      ${num("coVol", "Volunteers", v.volunteers)}
-      ${num("coHrs", "Volunteer hours", v.hours, "0.5")}
-      <button class="btn" type="submit" id="coSave">Save and update the counts</button>
-    </form>
-    <div class="btns"><button class="btn ghost" type="button" data-close>Cancel</button></div>`);
-  $("coForm").addEventListener("submit", async ev => {
-    ev.preventDefault();
-    const b = $("coSave"); b.disabled = true; b.textContent = "Saving...";
-    try {
-      const r = await run("closeoutSave", KEY, e.date, e.name, { households: $("coHH").value, people: $("coPP").value, volunteers: $("coVol").value, hours: $("coHrs").value });
-      if (BOOT.home) { BOOT.home.closed = r.closed || []; BOOT.home.impact = r.impact || BOOT.home.impact; }
-      drawImpact(BOOT.home ? BOOT.home.impact : null); drawCloseCard(); sheet.close();
-      toast("Saved. Home and the website show the new counts.");
-    } catch (err) {
-      b.disabled = false; b.textContent = "Save and update the counts";
-      toast(/network|fetch/i.test(String(err.message)) ? "That didn't save. Check your connection and try again." : String(err.message));
-    }
-  });
-}
-
 function drawRcCard() {
   const on = $("opsapprn"); if (on) on.textContent = (+BOOT.rc || 0) > 0 ? `${BOOT.rc} waiting` : "Nothing waiting";
   const c = $("homerc"); if (!c) return;
@@ -4472,7 +4422,7 @@ function vWireOrient(box) {
     }, function () { note("The Hub couldn't load. Check your connection.", true); });
   }
   function launch(r) {
-    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), closer: !!r.closer, pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
+    window.BOOT = { key: k, name: r.name, leader: !!r.leader, ops: !!r.ops, work: !!r.work, coordinator: !!r.coordinator, vol: !!(r.vol || r.ops), pinSet: !!r.pinSet, rc: typeof r.rc === "number" ? r.rc : -1, start: r.start || "", asset: r.asset, home: r.home };
     var b = document.getElementById("boot"); if (b) b.remove();
     document.body.classList.add("ready");
     var s = document.createElement("script");
@@ -4488,7 +4438,7 @@ function vWireOrient(box) {
       window.__startSeen = { at: Date.now(), ok: !!(r && r.ok), events: r && r.home && r.home.events ? r.home.events.length : -1 };
       if (!r || !r.ok) { closed(r); return; }
       keep(r);
-      var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol", "closer"].some(function (f) { return !!r[f] !== !!cached[f]; });
+      var changed = r.name !== cached.name || ["leader", "ops", "work", "coordinator", "vol"].some(function (f) { return !!r[f] !== !!cached[f]; });
       if (changed) { location.reload(); return; }
       window.BOOT.pinSet = !!r.pinSet;
       window.BOOT.rc = typeof r.rc === "number" ? r.rc : -1; if (window.__rcRefresh) window.__rcRefresh();
@@ -4507,7 +4457,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261031201500";
+  var BUILD = "20261031203000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

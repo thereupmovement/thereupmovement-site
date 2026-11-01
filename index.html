@@ -794,13 +794,14 @@ const YEAR_TOTALS = {
     ["$134,138", "in donated goods sent to Belize City, as declared to customs"],
     ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
 };
-// live: this year's totals from the Hub's event close-outs. Houston households and people come from them as soon
-// as an event is closed out; the goods and Belize City figures stay as recorded above.
+// live: this year's Houston totals from the Hub server, worked out from the check-in records and the Item Log
+// (liveStats_ in Code.gs). The Belize City figures stay as recorded above.
 const showYear = (live, tag) => {
   const tiles = YEAR_TOTALS.tiles.map(x => x.slice());
   if (live && live.households > 0) {
     tiles[0] = [Number(live.households).toLocaleString("en-US"), "households served in Houston this year"];
     if (live.people > 0) tiles[1] = [Number(live.people).toLocaleString("en-US"), "people in those Houston households"];
+    if (live.goods > 0) tiles[2] = ["$" + Math.round(live.goods).toLocaleString("en-US"), "in donated goods given to Houston families, valued item by item"];
   }
   $("liveNums").hidden = false;
   $("liveNums").classList.add("six");
@@ -808,7 +809,7 @@ const showYear = (live, tag) => {
   $("impact-lab").textContent = "Year to date";
   $("liveNote").hidden = false;
   $("liveNote").innerHTML = (live && live.households > 0
-    ? `Houston households and people update each time the team closes out an event. Goods values come from the item-by-item inventory log, and Belize City figures from shipping and customs records, as of ${YEAR_TOTALS.asOf}.`
+    ? `Houston numbers update on their own from event check-ins and the item-by-item inventory log. Belize City figures come from shipping and customs records.`
     : `Counted from sign-in sheets, shipping and customs records, and the item-by-item inventory log, as of ${YEAR_TOTALS.asOf}.`) + ` Houston counts start with check-ins on October 8.` + (tag || "");
 };
 
