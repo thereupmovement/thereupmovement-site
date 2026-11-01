@@ -794,13 +794,22 @@ const YEAR_TOTALS = {
     ["$134,138", "in donated goods sent to Belize City, as declared to customs"],
     ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
 };
-const showYear = () => {
+// live: this year's totals from the Hub's event close-outs. Houston households and people come from them as soon
+// as an event is closed out; the goods and Belize City figures stay as recorded above.
+const showYear = (live, tag) => {
+  const tiles = YEAR_TOTALS.tiles.map(x => x.slice());
+  if (live && live.households > 0) {
+    tiles[0] = [Number(live.households).toLocaleString("en-US"), "households served in Houston this year"];
+    if (live.people > 0) tiles[1] = [Number(live.people).toLocaleString("en-US"), "people in those Houston households"];
+  }
   $("liveNums").hidden = false;
   $("liveNums").classList.add("six");
-  $("liveNums").innerHTML = YEAR_TOTALS.tiles.map(x => `<div class="num"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("");
+  $("liveNums").innerHTML = tiles.map(x => `<div class="num"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("");
   $("impact-lab").textContent = "Year to date";
   $("liveNote").hidden = false;
-  $("liveNote").textContent = `Counted from sign-in sheets, shipping and customs records, and the item-by-item inventory log, as of ${YEAR_TOTALS.asOf}. Houston counts start with check-ins on October 8.`;
+  $("liveNote").innerHTML = (live && live.households > 0
+    ? `Houston households and people update each time the team closes out an event. Goods values come from the item-by-item inventory log, and Belize City figures from shipping and customs records, as of ${YEAR_TOTALS.asOf}.`
+    : `Counted from sign-in sheets, shipping and customs records, and the item-by-item inventory log, as of ${YEAR_TOTALS.asOf}.`) + ` Houston counts start with check-ins on October 8.` + (tag || "");
 };
 
 // Where ReUp has served: every event recapped on ReUp's Instagram (Oct 2019 to Sep 2026), read post by post,
@@ -921,19 +930,14 @@ if (STORE_URL) {
   const fmt = n => Number(n || 0).toLocaleString("en-US");
   const draw = (d, sample) => {
     const tag = sample ? '<span class="sample">SAMPLE</span>' : "";
-    const t = d.totals || {};
-    const nums = [[t.households, "households served this season"], [t.people, "people in those homes"], [t.volunteerHours, "volunteer hours"], [t.events, "events wrapped"]]
-      .filter(x => x[0] > 0);
-    if (nums.length) $("liveNums").innerHTML = nums.map(x => `<div class="num"><b>${fmt(x[0])}</b><span>${x[1]}</span></div>`).join("");
-    else { $("liveNums").hidden = true; $("liveNote").hidden = true; }
-    if (d.updated) $("liveNote").innerHTML = `Counts update on their own after every event. Last update: ${esc(new Date(d.updated).toLocaleDateString("en-US", { month: "long", day: "numeric" }))}.${tag}`;
-    else if (sample) $("liveNote").innerHTML += tag;
+    showYear(d.totals, tag);
     const L = d.lastEvent;
     if (L && L.name) {
       $("recap").hidden = false;
       $("recap-h").innerHTML = esc(L.name) + tag;
       $("recapWhen").textContent = [new Date(L.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }), L.place, (L.partners || []).length ? "With " + L.partners.join(", ") : ""].filter(Boolean).join(" · ");
       $("recapPhotos").innerHTML = (L.photos || []).slice(0, 3).map(p => `<img src="${esc(p.url)}" alt="${esc(p.alt || "")}" loading="lazy">`).join("");
+      $("recapPhotos").style.display = (L.photos || []).length ? "" : "none"; /* no empty photo space when an event has no photos yet */
       $("recapNums").innerHTML = [[L.households, "households served"], [L.people, "people in those homes"], [L.volunteers, "volunteers"], [L.volunteerHours, "volunteer hours"]]
         .filter(x => x[0] > 0).map(x => `<div><b>${fmt(x[0])}</b><span>${x[1]}</span></div>`).join("");
       $("recapWent").innerHTML = (L.wentOut || []).slice(0, 6).map(w => `<span>${fmt(w.qty)} ${esc(w.type)}</span>`).join("");
