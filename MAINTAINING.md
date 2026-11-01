@@ -67,6 +67,10 @@ The PIN check reads the **first argument as the person's key**, so every Hub cal
 drops it (see the `ci...` check-in entries in Code.gs). Never send someone's key to the page in a list:
 the check-in roster uses row numbers for this reason.
 
+**A new field on `boot`** (what the server tells the Hub about the person) must also be added to the
+`window.BOOT = {...}` line in the loader at the bottom of `hub/index.html`. The loader copies only the
+fields listed there, so anything else never reaches the app.
+
 **Uploaded files** go to the "ReUp Hub uploads" folder and are shared, as viewers, with the task's
 owners and helpers and the uploader (Leaders, for Goals), by the email on their Access row
 (`shareUpload_` in Code.gs). `shareOldUploads` re-runs that for every file already on the Files tab.
