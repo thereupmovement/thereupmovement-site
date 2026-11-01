@@ -788,9 +788,9 @@ const PUBLIC_API = HUB_API + "?public=1";
 // (August 15) and the bill of lading for container 1. Shown until the Hub sends live totals after each wrap-up.
 const YEAR_TOTALS = {
   year: 2026, asOf: "October 26, 2026",
-  tiles: [["309", "households served this year, in Houston and Belize City"], ["817", "people in the 204 Houston households served since October 8"],
-    ["105", "households served in Belize City on August 15"],
+  tiles: [["204", "households served in Houston since October 8"], ["817", "people in those Houston households"],
     ["$87,515", "in donated goods given to Houston families, valued item by item"],
+    ["105", "households served in Belize City on August 15"],
     ["$134,138", "in donated goods sent to Belize City, as declared to customs"],
     ["6,515 lb", "of goods in our first container to Belize City, given out this year"]]
 };
@@ -798,7 +798,7 @@ const showYear = () => {
   $("liveNums").hidden = false;
   $("liveNums").classList.add("six");
   $("liveNums").innerHTML = YEAR_TOTALS.tiles.map(x => `<div class="num"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("");
-  $("impact-lab").textContent = `${YEAR_TOTALS.year} so far`;
+  $("impact-lab").textContent = "Year to date";
   $("liveNote").hidden = false;
   $("liveNote").textContent = `Counted from sign-in sheets, shipping and customs records, and the item-by-item inventory log, as of ${YEAR_TOTALS.asOf}. Houston counts start with check-ins on October 8.`;
 };
