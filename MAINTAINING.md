@@ -75,14 +75,22 @@ fields listed there, so anything else never reaches the app.
 owners and helpers and the uploader (Leaders, for Goals), by the email on their Access row
 (`shareUpload_` in Code.gs). `shareOldUploads` re-runs that for every file already on the Files tab.
 
-**Event close-out and the counts:** after a Distribution or Event, a leader or anyone on the Events team
-saves its numbers in the Hub ("Close out", on Home or on the event). One row per event goes on the
-**Results** tab of the Hub sheet (`closeoutGet`, `closeoutSave` in Code.gs). The Hub's Home households
-count (this quarter) and the website's "Year to date" Houston households and people (this year) are sums
-of that tab, so a close-out shows everywhere within seconds and the year resets itself on January 1. A
-row typed in by hand (date as yyyy-mm-dd) counts too; the 2026-10-26 row holds the numbers from before
-close-outs existed. The website's goods value and Belize City figures are still written in `index.html`
-(`YEAR_TOTALS`) and change only by editing it.
+**The numbers (households, people, goods, distributions):** nobody types them in. `liveStats_` in
+Code.gs works them out from the records and caches them for 5 minutes; Hub Home (`liveImpact_`), the
+Leadership tab (`liveLeaders_`, including the sentences under each goal) and the website
+(`publicTotals_`, via `?public=1`) all read it. Sources:
+
+- Households, people, ZIP codes: guest rows on "Form Responses 1" in the Needs sheet (the tablet form
+  and the typed-in paper sign-ins), counted by the Event date column, plus the Hub's CheckIns tab.
+  Counting starts at `COUNT_FROM` (2026-10-08).
+- Volunteers: volunteer rows on the same sheet and the Hub's VolunteerHours tab, or the "Volunteers by
+  event" tab of the Hub sheet when nobody checked them in.
+- Goods given to families: LINE VALUE on the Item Log for rows with a "Date given out" this year.
+- Q4 distributions: dates with `EVENT_MIN` (10) or more households, except `NOT_DISTRIBUTIONS`.
+
+Run `checkNumbers` in the Apps Script editor to see every number each screen will show. The goal
+targets and milestones stay hand-set in the Data tab (`impact`, `leaders`). The website's Belize City
+figures are still written in `index.html` (`YEAR_TOTALS`).
 
 **Logs:** every request writes its name, time taken and any error to Executions in the Apps Script
 editor (`doPost` in Code.gs). Start there when a screen is slow or fails.
