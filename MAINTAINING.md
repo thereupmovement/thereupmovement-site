@@ -26,7 +26,8 @@ Three doors, three parts.
 
 ## This repository
 
-- `index.html`: the community page. Event dates, shop items and photos are written in this file.
+- `index.html`: the community page. Shop items and photos are written in this file. Its dates come from the
+  Hub Schedule and its Houston numbers from the Hub server (`?public=1`), so neither is edited here.
 - `hub/index.html`: the Team Hub. One file. The app itself is inside `<script type="text/plain" id="app">`
   and runs only after the loader at the bottom of the file has checked the person's link and PIN.
 - `hub/version.json` and `var BUILD` in `hub/index.html`: the Hub's build number (see below).
