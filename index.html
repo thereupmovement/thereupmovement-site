@@ -934,7 +934,7 @@ if (STORE_URL) {
       $("recapWent").innerHTML = (L.wentOut || []).slice(0, 6).map(w => `<span>${fmt(w.qty)} ${esc(w.type)}</span>`).join("");
       $("recapLine").textContent = L.line || "";
     }
-    showMap((d.events || []).filter(e => e.lat && e.lng));
+    showMap((d.served || []).filter(e => e.lat && e.lng)); /* this year's events from the check-in records, placed by the Schedule's address */
   };
   let mapDone = false;
   const showMap = live => {
