@@ -147,6 +147,22 @@ opens "We got more of this". `restock` in Code.gs copies that Item Log row to a 
 price, photos and pricing notes), then sets the new count, location, pickup ID, expiry, timestamp and sorter, and marks
 it Still in storage. The old row is not touched. It also writes one line on I6 Count Changes.
 
+## Turning work in, and the simpler Work tab (server version 53, 2 Nov 2026)
+
+Tasks have a fifth status, `review` ("Turned in"), in `WORK_STATUS` in Code.gs. The people on a task turn it in
+with a file or a note; the person in its "Created by" column (col 9), or any leader, approves it (status `done`) or
+sends it back (status `doing`, a note is required). While it waits, the person who turned it in can take it back
+(`takeBack`). Someone who assigned a task to themselves, or a Hub admin, marks it done directly. `saveWork` enforces
+this, and each step adds a line to the task's updates ("Turned in for review: ...", "Sent back: ...", "Approved").
+
+On the page (hub/index.html): My work shows at most 5 tasks for now (stuck, late, or due within 7 days) as plain
+cards (`wplain`), with the rest in folds. A task opens as 1. What to do, 2. Turn it in, 3. Updates; the review
+block (`reviewHtml`) shows to whoever reviews it. Status buttons are only in the leaders' "more" fold. Cards on
+the Teams view have no buttons. Overview (`overviewTop` and `overviewCards`, shared by Work and Leadership) shows
+"Your numbers" picked from the person's role, then needs a decision or help, waiting for review, finished this week,
+and Late by person. Event pages have a "For the team" section (`evTeamHTML`) that reads Volunteers and storage once
+those have been opened. Nothing here is a separate server report.
+
 ## Open handoff work
 
 - Move ownership of the Sheets, uploads folder and Apps Script project to ReUp's own Google account
