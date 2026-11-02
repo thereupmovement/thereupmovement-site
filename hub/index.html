@@ -3152,7 +3152,7 @@ function drawInventory(d) {
   const past = Array.isArray(inv.past) ? inv.past : [];
   const pastShown = q ? past.filter(i => (invCat === "All" || i.cat === invCat) && `${i.desc} ${i.sub} ${i.cat} ${i.loc} ${i.cond}`.toLowerCase().includes(q)) : [];
   // The full storage list folds away; it opens by itself while someone is searching
-  const listHtml = `<details class="invbox" id="invBox"${invOpen || q || invCat !== "All" ? " open" : ""}><summary><b>What's in storage</b><span>${(+oh.units || 0).toLocaleString()} units &middot; ${items.length} kind${items.length === 1 ? "" : "s"} of item &middot; search everything logged</span></summary><div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search what is in storage"></div>
+  const listHtml = `<details class="invbox" id="invBox"${invOpen || q || invCat !== "All" ? " open" : ""}><summary><b>What's in storage</b><span>${(+oh.units || 0).toLocaleString()} units &middot; ${items.length} kind${items.length === 1 ? "" : "s"} of item &middot; search everything logged</span></summary><div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search everything logged, in storage or given out"></div>
     ${cats.length > 2 ? `<div class="filters" role="group" aria-label="Category" style="margin:8px 0 0">${cats.map(c => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${invCat === c}">${esc(c)}</button>`).join("")}</div>` : ""}
     <div class="ires">${!items.length && !q
       ? `<div class="empty">Nothing is in storage right now. Search to find anything logged before.</div>`
@@ -4535,7 +4535,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261102151000";
+  var BUILD = "20261102152000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
