@@ -138,6 +138,15 @@ label to show the choice. Totals per event, with the value usable in application
 I8 Event Goods tab of the Budget workbook; the Hub shows units and value per event from the same storage
 list.
 
+
+## Search everything logged, and new stock of a past item (server version 52, 2 Nov 2026)
+
+The Inventory search covers the whole Item Log, not only what is in storage. `inventory_` sends `past`: one line per
+product already given out (newest row wins; Belize count-only and damaged rows are left out). Tapping a past item
+opens "We got more of this". `restock` in Code.gs copies that Item Log row to a new row at the bottom (same product,
+price, photos and pricing notes), then sets the new count, location, pickup ID, expiry, timestamp and sorter, and marks
+it Still in storage. The old row is not touched. It also writes one line on I6 Count Changes.
+
 ## Open handoff work
 
 - Move ownership of the Sheets, uploads folder and Apps Script project to ReUp's own Google account

@@ -89,6 +89,7 @@ h2:first-child{margin-top:4px}
 .row .s{font-size:13.5px;color:var(--muted)}
 .row .chev{color:var(--muted);font-size:20px}
 .k-Distribution{--kc:var(--k-dist);--ks:var(--k-dist-soft)} .k-Pickup{--kc:var(--k-pick);--ks:var(--k-pick-soft)} .k-Deadline{--kc:var(--k-dead);--ks:var(--k-dead-soft)} .k-Event{--kc:var(--s-fill);--ks:var(--s-fill-soft)}
+.pastadd{font-family:inherit!important;font-size:14px!important;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:4px 10px}
 .evfor{display:block;font-weight:700;color:var(--red-text,var(--red))}
 .tag{display:inline-block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--line);border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:1px;color:var(--ink)}
 .tag.tbc{border-style:dashed;color:var(--muted)}
@@ -3147,14 +3148,19 @@ function drawInventory(d) {
   const sortF = FORMS.find(f => f.title === "Sort an item"), pickF = FORMS.find(f => f.title === "Pallet pickup");
   const lastSorted = (inv.activity || {}).lastSortedDate;
   const limit = q || invCat !== "All" ? 200 : 30;
+  // Search also covers items already given out (step 140): one line per product, so the team can add new stock of it
+  const past = Array.isArray(inv.past) ? inv.past : [];
+  const pastShown = q ? past.filter(i => (invCat === "All" || i.cat === invCat) && `${i.desc} ${i.sub} ${i.cat} ${i.loc} ${i.cond}`.toLowerCase().includes(q)) : [];
   // The full storage list folds away; it opens by itself while someone is searching
-  const listHtml = `<details class="invbox" id="invBox"${invOpen || q || invCat !== "All" ? " open" : ""}><summary><b>What's in storage</b><span>${(+oh.units || 0).toLocaleString()} units &middot; ${items.length} kind${items.length === 1 ? "" : "s"} of item &middot; search</span></summary><div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search what is in storage"></div>
+  const listHtml = `<details class="invbox" id="invBox"${invOpen || q || invCat !== "All" ? " open" : ""}><summary><b>What's in storage</b><span>${(+oh.units || 0).toLocaleString()} units &middot; ${items.length} kind${items.length === 1 ? "" : "s"} of item &middot; search everything logged</span></summary><div class="isearchwrap"><input class="isearch" type="search" id="invQ" placeholder="Search: couch, mattress, size 6" value="${esc(invQ)}" aria-label="Search what is in storage"></div>
     ${cats.length > 2 ? `<div class="filters" role="group" aria-label="Category" style="margin:8px 0 0">${cats.map(c => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${invCat === c}">${esc(c)}</button>`).join("")}</div>` : ""}
-    <div class="ires">${!items.length
-      ? `<div class="empty">Nothing is in storage right now. Items show up here, searchable, once they're sorted.</div>`
-      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}${items.some(i => i.row) ? ". Tap an item to change its count or set it aside for an event." : ""}</p>
-        <div class="list">${shown.slice(0, limit).map(i => { const inner = `<div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span>${i.ev ? `<span class="evfor">For ${esc(i.ev)}</span>` : ""}</div><em>${(+i.units).toLocaleString()}</em>`; return i.row ? `<button type="button" class="irow" data-adj="${+i.row}" aria-label="Change the count or set aside: ${esc(i.desc || i.sub || "this item")}">${inner}</button>` : `<div class="irow">${inner}</div>`; }).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
-        ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
+    <div class="ires">${!items.length && !q
+      ? `<div class="empty">Nothing is in storage right now. Search to find anything logged before.</div>`
+      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} in storage${q ? ` &middot; ${pastShown.length} given out before` : ""}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}${items.some(i => i.row) ? ". Tap an item to change its count or set it aside for an event." : ""}</p>
+        <div class="list">${shown.slice(0, limit).map(i => { const inner = `<div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span>${i.ev ? `<span class="evfor">For ${esc(i.ev)}</span>` : ""}</div><em>${(+i.units).toLocaleString()}</em>`; return i.row ? `<button type="button" class="irow" data-adj="${+i.row}" aria-label="Change the count or set aside: ${esc(i.desc || i.sub || "this item")}">${inner}</button>` : `<div class="irow">${inner}</div>`; }).join("") || (pastShown.length ? "" : `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`)}</div>
+        ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}
+        ${pastShown.length ? `<h3 class="area">Given out before<span>${pastShown.length}</span></h3><p class="small" style="margin:0 2px 6px">Got more of one of these? Tap it to add the new ones to storage without logging it again.</p>
+        <div class="list">${pastShown.slice(0, limit).map(i => `<button type="button" class="irow" data-past="${+i.row}" aria-label="Add new stock of ${esc(i.desc)}"><div><b>${esc(i.desc)}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span>${i.out ? "Given out " + esc(shortDate(i.out)) : "Not in storage"}</span></div><em class="pastadd">Add</em></button>`).join("")}</div>` : ""}`}</div></details>`;
   // 1. Actions first, one tap straight into the form
   let html = listHtml; // What's in storage sits at the top, folded into its drop-down
   // Set aside for events (step 138): optional, built from the same storage list. Value is fair market value.
@@ -3292,6 +3298,48 @@ function openAdjust(row) {
   });
   setTimeout(() => f.elements.n.focus(), 50);
 }
+/* ============ New stock of a past item (step 140, 2 Nov 2026) ============
+   The server (restock in the ReUp Hub Apps Script) copies that Item Log row to a new row with the same product,
+   price and photos, then sets the new count, where it is, the pickup and the expiry. The old row is not changed. */
+function openRestock(row) {
+  const inv = (OPS || {}).inventory || {};
+  const it = (inv.past || []).find(x => +x.row === row);
+  if (!it) return;
+  const locs = [...new Set(["Caddo", "Mesa", ...(((inv.onHand || {}).locations || []).map(l => l[0]))].filter(l => /^[A-Za-z0-9 .'-]{2,30}$/.test(l) && !/^not set$/i.test(l)))];
+  const pks = (inv.pickups || []).filter(p => p.id && !p.unlogged && !p.notOnLog);
+  const unit = String(it.unit || "").trim(), u = unit.toLowerCase(), plain = !u || /^(each|item|items|individual|individual item)$/.test(u);
+  const sel = (name, label, list) => `<div class="vs-sel"><select class="vs-select" name="${name}" aria-label="${esc(label)}">${list.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join("")}</select><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>`;
+  openSheet(`<div class="k">We got more of this</div>
+    <h3 id="sheetTitle">${esc(it.desc)}</h3>
+    <p class="vs-note" style="margin:0">${it.out ? "Given out " + esc(shortDate(it.out)) + ". " : ""}The new ones keep the same price and photos.</p>
+    <form class="vs" id="rsF" novalidate>
+      <label class="vs-field"><span>How many came in?</span>${plain ? "" : `<small>Counted in ${esc(u)}, the same way this item was logged before.</small>`}<input type="text" inputmode="numeric" name="n" maxlength="6" autocomplete="off"></label>
+      <label class="vs-field"><span>Where is it stored?</span>${sel("loc", "Where it is stored", locs.map(l => [l, l]))}</label>
+      <label class="vs-field"><span>Which pickup did it come in on?</span>${pks.length ? sel("pk", "Pickup", pks.map(p => [p.id, `${p.donor || "Pickup"}, ${shortDate(p.date)}`])) : `<small>No pickups on the log yet. Log the pickup first.</small>`}</label>
+      <label class="vs-field"><span>Expiry date, if it has one</span><small>Read it off the new boxes. Leave it blank if there is none.</small><input type="date" name="exp"></label>
+      <p class="vs-err" role="alert"></p>
+      <button class="vs-btn" type="submit"${pks.length ? "" : " disabled"}>Add to storage</button>
+      <button class="btn ghost" type="button" data-close>Cancel</button>
+    </form>`);
+  const f = $("rsF"), err = f.querySelector(".vs-err"), btn = f.querySelector(".vs-btn");
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (btn.disabled) return;
+    const raw = String(f.elements.n.value || "").trim();
+    if (!/^\d+$/.test(raw) || +raw < 1) { err.textContent = "Put how many came in, as a number."; return; }
+    btn.disabled = true; btn.textContent = "Saving...";
+    try {
+      const r = await run("restock", KEY, TOK, row, it.desc, +raw, f.elements.loc.value, f.elements.pk.value, f.elements.exp.value || "");
+      if (r && r.ok) { if (r.ops) { OPS = r.ops; OPSTAT = r.status || OPSTAT; } sheet.close(); drawOps(); toast("Saved. " + (r.msg || "")); return; }
+      err.textContent = (r && r.msg) || "That didn't save. Try again.";
+    } catch (x) {
+      if (isAuth(x)) { sheet.close(); relock(); return; }
+      err.textContent = "That didn't save. Check your connection and try again.";
+    }
+    btn.disabled = false; btn.textContent = "Add to storage";
+  });
+  setTimeout(() => f.elements.n.focus(), 50);
+}
 function drawOps() {
   const d = OPS;
   if (!d) { $("ops").innerHTML = `<p class="lead">Nothing posted here yet.</p>`; return; }
@@ -3315,6 +3363,7 @@ function drawOps() {
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
   $("ops").querySelectorAll("[data-adj]").forEach(b => b.addEventListener("click", () => openAdjust(+b.dataset.adj)));
+  $("ops").querySelectorAll("[data-past]").forEach(b => b.addEventListener("click", () => openRestock(+b.dataset.past)));
   $("ops").querySelectorAll("[data-pkopen]").forEach(b => b.addEventListener("click", () => pkgOpenSheet(b.dataset.pkopen)));
   const pka = $("pkAll"); if (pka) pka.addEventListener("click", async () => { if (pkgBusy) return; pka.disabled = true; pka.textContent = "Building..."; await pkgBuildAll(); });
   const mp = $("morePk"); if (mp) mp.addEventListener("click", () => { invAllPickups = !invAllPickups; drawOps(); });
@@ -4486,7 +4535,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261102150000";
+  var BUILD = "20261102151000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
