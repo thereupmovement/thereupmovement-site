@@ -947,7 +947,7 @@ if (STORE_URL) {
       else places.push({ place: e.place || e.name, lat: e.lat, lng: e.lng, events: [ev] });
     });
     const n = places.reduce((t, p) => t + p.events.length, 0);
-    $("mapNote").textContent = `${n} events on the record since 2019, at ${places.length - 1} named places from Houston to Odessa, Lake Charles and Belize City. Events whose post did not name a neighborhood sit on the central Houston pin. Tap a pin to see what happened there. New events add themselves after each wrap-up.`;
+    $("mapNote").textContent = `${n} events on the record since 2019, at ${places.length - 1} named places from Houston to Odessa, Lake Charles and Belize City. Events whose post did not name a neighborhood sit on the central Houston pin. Tap a pin to see what happened there. New events add themselves once their sign-ins are entered.`;
     const go = () => {
       const m = L.map("map", { scrollWheelZoom: false });
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(m);
