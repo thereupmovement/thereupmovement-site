@@ -605,6 +605,23 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 
 .g-quick{--gc:#1E5C38}.g-soon{--gc:#5D5A57}
 .wrows{display:grid;gap:6px}
+/* My work, simplified (Nov 2026): plain cards, no buttons on them; the task opens with one tap. */
+.wplain{display:grid;gap:8px}
+.wpcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;min-height:44px}
+.wpcard:focus-visible,.wbig:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.wptop{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.wpteam{display:flex;align-items:center;gap:6px}.wpteam::before{content:"";width:8px;height:8px;background:var(--tc,var(--muted));flex:none}
+.wpst{font-weight:700;color:var(--ink)}.wpst.late{color:var(--red)}.wpst.soon{color:var(--ink)}
+.wpname{font-size:17px;font-weight:700;line-height:1.3}
+.wpmeta{font-size:14px;color:var(--muted)}
+.wbig{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;border-radius:10px;padding:14px 16px;margin-top:10px;cursor:pointer;min-height:52px}
+.wreview{background:var(--red);color:#fff;border:0}.wreview b{font-family:var(--display,inherit);font-size:28px;line-height:1}
+.wnext{background:var(--surface);color:var(--ink);border:1px solid var(--ink)}.wnext span{display:flex;flex-direction:column;gap:2px}.wnext em{font-style:normal;font-size:14px;color:var(--muted)}
+.wlabel{margin:18px 2px 8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.wpfold .wplain{margin-top:8px}
+.ttin{display:grid;gap:10px}
+.trev{background:var(--red-soft);border-radius:12px;padding:14px}
+.trev .btns{margin-top:10px}
 .wrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--tc);border-radius:10px;padding:10px 12px;cursor:pointer;min-height:44px}
 .wrow:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .wrname{font-weight:700;font-size:15px;line-height:1.3}
@@ -1719,7 +1736,7 @@ function fillTask(keep) {
 let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team") workView = wv0; } catch (e) {}
-const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["done", "Done"]];
+const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["review", "Turned in"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const LBL = x => x === "Ops" ? "Operations" : x;
 const TEAMCLS = { Ops: "t-ops", Admin: "t-admin", Media: "t-media", Events: "t-events", Grants: "t-grants", Volunteers: "t-volunteers" };
@@ -1865,6 +1882,15 @@ function wrow(t, sub) {
   return `<button type="button" class="wrow ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wrname">${esc(t.title)}</span>
     <span class="wrmeta">${t.status === "doing" ? `<span class="wrprog">In progress</span>` : ""}<span class="wdue ${dc}">${esc(sub || dw)}</span></span></button>`;
 }
+function wplain(t) {
+  const [dw, dc] = dueWords(t.due, t.status === "done");
+  const right = t.status === "stuck" ? ["Stuck", "late"] : t.status === "review" ? ["Turned in", ""] : t.status === "done" ? ["Done", ""] : [dw, dc];
+  const from = t.createdBy && t.createdBy !== WORK.me ? "From " + t.createdBy + "." : "";
+  const help = t.helpers.length ? " " + t.helpers.join(", ") + (t.helpers.length === 1 ? " is" : " are") + " helping." : "";
+  return `<button type="button" class="wpcard ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wptop"><span class="wpteam">${esc(LBL(t.team) || "No team")}</span><span class="wpst ${right[1]}">${esc(right[0])}</span></span>
+    <span class="wpname">${esc(t.title)}</span>${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
+}
+const wfoldPlain = (title, list) => list.length ? `<details class="dhist wpfold"><summary>${title} (${list.length})</summary><div class="wplain">${list.map(wplain).join("")}</div></details>` : "";
 const wlist = (title, cls, list, note, fold) => !list.length ? "" : fold
   ? `<details class="wgroup wfold ${cls}"><summary><h3><span>${title}</span><b>${list.length}</b></h3></summary>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></details>`
   : `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></section>`;
@@ -1883,44 +1909,28 @@ function drawWork() {
     html += `<div class="whello"><h2>Team overview</h2><p class="small">What's stuck, what's late, what just got finished and whether anything was turned in with it. Tap any task to open it.</p></div>
       <div class="lo-grid">${overviewCards()}</div>`;
   } else if (workView === "mine") {
+    /* My work: only what matters now, as plain cards. Everything else folds away. Tap a card to open the task. */
+    const d = t => t.due ? daysAway(t.due) : 9999;
     const mine = all.filter(t => t.owners.includes(me));
-    const open = mine.filter(wOpen).sort(wSort);
-    /* Sorted by what needs attention first. Tasks that open later wait in their own fold until their date. */
+    const open = mine.filter(t => wOpen(t) && t.status !== "review").sort(wSort);
     const notYet = open.filter(t => wNotYet(t) && t.status !== "stuck");
     const active = open.filter(t => !notYet.includes(t));
-    const d = t => t.due ? daysAway(t.due) : 9999;
-    const stuck = active.filter(t => t.status === "stuck"), late = active.filter(t => t.status !== "stuck" && wLate(t));
-    const rest = active.filter(t => t.status !== "stuck" && !wLate(t));
-    const week = rest.filter(t => d(t) <= 7);
-    const quick = rest.filter(t => d(t) > 7 && t.quick);
-    const soon = rest.filter(t => d(t) > 7 && d(t) <= 30 && !t.quick);
-    const ongoing = rest.filter(t => d(t) > 30 && !t.quick && t.status === "doing");
-    const later = rest.filter(t => d(t) > 30 && !t.quick && t.status !== "doing");
-    const helping = all.filter(t => wOpen(t) && !t.owners.includes(me) && t.helpers.includes(me) && !wNotYet(t)).sort(wSort);
-    const byDue = (x, y) => d(x) - d(y) || x.title.localeCompare(y.title);
-    [week, quick, soon, ongoing, later].forEach(l => l.sort(byDue));
-    notYet.sort((x, y) => String(x.opens).localeCompare(String(y.opens)));
-    const now = active.length;
-    html += `<div class="whello"><h2>Hi ${esc(me)}</h2><p>${now ? `You have <b>${plural(now, "thing")}</b> on your list${week.length ? `, <b>${week.length}</b> due this week` : ""}.` : "You're all caught up."}${late.length ? ` <span class="late">${plural(late.length, "is", "are")} late.</span>` : ""}</p>
-      <p class="small">Most urgent first. Tap <b>Start</b> when you begin, <b>Done</b> when it's finished, or <b>I'm stuck</b> if you need help.</p></div>`;
-    const doneWk = mine.filter(t => wRecentDone(t, 7)).length, done30 = mine.filter(t => wRecentDone(t, 30)).length;
-    const leftWk = stuck.length + late.length + week.length, pct = doneWk + leftWk ? Math.round(100 * doneWk / (doneWk + leftWk)) : 0;
-    html += `<div class="wme"><div class="wmetop"><b>Your week</b><span>${doneWk} done${leftWk ? `, ${leftWk} to go` : ""}</span></div>
-      <div class="wmebar" role="img" aria-label="${pct}% of this week's tasks done"><i style="width:${pct}%"></i></div>
-      <div class="wmenums"><div><b>${doneWk}</b><span>done this week</span></div><div><b>${done30}</b><span>done in 30 days</span></div><div><b>${active.filter(t => t.status === "doing").length}</b><span>in progress</span></div></div></div>`;
-    const goingWk = (typeof EVENTS !== "undefined" && typeof myGoing === "function" ? EVENTS : []).filter(e => myGoing(e) === "yes" && daysAway(e.date) >= 0 && daysAway(e.date) <= 7);
-    if (goingWk.length) html += `<div class="wgoing"><b>You're going this week</b>${goingWk.map(e => `<span>${esc(e.name)} &middot; ${esc(dt(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</span>`).join("")}</div>`;
-    html += wgroup("Stuck", "g-stuck", stuck, { hideWho: true }, "A leader will help you with these.");
-    html += wgroup("Late", "g-late", late, { hideWho: true });
-    html += wgroup("Due this week", "g-week", week, { hideWho: true });
-    html += wgroup("Quick ones", "g-quick", quick, { hideWho: true }, "Each of these takes a call or a few minutes. Knock them out when you have a gap.");
-    html += wlist("Next 30 days", "g-soon", soon, "Tap one to open it.");
-    html += wlist("Ongoing", "g-prog", ongoing, "Started, and due further out. Keep these moving a little at a time.");
-    html += wlist("Later", "g-later", later, "", true);
-    html += wgroup("You're helping", "g-help", helping);
+    const now = active.filter(t => t.status === "stuck" || wLate(t) || d(t) <= 7).slice(0, 5);
+    const later = active.filter(t => !now.includes(t)).sort((x, y) => d(x) - d(y) || x.title.localeCompare(y.title));
+    const turnedIn = mine.filter(t => t.status === "review");
+    const toReview = all.filter(t => t.status === "review" && t.createdBy === me);
+    const helping = all.filter(t => wOpen(t) && t.status !== "review" && !t.owners.includes(me) && t.helpers.includes(me) && !wNotYet(t)).sort(wSort);
+    const next = upcoming.find(e => ["Distribution", "Event"].includes(e.kind));
+    html += `<div class="whello"><h2>My work</h2><p>${now.length ? `<b>${plural(now.length, "thing")}</b> for now.` : "Nothing urgent right now."}${later.length ? ` ${later.length} more later.` : ""}</p></div>`;
+    if (toReview.length) html += `<button type="button" class="wbig wreview" data-work="${esc(toReview[0].id)}"><b>${toReview.length}</b><span>To review. Work your team turned in.</span></button>`;
+    if (next) { const g = myGoing(next); html += `<button type="button" class="wbig wnext" data-wev="${esc(String(upcoming.indexOf(next)))}"><span><b>Next event: ${esc(next.name)}, ${esc(dt(next.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</b><em>${g === "yes" ? "You're going." : g === "no" ? "You said you can't make it." : "Are you going? Tap to answer."}</em></span></button>`; }
+    if (now.length) html += `<h3 class="wlabel">Now</h3><div class="wplain">${now.map(wplain).join("")}</div>`;
+    html += wfoldPlain("Later", later);
+    html += wfoldPlain("Turned in, waiting on review", turnedIn);
+    html += wfoldPlain("You're helping", helping);
     if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own when it's time</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(t.opens))).join("")}</div></details>`;
     const done = mine.filter(t => wRecentDone(t, 14));
-    if (done.length) html += `<details class="dhist"><summary>Finished in the last 2 weeks (${done.length})</summary>${done.map(t => wcard(t, { hideWho: true, noActs: true })).join("")}</details>`;
+    if (done.length) html += wfoldPlain("Finished in the last 2 weeks", done);
     if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   } else {
     const teams = ["Everyone", ...(W.teams || [])];
@@ -1969,9 +1979,11 @@ function drawWork() {
   box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
   box.querySelectorAll("[data-wp]").forEach(b => b.addEventListener("click", () => { workPerson = workPerson === b.dataset.wp ? null : b.dataset.wp; drawWork(); }));
   box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  box.querySelectorAll("[data-wev]").forEach(b => b.addEventListener("click", () => { const e = upcoming[+b.dataset.wev]; if (e) openEvent(e); }));
   box.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", async () => {
     const id = b.dataset.id, q = b.dataset.q;
     if (q === "stuck") { workStuckOpen = true; openWork(id); return; }
+    if (q === "done") { openWork(id); return; } /* finishing goes through the task, so work can be turned in */
     if (q === "decide") { workDecideOpen = true; openWork(id); return; }
     wQueue("saveWork", [id, { status: q }], q === "done" ? "Nice work. Marked done." : "Marked in progress.");
     drawWork();
@@ -2100,15 +2112,35 @@ function fillWork(keep) {
   const names = (W.people || []).map(p => p.name);
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
   const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
+  /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
+  const by = t.createdBy || "", meP = (W.people || []).find(p => p.name === me), amLeader = !!(meP && meP.leader);
+  const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || manage;
+  const filesHtml = (t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : "";
+  const tin = (t.updates || []).find(u => /^Turned in for review/.test(u.text || ""));
+  const reviewHtml = !isNew && !G && t.status === "review" && (by === me || amLeader) ? `<div class="tsec trev"><div class="tl">Turned in for you to review</div>
+      <p style="margin:0 0 6px">${tin ? `Turned in by ${esc(tin.who)}, ${stamp(tin.at)}.` : "Turned in."}</p>${tin && /: /.test(tin.text) ? `<p class="wtext" style="margin:0 0 8px">${linkify(tin.text.replace(/^Turned in for review: /, ""))}</p>` : ""}${filesHtml}
+      <div class="btns"><button class="btn" type="button" id="wapprove">Approve</button><button class="btn ghost" type="button" id="wsendback">Send it back</button></div>
+      <div id="wbackbox" hidden><textarea id="wback" class="tarea" placeholder="What needs to change? They'll see this."></textarea><button type="button" class="tbtn" id="wbacksave">Send it back with this note</button></div></div>` : "";
+  const showTurnIn = iDo && t.status !== "done" && t.status !== "review";
+  const turnHtml = !iDo ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status] || "To do"}</span></p></div>`
+    : t.status === "done" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0">Done${t.doneAt ? ", " + stamp(t.doneAt) : ""}.</p></div>`
+    : t.status === "review" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0 0 6px">Turned in. ${esc(by && by !== me ? by + " reviews it" : "A leader reviews it")}, and you'll see the answer here.</p>${by === me || amLeader ? "" : `<button type="button" class="linkish" id="wtakeback">Take it back to change something</button>`}</div>`
+    : `<div class="tsec ttin"><div class="tl">2. Turn it in</div>${filesHtml}
+      <div class="tdue"><label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
+      <textarea id="wtin" class="tarea" placeholder="${esc(selfDone ? "A note about what you did (optional). Paste a link here if the work lives somewhere else." : "A note for " + by + " (optional). Paste a link here if the work lives somewhere else.")}"></textarea>
+      <button type="button" class="btn" id="wturnin">${selfDone ? "Mark it done" : "Turn it in"}</button>
+      ${t.status === "todo" ? `<button type="button" class="linkish" id="wstart">I've started on this</button>` : ""}
+      ${t.status === "stuck" ? "" : `<button type="button" class="linkish" id="wstuckbtn" style="color:var(--red)">I'm stuck. Ask for help.</button>`}
+      <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div></div>`;
   box.innerHTML = `<p class="tmsg wsticky" id="wmsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "New task" : esc(LBL(t.team) || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
-    ${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">Details</div>${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
+    ${reviewHtml}${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">${isNew ? "Details" : showTurnIn ? "1. What to do" : "What to do"}</div>${!isNew && by && by !== me ? `<p class="small" style="margin:0 0 6px">From ${esc(by)}.</p>` : ""}${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
       : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
       <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
-    ${GD ? decisionHtml : isNew ? "" : `<div class="tsec"><div class="tl">Status</div>${mine ? `<div class="tseg">${WSTAT.map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div>
-      <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div>` : `<p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status]}</span></p>`}</div>`}
-    <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueTxt(t.due, t.status === "done") : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
+    ${GD ? decisionHtml : isNew || G || reviewHtml ? "" : turnHtml}
+    <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueWords(t.due, t.status === "done")[0] : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
+    ${manage && !isNew && !G ? `<div class="tsec"><div class="tl">Status (leaders)</div><div class="tseg">${WSTAT.filter(([k]) => k !== "review").map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div></div>` : ""}
     ${manage && WORK.unlocked && !G ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
     ${manage ? `${G ? "" : teamHtml}
       <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
@@ -2119,9 +2151,8 @@ function fillWork(keep) {
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
     </details>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
-    <div class="tsec"><div class="tl">Files</div>${(t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : ""}
-      <label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
-    <div class="tsec"><div class="tl">Updates</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
+    ${showTurnIn || reviewHtml ? "" : `<div class="tsec"><div class="tl">Files</div>${filesHtml}${mine ? `<label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label>` : ""}</div>`}
+    <div class="tsec"><div class="tl">${showTurnIn ? "3. Updates" : "Updates"}</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
       ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${linkify(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
   if (keep) {
@@ -2183,7 +2214,18 @@ function fillWork(keep) {
   const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
   $("wupdpost").addEventListener("click", post);
   $("wupd").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); post(); } });
-  $("wfile").addEventListener("change", e => {
+  const tb = $("wturnin"); if (tb) tb.addEventListener("click", () => {
+    const note = ($("wtin").value || "").trim();
+    if (selfDone) { if (note) wQueue("workUpdate", [t.id, note], "Note posted."); save("saveWork", [t.id, { status: "done" }], "Nice work. Marked done."); }
+    else save("saveWork", [t.id, { status: "review", note: note }], "Turned in. " + by + " will review it.");
+  });
+  const stb = $("wstart"); if (stb) stb.addEventListener("click", () => save("saveWork", [t.id, { status: "doing" }], "Marked as started."));
+  const skb = $("wstuckbtn"); if (skb) skb.addEventListener("click", () => { $("wstuck").hidden = false; $("wwhy").focus(); });
+  const tkb = $("wtakeback"); if (tkb) tkb.addEventListener("click", () => save("saveWork", [t.id, { status: "doing", takeBack: true }], "Taken back. Turn it in again when it's ready."));
+  const ap = $("wapprove"); if (ap) ap.addEventListener("click", () => save("saveWork", [t.id, { status: "done" }], "Approved. It counts as done now."));
+  const sbk = $("wsendback"); if (sbk) sbk.addEventListener("click", () => { $("wbackbox").hidden = false; $("wback").focus(); });
+  const sbs = $("wbacksave"); if (sbs) sbs.addEventListener("click", () => { const v = $("wback").value.trim(); if (!v) { msg("Say what needs to change first."); $("wback").focus(); return; } save("saveWork", [t.id, { status: "doing", note: v }], "Sent back with your note."); });
+  const wfi = $("wfile"); if (wfi) wfi.addEventListener("change", e => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     if (f.size > 10 * 1024 * 1024) { msg("That file is over 10 MB. Try a smaller one."); return; }
@@ -4535,7 +4577,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261102140000";
+  var BUILD = "20261102200000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
