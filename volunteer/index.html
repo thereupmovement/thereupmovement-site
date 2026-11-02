@@ -302,7 +302,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
           (sent ? '<button type="button" class="link" data-nclear="' + m.date + '">I don\'t need anything after all</button>' : "");
       } else if (sent) {
         var what = sent.items.length ? sent.items.join(", ").toLowerCase() : "your note";
-        c += '<p class="small" style="font-size:14px;color:var(--ink2)">Kyana and Dasia have it: ' + esc(what) + (sent.note ? ' (' + esc(sent.note) + ')' : "") + '. We\'ll work you in at this event.</p><button type="button" class="link" data-nstart="' + m.date + '">Change what I need</button>';
+        c += '<p class="small" style="font-size:14px;color:var(--ink2)">The volunteer team has it: ' + esc(what) + (sent.note ? ' (' + esc(sent.note) + ')' : "") + '. We\'ll work you in at this event.</p><button type="button" class="link" data-nstart="' + m.date + '">Change what I need</button>';
       } else c += '<button type="button" class="btn line" data-nstart="' + m.date + '">I need something at this event</button>';
       return c + '</div>';
     }).join("");
@@ -380,7 +380,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
       '<div class="two" role="group" aria-labelledby="phq"><button type="button" class="choice" data-ph="yes" aria-pressed="' + (m.photos === "yes") + '" style="text-align:center">Yes</button>' +
       '<button type="button" class="choice" data-ph="no" aria-pressed="' + (m.photos === "no") + '" style="text-align:center">Keep me out</button></div>' +
       '<button type="button" class="btn brand" id="save" style="margin-top:6px">Save</button>' +
-      '<p class="small">Questions? Reply to any ReUp email and it reaches Dasia and Kyana.</p>' +
+      '<p class="small">Questions? Reply to any ReUp email and it reaches the volunteer team.</p>' +
       '<button type="button" class="btn" id="signout" style="margin-top:6px">Sign out on this phone</button>';
   }
 
