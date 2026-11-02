@@ -125,6 +125,18 @@ before committing with `node .github/check-pages.js`.
   and column position.
 - The PIN, Password hash and Reset/setup columns on the Access tab: written by the server only.
 - The deployment's web address (see above).
+- On the Budget workbook's I2 Item Log: the headers Quantity, Notes, Total units, Line value, Handover and
+  "Set aside for event". The Hub finds Item Log columns by these header words, so renaming one stops
+  Inventory, Found more / Fix the count, and Set aside for an event.
+
+## Set aside for an event (server version 51, 2 Nov 2026)
+
+Optional. In Ops, Inventory, tap an item in storage and pick an upcoming distribution. `setAside` in Code.gs
+writes only that row's "Set aside for event" cell (I2 column AB) and a dated line in its Notes. The label
+is built by `eventLabel_` (for example "Sat Dec 12: Maternal Wellness event"); the page builds the same
+label to show the choice. Totals per event, with the value usable in applications kept apart, are on the
+I8 Event Goods tab of the Budget workbook; the Hub shows units and value per event from the same storage
+list.
 
 ## Open handoff work
 

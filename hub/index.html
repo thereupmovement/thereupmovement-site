@@ -89,6 +89,7 @@ h2:first-child{margin-top:4px}
 .row .s{font-size:13.5px;color:var(--muted)}
 .row .chev{color:var(--muted);font-size:20px}
 .k-Distribution{--kc:var(--k-dist);--ks:var(--k-dist-soft)} .k-Pickup{--kc:var(--k-pick);--ks:var(--k-pick-soft)} .k-Deadline{--kc:var(--k-dead);--ks:var(--k-dead-soft)} .k-Event{--kc:var(--s-fill);--ks:var(--s-fill-soft)}
+.evfor{display:block;font-weight:700;color:var(--red-text,var(--red))}
 .tag{display:inline-block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid var(--line);border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:1px;color:var(--ink)}
 .tag.tbc{border-style:dashed;color:var(--muted)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin:0 0 10px}
@@ -3151,11 +3152,15 @@ function drawInventory(d) {
     ${cats.length > 2 ? `<div class="filters" role="group" aria-label="Category" style="margin:8px 0 0">${cats.map(c => `<button class="chip" type="button" data-cat="${esc(c)}" aria-pressed="${invCat === c}">${esc(c)}</button>`).join("")}</div>` : ""}
     <div class="ires">${!items.length
       ? `<div class="empty">Nothing is in storage right now. Items show up here, searchable, once they're sorted.</div>`
-      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}${items.some(i => i.row) ? ". Found more, or a count is wrong? Tap the item." : ""}</p>
-        <div class="list">${shown.slice(0, limit).map(i => { const inner = `<div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span></div><em>${(+i.units).toLocaleString()}</em>`; return i.row ? `<button type="button" class="irow" data-adj="${+i.row}" aria-label="Change the count for ${esc(i.desc || i.sub || "this item")}">${inner}</button>` : `<div class="irow">${inner}</div>`; }).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
+      : `<p class="small" style="margin:8px 2px 6px">${q || invCat !== "All" ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${(+oh.units || 0).toLocaleString()} units in storage, ${items.length} kind${items.length === 1 ? "" : "s"} of item`}${items.some(i => i.row) ? ". Tap an item to change its count or set it aside for an event." : ""}</p>
+        <div class="list">${shown.slice(0, limit).map(i => { const inner = `<div><b>${esc(i.desc || i.sub || "Item")}</b><span>${[i.sub, i.cond].filter(Boolean).map(esc).join(" &middot; ")}</span><span><strong>${esc(i.loc || "")}</strong>${i.expiry ? " &middot; expires " + esc(shortDate(i.expiry)) : ""}</span>${i.ev ? `<span class="evfor">For ${esc(i.ev)}</span>` : ""}</div><em>${(+i.units).toLocaleString()}</em>`; return i.row ? `<button type="button" class="irow" data-adj="${+i.row}" aria-label="Change the count or set aside: ${esc(i.desc || i.sub || "this item")}">${inner}</button>` : `<div class="irow">${inner}</div>`; }).join("") || `<div class="irow"><div><span>Nothing matches. Try a shorter word.</span></div></div>`}</div>
         ${shown.length > limit ? `<p class="small">Showing ${limit} of ${shown.length}. Search to narrow it down.</p>` : ""}`}</div></details>`;
   // 1. Actions first, one tap straight into the form
   let html = listHtml; // What's in storage sits at the top, folded into its drop-down
+  // Set aside for events (step 138): optional, built from the same storage list. Value is fair market value.
+  const evs = {};
+  items.filter(i => i.ev).forEach(i => { const e = evs[i.ev] = evs[i.ev] || { lines: 0, units: 0, val: 0 }; e.lines++; e.units += +i.units || 0; e.val += +i.val || 0; });
+  if (Object.keys(evs).length) html += `<h2>Set aside for events</h2><div class="list">${Object.keys(evs).sort().map(k => `<div class="irow"><div><b>${esc(k)}</b><span>${evs[k].lines} kind${evs[k].lines === 1 ? "" : "s"} of item &middot; about $${Math.round(evs[k].val).toLocaleString()} in goods</span></div><em>${evs[k].units.toLocaleString()}</em></div>`).join("")}</div><p class="small" style="margin:6px 2px 0">Units set aside. Everything else in storage can go to any event.</p>`;
   // 3. Status at a glance
   html += `<div class="glance">
       <div><b>${(+oh.units || 0).toLocaleString()}</b><span>units in storage</span></div>
@@ -3213,6 +3218,8 @@ function openAdjust(row) {
   const items = (((OPS || {}).inventory || {}).onHand || {}).items || [];
   const it = items.find(x => +x.row === row);
   if (!it) return;
+  // Upcoming distributions, labeled the way the server writes them on the Item Log (eventLabel_ in Code.gs)
+  const asideOpts = upcoming.filter(e => e.kind === "Distribution").map(e => [e.date + "|" + e.name, dt(e.date).toLocaleDateString("en-US", { weekday: "short" }) + " " + dt(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ": " + e.name]);
   const unit = String(it.unit || "").trim(), u = unit.toLowerCase(), plain = !u || /^(each|item|items|individual|individual item)$/.test(u);
   openSheet(`<div class="k">Change the count</div>
     <h3 id="sheetTitle">${esc(it.desc || it.sub || "Item")}</h3>
@@ -3228,8 +3235,30 @@ function openAdjust(row) {
       </div>
       <p class="vs-err" role="alert"></p>
       <button class="vs-btn" type="submit">Save</button>
-      <button class="btn ghost" type="button" data-close>Cancel</button>
-    </form>`);
+    </form>
+    <form class="vs" id="asideF" novalidate style="margin-top:22px">
+      <label class="vs-field"><span>Set aside for an event (optional)</span><small>${it.ev ? "Now set aside for " + esc(it.ev) + "." : "Leave it as general stock unless it is saved for one event."}</small>
+        <div class="vs-sel"><select class="vs-select" name="ev" aria-label="Event to set this item aside for"><option value="">General stock, any event</option>${asideOpts.map(([v, t]) => `<option value="${esc(v)}"${t === it.ev ? " selected" : ""}>${esc(t)}</option>`).join("")}</select><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></label>
+      <p class="vs-err" role="alert"></p>
+      <button class="vs-btn" type="submit">Save event</button>
+    </form>
+    <button class="btn ghost" type="button" data-close style="margin-top:14px">Cancel</button>`);
+  const af = $("asideF"), aerr = af.querySelector(".vs-err"), abtn = af.querySelector(".vs-btn");
+  af.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (abtn.disabled) return;
+    const [date, name] = af.elements.ev.value ? af.elements.ev.value.split("|") : ["", ""];
+    abtn.disabled = true; abtn.textContent = "Saving...";
+    try {
+      const r = await run("setAside", KEY, TOK, row, it.desc, date, name || "");
+      if (r && r.ok) { if (r.ops) { OPS = r.ops; OPSTAT = r.status || OPSTAT; } sheet.close(); drawOps(); toast(r.msg || "Saved."); return; }
+      aerr.textContent = (r && r.msg) || "That didn't save. Try again.";
+    } catch (x) {
+      if (isAuth(x)) { sheet.close(); relock(); return; }
+      aerr.textContent = "That didn't save. Check your connection and try again.";
+    }
+    abtn.disabled = false; abtn.textContent = "Save event";
+  });
   const f = $("adjF"), err = f.querySelector(".vs-err"), btn = f.querySelector(".vs-btn");
   let mode = "add", busy = false;
   f.querySelectorAll("[data-am]").forEach(b => b.addEventListener("click", () => {
@@ -4457,7 +4486,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261031203000";
+  var BUILD = "20261102150000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
