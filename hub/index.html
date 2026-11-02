@@ -363,6 +363,8 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .guide{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:var(--ink);color:var(--bg);text-decoration:none;margin:4px 0 6px}
 .guide b{display:block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:21px;letter-spacing:.01em}
 .guide span{font-size:14.5px;opacity:.9}
+.gpages{display:grid;gap:10px;margin-top:8px}.gpages img{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff}
+button.guide{width:100%;border:0;font:inherit;text-align:left;cursor:pointer}
 .guide:focus-visible{outline:3px solid var(--red);outline-offset:3px}
 .who{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--ss);border:1.5px solid var(--sc)}
 .wq{font-weight:800;font-size:15px;margin-bottom:8px}
@@ -945,6 +947,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .lo-mine span{font-size:14px;font-weight:700}
 .lo-mine em{font-style:normal;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .lo-late{grid-column:1/-1}
+.lo-mine .bad b{color:#B3261E}
 @media (min-width:700px){.lo-mine{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* Tablet and desktop: the phone layout stays, it just gets more room so it isn't a narrow strip floating in a wide window. No sideways scrolling at any width. */
@@ -1028,7 +1031,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-eventday" hidden>
       <div class="banner" data-cover="eventday"><div><h2>Event day</h2><p>Everything for the day, in the order it happens.</p></div></div>
-      <a class="guide" id="handbook" href="https://thereupmovement.org/hub/event-lead-guide.pdf" target="_blank" rel="noopener"><span><b>Running this event?</b>Open the Event Lead Guide (PDF)</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+      <button class="guide" type="button" id="handbook" data-guide><span><b>Running this event?</b>Open the Event Lead Guide</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
       <h2>When you get there</h2>
       <div class="card">
         <div class="rule"><i>1</i><div><b>Find the event lead.</b><span>Get your spot. Stay for the five-minute huddle before the line opens.</span></div></div>
@@ -1206,19 +1209,37 @@ function wireRsvp(e) {
 }
 /* The event page, for the team (Nov 2026): who's going, volunteers, what's set aside, and what happens after.
    It reads what the Hub already has open (Volunteers and Operations, once someone has opened them) and links there. */
+let evLoadTried = false;
 function evTeamHTML(e, n) {
   if (!BOOT.work || !["Distribution", "Event"].includes(e.kind) || n < 0) return "";
+  const team = goingList(e).filter(x => x.a === "yes").length;
   const ve = VOL && VOL.events ? VOL.events.find(x => x.date === e.date) : null;
+  const vgo = ve ? vOn(e.date).filter(p => vStatus(p, e.date) !== "cancelled") : [];
   const items = OPS && OPS.inventory && OPS.inventory.onHand && Array.isArray(OPS.inventory.onHand.items) ? OPS.inventory.onHand.items : null;
   const set = items ? items.filter(i => i.ev && String(i.ev).toLowerCase().includes(String(e.name).toLowerCase())) : null;
   const units = set ? set.reduce((a, i) => a + (+i.units || 0), 0) : 0, val = set ? set.reduce((a, i) => a + (+i.val || 0), 0) : 0;
-  const tile = (v, l) => `<div><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`;
-  return `<div class="tsec"><div class="tl">For the team</div>
-    ${ve || set ? `<div class="lo-mine ev-nums">` : ""}${ve ? tile(vCount(e.date) + (ve.needed ? " of " + ve.needed : ""), "volunteers signed up") : ""}${set ? tile(units.toLocaleString(), "units set aside") : ""}${ve || set ? "</div>" : ""}
-    ${set && set.length ? `<p class="small" style="margin:6px 0 0">${plural(set.length, "kind")} of item set aside, about $${Math.round(val).toLocaleString()} in goods.</p>` : ""}
-    <div class="btns" style="margin-top:8px">${BOOT.vol ? `<button class="btn ghost" type="button" id="evVol">Volunteers and reminders</button>` : ""}${BOOT.ops ? `<button class="btn ghost" type="button" id="evStock">What's set aside</button>` : ""}</div>
-    <p class="small" style="margin:6px 0 0">After the event, households, people and volunteer hours fill in from check-ins, and the website updates on its own.</p></div>`;
+  const tile = (v, l, bad) => `<div${bad ? ' class="bad"' : ""}><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`;
+  const need = ve ? +ve.needed || 0 : 0, short = need > vgo.length;
+  const sec = (t, body) => `<div class="tsec"><div class="tl">${t}</div>${body}</div>`;
+  const loading = `<p class="small" style="margin:0">Loading...</p>`;
+  return `<div class="lo-mine ev-nums" style="margin-top:12px">${ve ? tile(vgo.length + (need ? " of " + need : ""), "volunteers signed up", short) : ""}${tile(team, "from the team going")}${set ? tile(units.toLocaleString(), "units set aside") : ""}</div>
+    ${BOOT.vol ? sec("Volunteers", ve ? `<p style="margin:0">${vgo.length} coming${need ? ` of ${need} needed` : ""}.${short ? ` <b>${need - vgo.length} more needed.</b>` : ""}</p>${vRemindNote(e.date, vgo)}<div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="evVol">Who's coming, reminders and recruiting</button></div>` : VOL ? `<p class="small" style="margin:0">This date isn't on the volunteer sign-up sheet yet.</p>` : TOK ? loading : `<p class="small" style="margin:0">Open Volunteers under More to see who's signed up.</p>`) : ""}
+    ${BOOT.ops ? sec("Set aside for this event", set ? (set.length ? `<div class="list">${set.slice(0, 8).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b></div><em>${(+i.units || 0).toLocaleString()}</em></div>`).join("")}</div><p class="small" style="margin:6px 0 0">${set.length > 8 ? `And ${set.length - 8} more. ` : ""}About $${Math.round(val).toLocaleString()} in goods.</p>` : `<p class="small" style="margin:0">Nothing set aside yet. In Ops, Inventory, tap an item and pick this event.</p>`) + `<div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="evStock">Open storage</button></div>` : TOK ? loading : `<p class="small" style="margin:0">Open Ops under More to see what's in storage.</p>`) : ""}
+    ${sec("On the day", `<p class="small" style="margin:0 0 8px">${n === 0 ? "Check-in is open today." : "Check-in opens here on the day of the event."}</p><div class="btns" style="margin-top:0"><button class="btn ghost" type="button" data-guide>Event Lead Guide</button></div>`)}
+    ${sec("After", `<p class="small" style="margin:0">Households, people and volunteer hours fill in from check-ins, and the website updates on its own.</p>`)}`;
 }
+/* The Event Lead Guide opens inside the Hub, one page image after another, with Close at the top and the bottom.
+   (Opening the PDF itself from the home screen app left people on the PDF with no way back to the Hub.)
+   The pages are hub/guide/p01.webp to p15.webp, made from event-lead-guide.pdf; remake them when the PDF changes. */
+function openGuide() {
+  if (sheet.open) sheet.close();
+  const pages = Array.from({ length: 15 }, (_, i) => `<img src="guide/p${String(i + 1).padStart(2, "0")}.webp" alt="Event Lead Guide, page ${i + 1}" loading="lazy" width="935" height="1210">`).join("");
+  openSheet(`<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" data-close>Back to the Hub</button></div>
+    <h3 id="sheetTitle">Event Lead Guide</h3><div class="gpages">${pages}</div>
+    <div class="btns"><button class="btn" type="button" data-gclose>Back to the Hub</button></div>`);
+  $("sheetBody").querySelectorAll("[data-gclose]").forEach(b => b.addEventListener("click", () => sheet.close()));
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-guide]")) openGuide(); });
 function openEvent(e) {
   const n = daysAway(e.date);
   const where = [e.place, e.address].filter(Boolean).map(esc).join("<br>");
@@ -1247,6 +1268,11 @@ function openEvent(e) {
   const ck = $("toCheckin"); if (ck) ck.addEventListener("click", () => { sheet.close(); CI_EVENT = e.name + " (" + e.date + ")"; try { localStorage.setItem("reupCheckinEvent", CI_EVENT); } catch (er) {} go("checkin"); });
 
   wireRsvp(e);
+  if (BOOT.work && TOK && !evLoadTried && ["Distribution", "Event"].includes(e.kind) && ((BOOT.vol && !VOL) || (BOOT.ops && !OPS))) {
+    evLoadTried = true;
+    const again = () => { if (sheet.open && $("sheetTitle") && $("sheetTitle").textContent === e.name) openEvent(e); };
+    Promise.all([BOOT.vol && !VOL ? loadVol(true) : null, BOOT.ops && !OPS ? loadOps(true) : null]).then(again, again);
+  }
   const evv = $("evVol"); if (evv) evv.addEventListener("click", () => { sheet.close(); if (VOL && VOL.events && VOL.events.some(x => x.date === e.date)) volEvent(e.date); else go("vol"); });
   const evs = $("evStock"); if (evs) evs.addEventListener("click", () => { sheet.close(); opsView = "storage"; go("ops"); });
   const su = $("toSignup"); if (su) su.addEventListener("click", () => openSignup({ date: e.date, name: e.name }));
@@ -4630,7 +4656,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261102210000";
+  var BUILD = "20261102220000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
