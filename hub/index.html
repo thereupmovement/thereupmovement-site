@@ -2863,6 +2863,9 @@ function editForm(i) {
   const d = $("afdel"); if (d) d.addEventListener("click", async () => { if (confirm("Remove " + f.title + " from the Hub? The form itself is not deleted.") && await adminCall("adminSaveForm", [i, null], "Removed.")) sheet.close(); });
 }
 /* ============ VOLUNTEERS: for the core team who organize volunteers (behind the PIN) ============ */
+/* The volunteer sheet keeps a row for a date that moved or was taken off the Schedule, marked Show = No.
+   Upcoming dates only count when they're on the Schedule and open for sign-up; past ones stay for history. */
+const volClean = r => { if (r && Array.isArray(r.events)) r.events = r.events.filter(e => e.show || e.date < r.today); return r; };
 let VOL = null, volAt = 0, volView = "dates", volBusy = false, volQ = "", volF = "all", volSheet = null;
 const V_ST = [["signed", "Signed up"], ["confirmed", "Confirmed"], ["came", "Came"], ["noshow", "No-show"], ["cancelled", "Can't make it"]];
 const vLabel = k => (V_ST.find(x => x[0] === k) || V_ST[0])[1];
@@ -2878,7 +2881,7 @@ async function loadVol(quiet) {
     const r = await run("getVolunteers", KEY, TOK);
     // A refresh never redraws over someone who is typing or saving.
     const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
-    if (!volBusy && !(quiet && typing)) { VOL = r; volAt = Date.now(); drawVol(); if (volSheet && !typing) volSheet(); }
+    if (!volBusy && !(quiet && typing)) { VOL = volClean(r); volAt = Date.now(); drawVol(); if (volSheet && !typing) volSheet(); }
   }
   catch (e) { if (isAuth(e)) relock(); else if (!VOL) $("vol").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
   volLoading = false;
@@ -2888,7 +2891,7 @@ async function volCall(fn, args, ok) {
   volBusy = true;
   const m = $("vmsg"); if (m) m.textContent = "Saving...";
   try {
-    VOL = await run(fn, KEY, TOK, ...args); volAt = Date.now(); volBusy = false;
+    VOL = volClean(await run(fn, KEY, TOK, ...args)); volAt = Date.now(); volBusy = false;
     drawVol(); if (volSheet) volSheet(); if (ok) toast(ok);
     return VOL;
   } catch (e) {
@@ -4606,7 +4609,7 @@ function openOrientEdit() {
     volBusy = true; err.textContent = "";
     const b = f.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Saving...";
     try {
-      VOL = await run("saveOrientation", KEY, TOK, s); volAt = Date.now(); volBusy = false;
+      VOL = volClean(await run("saveOrientation", KEY, TOK, s)); volAt = Date.now(); volBusy = false;
       const r = VOL.orientSaved || {};
       drawVol(); sheet.close();
       toast(r.cal === "ok" ? `Saved. The sign-up and the calendar invite now say ${r.summary}.${r.mailed ? " Walter and Kyana got an email." : ""}`
@@ -4855,7 +4858,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103200000";
+  var BUILD = "20261103210000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
