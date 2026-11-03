@@ -622,6 +622,8 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .wlabel{margin:18px 2px 8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .wpfold .wplain{margin-top:8px}
 .ttin{display:grid;gap:10px}
+.wnextbox summary{cursor:pointer;font-weight:700;padding:6px 0}.wnextbox .wchips{margin-top:8px}
+.wtag{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted)}.wtag button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer}
 .trev{background:var(--red-soft);border-radius:12px;padding:14px}
 .trev .btns{margin-top:10px}
 .wrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--tc);border-radius:10px;padding:10px 12px;cursor:pointer;min-height:44px}
@@ -1942,6 +1944,7 @@ function fillTask(keep) {
 
 /* ============ WORK: everyday tasks for the whole team ============ */
 let wMoreOpen = false;
+let wNextOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
 try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team") workView = wv0; } catch (e) {}
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["review", "Turned in"], ["done", "Done"]];
@@ -2001,6 +2004,7 @@ function wApply(id, patch) {
   if (patch.stopHelping) t.helpers = t.helpers.filter(n => n !== WORK.me);
   if (patch.decide) { t.decision = patch.decide; t.status = "done"; t.decidedBy = WORK.me; t.decidedAt = new Date().toISOString(); }
   if (patch.reopen) { t.decision = ""; t.status = "todo"; }
+  if (patch.handTo) { t.owners = [patch.handTo]; if (t.status === "done" || t.status === "review") t.status = "todo"; }
 }
 function wNote(text) {
   wqNote = text;
@@ -2143,7 +2147,7 @@ function drawWork() {
     if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own when it's time</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(t.opens))).join("")}</div></details>`;
     const done = mine.filter(t => wRecentDone(t, 14));
     if (done.length) html += wfoldPlain("Finished in the last 2 weeks", done);
-    if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
+    html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   } else {
     const teams = ["Everyone", ...(W.teams || [])];
     if (!teams.includes(workTeam)) workTeam = "Everyone";
@@ -2181,7 +2185,7 @@ function drawWork() {
         ${isOpen ? (theirs.filter(wOpen).length ? theirs.filter(wOpen).sort(wSort).map(t => wcard(t, { hideWho: false })).join("") : `<p class="small" style="margin:6px 14px 12px">Nothing open${allTeams ? "" : " on " + esc(workTeam)}.</p>`) : ""}</div>`;
     }).join("") || `<div class="empty">Nobody is on this team yet.</div>`}</div>
       <p class="small" style="margin-top:10px">Bar colors: <span class="key b-done"></span> done <span class="key b-doing"></span> in progress <span class="key b-bad"></span> stuck or late <span class="key b-todo"></span> to do</p>`;
-    if (W.canManage) html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
+    html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
   }
   box.innerHTML = html;
   drawHomeWork();
@@ -2335,6 +2339,7 @@ function fillWork(keep) {
   const names = (W.people || []).map(p => p.name);
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
   const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
+  const others = names.filter(n => n !== me);
   /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
   const by = t.createdBy || "", meP = (W.people || []).find(p => p.name === me), amLeader = !!(meP && meP.leader);
   const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || manage;
@@ -2351,7 +2356,14 @@ function fillWork(keep) {
     : `<div class="tsec ttin"><div class="tl">2. Turn it in</div>${filesHtml}
       <div class="tdue"><label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
       <textarea id="wtin" class="tarea" placeholder="${esc(selfDone ? "A note about what you did (optional). Paste a link here if the work lives somewhere else." : "A note for " + by + " (optional). Paste a link here if the work lives somewhere else.")}"></textarea>
+      <details class="wnextbox"${t.title && wNextOpen ? " open" : ""}><summary>What's next, and who does it? (optional)</summary>
+        <input class="ainput" id="wnext" type="text" maxlength="200" placeholder="For example: Post the merch drop">
+        <div class="wchips">${others.map(n => `<button type="button" data-wnx="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join("")}</div>
+        <p class="small" style="margin:6px 0 0">When you press the button below, they get a new task with your files and note, and a message in their Inbox.</p></details>
       <button type="button" class="btn" id="wturnin">${selfDone ? "Mark it done" : "Turn it in"}</button>
+      <button type="button" class="linkish" id="wpassbtn">Pass this task to someone instead</button>
+      <div id="wpass" hidden><div class="wchips">${others.map(n => `<button type="button" data-wpto="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join("")}</div>
+        <textarea id="wpassnote" class="tarea" placeholder="A note for them (optional)" style="min-height:60px"></textarea><button type="button" class="tbtn" id="wpasssave">Pass it on</button></div>
       ${t.status === "todo" ? `<button type="button" class="linkish" id="wstart">I've started on this</button>` : ""}
       ${t.status === "stuck" ? "" : `<button type="button" class="linkish" id="wstuckbtn" style="color:var(--red)">I'm stuck. Ask for help.</button>`}
       <div id="wstuck" hidden><textarea id="wwhy" class="tarea" placeholder="What's in the way? A leader will see this and help." style="margin-top:8px;min-height:60px"></textarea><button type="button" class="tbtn" id="wstucksave">Ask for help</button></div></div>`;
@@ -2365,8 +2377,8 @@ function fillWork(keep) {
     <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueWords(t.due, t.status === "done")[0] : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
     ${manage && !isNew && !G ? `<div class="tsec"><div class="tl">Status (leaders)</div><div class="tseg">${WSTAT.filter(([k]) => k !== "review").map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div></div>` : ""}
     ${manage && WORK.unlocked && !G ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
-    ${manage ? `${G ? "" : teamHtml}
-      <div class="tsec"><div class="tl">Who owns it</div>${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
+    ${manage || isNew ? `${G ? "" : teamHtml}
+      <div class="tsec"><div class="tl">Who owns it</div>${isNew && !manage ? `<p class="small" style="margin:0 0 6px">Leave it blank and it's yours. Pick a teammate to ask them for it.</p>` : ""}${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
     ${isNew || G ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     ${isNew || G || !(mine || manage) ? "" : `<div class="tsec"><div class="tl">Size</div><div class="wchips"><button type="button" data-wquick="1" aria-pressed="${!!t.quick}">Quick one</button><button type="button" data-wquick="0" aria-pressed="${!t.quick}">Takes longer</button></div></div>`}
@@ -2376,6 +2388,7 @@ function fillWork(keep) {
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
     ${showTurnIn || reviewHtml ? "" : `<div class="tsec"><div class="tl">Files</div>${filesHtml}${mine ? `<label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label>` : ""}</div>`}
     <div class="tsec"><div class="tl">${showTurnIn ? "3. Updates" : "Updates"}</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
+      <div class="wtag"><span>Tag someone:</span>${others.map(n => `<button type="button" data-wtag="${esc(n)}">@${esc(n)}</button>`).join("")}</div>
       ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${linkify(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
   if (keep) {
@@ -2437,8 +2450,22 @@ function fillWork(keep) {
   const post = () => { const v = $("wupd").value.trim(); if (v) save("workUpdate", [t.id, v], "Update posted.", "upd"); };
   $("wupdpost").addEventListener("click", post);
   $("wupd").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); post(); } });
+  let nextPick = "", passPick = "";
+  const pick1 = (attr, set) => box.querySelectorAll(`[data-${attr}]`).forEach(b => b.addEventListener("click", () => { const v = b.getAttribute("data-" + attr); set(v); box.querySelectorAll(`[data-${attr}]`).forEach(x => x.setAttribute("aria-pressed", x === b)); }));
+  pick1("wnx", v => nextPick = v); pick1("wpto", v => passPick = v);
+  const nb = box.querySelector(".wnextbox"); if (nb) nb.addEventListener("toggle", () => { wNextOpen = nb.open; });
+  box.querySelectorAll("[data-wtag]").forEach(b => b.addEventListener("click", () => { const u = $("wupd"); u.value = (u.value ? u.value.replace(/\s*$/, " ") : "") + "@" + b.dataset.wtag + " "; u.focus(); }));
+  const pb = $("wpassbtn"); if (pb) pb.addEventListener("click", () => { $("wpass").hidden = false; });
+  const ps = $("wpasssave"); if (ps) ps.addEventListener("click", () => { if (!passPick) { msg("Pick who to pass it to."); return; } save("saveWork", [t.id, { handTo: passPick, note: ($("wpassnote").value || "").trim() }], "Passed to " + passPick + ". They got a message."); });
   const tb = $("wturnin"); if (tb) tb.addEventListener("click", () => {
     const note = ($("wtin").value || "").trim();
+    const next = (($("wnext") || {}).value || "").trim();
+    if (next && !nextPick) { msg("Pick who does the next step, or clear it."); return; }
+    if (next) {
+      const fl = (t.files || []).map(f => f.name + ": " + f.url).join("\n");
+      wQueue("saveWork", ["", { title: next, owners: [nextPick], team: t.team, details: `Follows on from "${t.title}", from ${me}.` + (note ? "\n" + note : "") + (fl ? "\nFiles:\n" + fl : "") }], "Next step sent to " + nextPick + ".");
+      wNextOpen = false;
+    }
     if (selfDone) { if (note) wQueue("workUpdate", [t.id, note], "Note posted."); save("saveWork", [t.id, { status: "done" }], "Nice work. Marked done."); }
     else save("saveWork", [t.id, { status: "review", note: note }], "Turned in. " + by + " will review it.");
   });
@@ -4828,7 +4855,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103191000";
+  var BUILD = "20261103200000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
