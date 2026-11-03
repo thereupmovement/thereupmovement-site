@@ -226,7 +226,8 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
       '<button type="button" class="btn brand" data-rel="1">I agree</button></section>';
   }
   function home() {
-    var today = V.today, live = V.mine.filter(function (m) { return !m.cancelled; }), next = live[0], o = V.orientation, h = "";
+    /* m.off: the team moved that date or took it off the schedule, so it no longer counts as a date they're on. */
+    var today = V.today, live = V.mine.filter(function (m) { return !m.cancelled && !m.off; }), next = live[0], o = V.orientation, h = "";
     h += '<div><p class="hi">Hi, ' + esc(V.first) + '</p><h1>' + (next ? "You're on for " + esc(short(next.date)) : "Ready when you are") + '</h1></div>';
     h += relCard();
     var todos = [];
@@ -252,6 +253,8 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
     }
     var later = V.mine.filter(function (m) { return m !== next; });
     if (later.length) h += '<div class="kicker" style="margin-top:4px">Also coming up</div>' + later.map(function (m) {
+      if (m.off) return '<div class="card" style="opacity:.85"><div class="row"><div><div class="when">' + esc(short(m.date)) + '</div><div class="name">' + esc(m.name) + '</div></div><span class="pill p-no">Date changed</span></div>' +
+        '<p class="small" style="margin:0">The team moved this date or took it off the schedule, so you don\'t need to come that day. Pick a new date below.</p></div>';
       return '<div class="card" style="opacity:' + (m.cancelled ? ".75" : "1") + '"><div class="row"><div><div class="when">' + esc(short(m.date)) + '</div><div class="name">' + esc(m.name) + '</div>' +
         (m.time ? '<div class="sub">' + esc(m.time) + '</div>' : "") + '</div><span class="pill ' + (m.cancelled ? "p-no" : "p-ok") + '">' + (m.cancelled ? "Can't make it" : "Signed up") + '</span></div>' +
         (m.cancelled ? '<button type="button" class="link" data-join="' + m.date + '">I can make it after all</button>'
@@ -288,7 +291,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
     w.document.close();
   }
   function needs() {
-    var live = V.mine.filter(function (m) { return !m.cancelled; });
+    var live = V.mine.filter(function (m) { return !m.cancelled && !m.off; });
     var h = '<div><h1>Need something too?</h1><p class="lede">Volunteers can receive too. Tell us before an event and we\'ll set something aside for you. Only the team sees this.</p></div>';
     if (!live.length) return h + '<div class="card"><div class="name" style="font-size:16px">Sign up for a date first</div><p class="small">Then tell us here what would help at that event.</p><button type="button" class="btn" data-go="signup">See open dates</button></div>';
     return h + live.map(function (m) {

@@ -980,24 +980,38 @@ if (STORE_URL) {
   PUB.then(d => { if (d && (d.totals || d.lastEvent)) draw(d, false); else { showYear(); showMap([]); } });
 })();
 
-// Volunteering
+// Volunteering. ORIENTATION is only the fallback: the real day, time, length and Meet link come from the
+// orientation settings the team keeps in the Hub (the same ones the sign-up form uses), so a change there shows here.
 (() => {
-  const now = new Date(), o = ORIENTATION;
-  const next = new Date(now); next.setHours(o.hour, o.minute, 0, 0);
-  let add = (o.weekday - next.getDay() + 7) % 7;
-  if (add === 0 && now > new Date(next.getTime() + 45 * 60e3)) add = 7;
-  next.setDate(next.getDate() + add);
-  const time = next.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  const day = next.toLocaleDateString("en-US", { weekday: "long" });
-  const when = add === 0 ? `today at ${time}` : add === 1 ? `tomorrow at ${time}` : `${day}, ${next.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
-  $("orientWhen").textContent = `Every ${day} at ${time}, ${o.length}, on Google Meet.`;
-  $("orientNext").innerHTML = `Next one: <b>${when}${add > 1 ? " at " + time : ""}</b>`;
-  $("orientJoin").href = o.url;
-  const end = new Date(next.getTime() + (parseInt(o.length, 10) || 30) * 60e3);
-  const stamp = t => `${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}T${pad(t.getHours())}${pad(t.getMinutes())}00`;
-  const cp = new URLSearchParams({ action: "TEMPLATE", text: "The ReUp Movement: volunteer orientation", dates: `${stamp(next)}/${stamp(end)}`, ctz: "America/Chicago",
-    details: `Orientation for new ReUp volunteers on Google Meet (${o.length}). Join here: ${o.url}\n\nAfter orientation, pick the dates you can help: ${PAGE_URL}`, location: o.url });
-  $("orientCal").href = "https://calendar.google.com/calendar/render?" + cp.toString();
+  const draw = o => {
+    const now = new Date(), next = new Date(now); next.setHours(o.hour, o.minute, 0, 0);
+    let add = (o.weekday - next.getDay() + 7) % 7;
+    if (add === 0 && now > new Date(next.getTime() + 45 * 60e3)) add = 7;
+    next.setDate(next.getDate() + add);
+    if (o.next) { next.setTime(o.next.getTime()); add = Math.round((new Date(next).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 864e5); }
+    const time = next.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    const day = next.toLocaleDateString("en-US", { weekday: "long" });
+    const when = add === 0 ? `today at ${time}` : add === 1 ? `tomorrow at ${time}` : `${day}, ${next.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+    $("orientWhen").textContent = `${o.weekly === false ? "Most" : "Every"} ${day} at ${time}, ${o.length}, on Google Meet.`;
+    $("orientNext").innerHTML = `Next one: <b>${when}${add > 1 ? " at " + time : ""}</b>`;
+    $("orientJoin").href = o.url;
+    const end = new Date(next.getTime() + (parseInt(o.length, 10) || 30) * 60e3);
+    const stamp = t => `${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}T${pad(t.getHours())}${pad(t.getMinutes())}00`;
+    const cp = new URLSearchParams({ action: "TEMPLATE", text: "The ReUp Movement: volunteer orientation", dates: `${stamp(next)}/${stamp(end)}`, ctz: "America/Chicago",
+      details: `Orientation for new ReUp volunteers on Google Meet (${o.length}). Join here: ${o.url}\n\nAfter orientation, pick the dates you can help: ${PAGE_URL}`, location: o.url });
+    $("orientCal").href = "https://calendar.google.com/calendar/render?" + cp.toString();
+  };
+  draw(ORIENTATION);
+  fetch(HUB_API, { method: "POST", credentials: "omit", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn: "volForm", args: [] }) })
+    .then(r => r.ok ? r.json() : null).then(r => {
+      const f = r && r.result, o = f && f.orientation, ss = o && o.sessions;
+      if (!ss || !ss.length) return;
+      const m = String(o.time || "").match(/(\d{1,2}):(\d{2})\s*([AP]M)/i); if (!m) return;
+      const at = d => { const t = new Date(d + "T00:00:00"); t.setHours(+m[1] % 12 + (/p/i.test(m[3]) ? 12 : 0), +m[2], 0, 0); return t; };
+      const nx = at(ss[0].date);
+      draw({ weekday: nx.getDay(), hour: nx.getHours(), minute: nx.getMinutes(), next: nx, length: (o.length || 30) + " minutes", url: o.link || ORIENTATION.url,
+        weekly: ss.length < 2 || Math.round((at(ss[1].date) - nx) / 864e5) === 7 });
+    }).catch(() => {});
 })();
 
 // Volunteer sign-up, right on this page. The dates come from the team's schedule through the ReUp Hub.
