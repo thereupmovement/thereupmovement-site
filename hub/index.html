@@ -948,6 +948,12 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .lo-mine em{font-style:normal;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .lo-late{grid-column:1/-1}
 .lo-mine .bad b{color:#B3261E}
+.tnums button{font:inherit;color:inherit;border:0;background:var(--surface);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer}
+.lo-mine button{font:inherit;color:inherit;text-align:left;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tnums button span::after,.lo-mine button span::after{content:" \203A"}
+.tnums button:focus-visible,.lo-mine button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.wgroup,.wpeople,.locard,.phead{scroll-margin-top:14px}
+.ppick{align-items:center}.ppick span{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}.ppick button{font-size:14px;padding:7px 12px}
 .evcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
 .evcard .lo-mine{margin-top:4px;grid-template-columns:repeat(3,minmax(0,1fr))}.evcard .lo-mine div{background:var(--bg);padding:8px}.evcard .lo-mine b{font-size:22px}.evcard .lo-mine span{font-size:12.5px}
 .evcard:focus-visible{outline:3px solid var(--red);outline-offset:2px}
@@ -2015,6 +2021,14 @@ const wfoldPlain = (title, list) => list.length ? `<details class="dhist wpfold"
 const wlist = (title, cls, list, note, fold) => !list.length ? "" : fold
   ? `<details class="wgroup wfold ${cls}"><summary><h3><span>${title}</span><b>${list.length}</b></h3></summary>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></details>`
   : `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></section>`;
+/* A number that jumps to its section when tapped (only when there is something to jump to). */
+const jtile = (n, label, cls, to) => n ? `<button type="button" class="${cls}" data-jump="${to}"><b>${n}</b><span>${label}</span></button>` : `<div class="${cls}"><b>${n}</b><span>${label}</span></div>`;
+document.addEventListener("click", e => {
+  const j = e.target.closest("[data-jump]");
+  if (j) { const v = j.closest(".view") || document, t = v.querySelector(j.dataset.jump); if (t) { if (t.tagName === "DETAILS") t.open = true; t.scrollIntoView({ behavior: "smooth", block: "start" }); } return; }
+  const g = e.target.closest("[data-wgo]");
+  if (g) { workView = g.dataset.wgo; try { localStorage.setItem("reupHubWorkView", workView); } catch (er) {} if ($("v-work").hidden) go("work"); else drawWork(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
 const wgroup = (title, cls, list, opts, note) => list.length ? `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}${list.map(t => wcard(t, opts)).join("")}</section>` : "";
 function drawWork() {
   const W = WORK, box = $("work");
@@ -2068,9 +2082,11 @@ function drawWork() {
     const lateOrStuck = n => all.some(t => wOpen(t) && t.owners.includes(n) && (t.status === "stuck" || wLate(t)));
     const leaders = (W.people || []).filter(p => (p.leader || p.coordinator) && !lateOrStuck(p.name))
       .map(p => ({ name: p.name, n: all.filter(t => wOpen(t) && t.owners.includes(p.name)).length })).sort((a, b) => a.n - b.n).slice(0, 3);
+    const named = (W.people || []).map(p => p.name).sort((a, b) => a.localeCompare(b));
+    html += `<div class="tpick ppick" role="group" aria-label="Pick a person"><span>Person:</span>${named.map(n => `<button type="button" class="t-all" data-wpp="${esc(n)}" aria-pressed="${workPerson === n}">${esc(n)}</button>`).join("")}</div>`;
     html += `<div class="tpick" role="group" aria-label="Pick a team">${teams.map(t => `<button type="button" class="${TEAMCLS[t] || "t-all"}" data-wt="${esc(t)}" aria-pressed="${t === workTeam}">${esc(LBL(t))}</button>`).join("")}</div>
       <div class="tsum ${TEAMCLS[workTeam] || "t-all"}"><h2>${allTeams ? "The whole team" : esc(LBL(workTeam))}</h2>
-        <div class="tnums"><div><b>${open.length}</b><span>to do</span></div><div class="${stuck.length ? "bad" : ""}"><b>${stuck.length}</b><span>stuck</span></div><div class="${late.length ? "bad" : ""}"><b>${late.length}</b><span>late</span></div><div class="good"><b>${doneWeek}</b><span>done this week</span></div></div></div>`;
+        <div class="tnums">${jtile(open.length, "to do", "", ".wpeople")}${jtile(stuck.length, "stuck", stuck.length ? "bad" : "", ".g-stuck")}${jtile(late.length, "late", late.length ? "bad" : "", ".g-stuck")}${jtile(doneWeek, "done this week", "good", ".g-done")}</div></div>`;
     if (stuck.length || late.length) html += wgroup("Needs help now", "g-stuck", stuck.concat(late), {}, leaders.length ? `Leaders with the most room to help: <b>${leaders.map(l => `${esc(l.name)} (${l.n})`).join(", ")}</b>. Open a task and add a helper.` : "");
     html += wgroup("Nobody is on these yet", "g-nobody", nobody, {}, W.canManage ? "Open one and pick who owns it." : "");
     /* What got finished, and whether anything was turned in with it - visible to everyone on the team, not just leaders. */
@@ -2100,6 +2116,13 @@ function drawWork() {
   if (workView === "overview") bindOverview(box, true); /* task rows are already wired to open below */
   box.querySelectorAll("[data-wunlock]").forEach(b => b.addEventListener("click", () => { if (TOK) loadWork(); else go("goals"); }));
   box.querySelectorAll("[data-wt]").forEach(b => b.addEventListener("click", () => { workTeam = b.dataset.wt; workPerson = null; drawWork(); }));
+  /* Person picker: opens that person's card (switching to the whole team if they're not on this one) and scrolls to it. */
+  box.querySelectorAll("[data-wpp]").forEach(b => b.addEventListener("click", () => {
+    const n = b.dataset.wpp; workPerson = workPerson === n ? null : n;
+    const pp = (W.people || []).find(x => x.name === n); if (workPerson && workTeam !== "Everyone" && !((pp && pp.teams) || []).includes(workTeam)) workTeam = "Everyone";
+    drawWork();
+    if (workPerson) { const c = [...$("work").querySelectorAll("[data-wp]")].find(x => x.dataset.wp === n); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }));
   box.querySelectorAll("[data-wp]").forEach(b => b.addEventListener("click", () => { workPerson = workPerson === b.dataset.wp ? null : b.dataset.wp; drawWork(); }));
   box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
   box.querySelectorAll("[data-wev]").forEach(b => b.addEventListener("click", () => { const e = upcoming[+b.dataset.wev]; if (e) openEvent(e); }));
@@ -3720,7 +3743,7 @@ function overviewData() {
 }
 function overviewTop() {
   const D = overviewData(), me = D.me;
-  const nums = [], add = (v, l, sub) => nums.push({ v, l, sub });
+  const nums = [], add = (v, l, sub, act) => nums.push({ v, l, sub, act: v && v !== "0" ? act : "" });
   const myDecide = D.decide.length + D.stuck.filter(t => t.createdBy === me || t.owners.includes(me)).length;
   const toMe = D.review.filter(t => t.createdBy === me);
   const dueWk = D.all.filter(t => wOpen(t) && t.status !== "review" && t.owners.includes(me) && t.due && daysAway(t.due) <= 7);
@@ -3728,17 +3751,17 @@ function overviewTop() {
   const goods = tiles.find(t => /goods/i.test(t.label || ""));
   const lst = OPS && Array.isArray(OPS.list) ? OPS.list : null, oh = (OPS && OPS.inventory && OPS.inventory.onHand) || null;
   const next = upcoming.find(e => ["Distribution", "Event"].includes(e.kind));
-  if (BOOT.leader) add(myDecide, "Need a decision or help", myDecide ? "Each one says what it's waiting on." : "Nothing waiting.");
+  if (BOOT.leader) add(myDecide, "Need a decision or help", myDecide ? "Each one says what it's waiting on." : "Nothing waiting.", 'data-jump="#lo-need"');
   if ((+BOOT.rc) >= 0) add(+BOOT.rc || 0, "Receipts and trips to approve", (+BOOT.rc) > 0 ? "Approve them and they count in the budget." : "Nothing waiting.");
-  add(toMe.length, "Turned in to you", toMe.length ? "Approve it or send it back with a note." : "Nothing waiting.");
-  add(dueWk.length, "Your tasks due this week", dueWk.length ? dueWk.sort(wSort)[0].title : "Nothing due this week.");
-  if (BOOT.ops && lst) add(lst.filter(x => stOf(x.id) === "new").length, "Requests nobody has called yet", "Call or text within a week.");
+  add(toMe.length, "Turned in to you", toMe.length ? "Approve it or send it back with a note." : "Nothing waiting.", 'data-jump="#lo-review"');
+  add(dueWk.length, "Your tasks due this week", dueWk.length ? dueWk.sort(wSort)[0].title : "Nothing due this week.", 'data-wgo="mine"');
+  if (BOOT.ops && lst) add(lst.filter(x => stOf(x.id) === "new").length, "Requests nobody has called yet", "Call or text within a week.", 'data-logo="ops"');
   if (BOOT.leader && g.now) add((+g.now).toLocaleString(), "Households served this year", g.target && g.target > g.now ? `${(g.target - g.now).toLocaleString()} more by ${g.by} to reach ${(+g.target).toLocaleString()}.` : "");
   if (BOOT.leader && goods && goods.value) add(goods.value, "Goods given to families", "This year, at fair market value.");
-  if (next) { const y = goingList(next).filter(x => x.a === "yes").length; add(dt(next.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), "Next event: " + next.name, `${y} from the team going.${myGoing(next) === "yes" ? " You're going." : ""}`); }
+  if (next) { const y = goingList(next).filter(x => x.a === "yes").length; add(dt(next.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }), "Next event: " + next.name, `${y} from the team going.${myGoing(next) === "yes" ? " You're going." : ""}`, `data-wev="${upcoming.indexOf(next)}"`); }
   if (BOOT.ops && oh) add((+oh.units || 0).toLocaleString(), "Units in storage", "From the Item Log.");
   const line = [`${D.doneWk.length} finished this week`, `${D.stuck.length + D.decide.length} need a decision or help`, `${D.review.length} waiting for review`, `${D.late.length} late`].join(". ") + ".";
-  return `<p class="lo-line">${esc(line)}</p><h3 class="wlabel">Your numbers, ${esc(me)}</h3><div class="lo-mine">${nums.slice(0, 6).map(n => `<div><b>${esc(String(n.v))}</b><span>${esc(n.l)}</span>${n.sub ? `<em>${esc(n.sub)}</em>` : ""}</div>`).join("")}</div>`;
+  return `<p class="lo-line">${esc(line)}</p><h3 class="wlabel">Your numbers, ${esc(me)}</h3><div class="lo-mine">${nums.slice(0, 6).map(n => { const inner = `<b>${esc(String(n.v))}</b><span>${esc(n.l)}</span>${n.sub ? `<em>${esc(n.sub)}</em>` : ""}`; return n.act ? `<button type="button" ${n.act}>${inner}</button>` : `<div>${inner}</div>`; }).join("")}</div>`;
 }
 function overviewCards() {
   const D = overviewData();
@@ -3747,13 +3770,13 @@ function overviewCards() {
   /* Title on its own line, the note under it, so long notes don't squeeze the title on a phone. */
   const row = (t, sub) => wrow(t, sub).replace('class="wrow ', 'class="wrow wdone ');
   const more = (list, max) => list.length > max ? `<p class="small" style="margin:6px 2px 0">And ${list.length - max} more.</p>` : "";
-  const card = (title, n, note, body, cls) => `<section class="card locard${cls ? " " + cls : ""}"><h3 class="area">${title}<span>${n}</span></h3><p class="small" style="margin:-4px 0 8px">${note}</p>${body}</section>`;
+  const card = (title, n, note, body, cls, id) => `<section class="card locard${cls ? " " + cls : ""}"${id ? ` id="${id}"` : ""}><h3 class="area">${title}<span>${n}</span></h3><p class="small" style="margin:-4px 0 8px">${note}</p>${body}</section>`;
   const needs = D.stuck.concat(D.decide);
   const byPerson = {};
   D.late.forEach(t => (t.owners.length ? t.owners : ["Nobody"]).forEach(n => (byPerson[n] = byPerson[n] || []).push(t)));
   const people = Object.keys(byPerson).sort((a, b) => byPerson[b].length - byPerson[a].length);
-  return `${card("Needs a decision or help", needs.length, "Stuck tasks, and decisions for leaders.", needs.length ? `<div class="wrows">${needs.slice(0, 6).map(t => row(t, t.status === "stuck" ? why(t) : "Decision")).join("")}</div>${more(needs, 6)}` : `<p class="lead">Nothing waiting.</p>`, needs.length ? "lo-bad" : "")}
-    ${card("Waiting for review", D.review.length, "Turned in. The person who assigned it approves it or sends it back.", D.review.length ? `<div class="wrows">${D.review.slice(0, 6).map(t => row(t, tin(t))).join("")}</div>${more(D.review, 6)}` : `<p class="lead">Nothing turned in right now.</p>`)}
+  return `${card("Needs a decision or help", needs.length, "Stuck tasks, and decisions for leaders.", needs.length ? `<div class="wrows">${needs.slice(0, 6).map(t => row(t, t.status === "stuck" ? why(t) : "Decision")).join("")}</div>${more(needs, 6)}` : `<p class="lead">Nothing waiting.</p>`, needs.length ? "lo-bad" : "", "lo-need")}
+    ${card("Waiting for review", D.review.length, "Turned in. The person who assigned it approves it or sends it back.", D.review.length ? `<div class="wrows">${D.review.slice(0, 6).map(t => row(t, tin(t))).join("")}</div>${more(D.review, 6)}` : `<p class="lead">Nothing turned in right now.</p>`, "", "lo-review")}
     ${card("Finished this week", D.doneWk.length, "With what was turned in.", D.doneWk.length ? `<div class="wrows">${D.doneWk.slice(0, 6).map(t => wDoneRow(t)).join("")}</div>${more(D.doneWk, 6)}` : `<p class="lead">Nothing finished yet this week.</p>`)}
     ${people.length ? `<details class="dhist lo-late"><summary>Late (${D.late.length}), by person</summary>${people.map(n => `<h4 class="wlabel">${esc(n)} (${byPerson[n].length})</h4><div class="wrows">${byPerson[n].map(t => row(t)).join("")}</div>`).join("")}</details>` : ""}`;
 }
@@ -4730,7 +4753,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103160000";
+  var BUILD = "20261103170000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
