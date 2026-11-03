@@ -951,6 +951,50 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .evcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
 .evcard .lo-mine{margin-top:4px;grid-template-columns:repeat(3,minmax(0,1fr))}.evcard .lo-mine div{background:var(--bg);padding:8px}.evcard .lo-mine b{font-size:22px}.evcard .lo-mine span{font-size:12.5px}
 .evcard:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+/* Dark mode (phones set to dark): these used fixed light colors, which put light text on light boxes. */
+@media (prefers-color-scheme: dark){
+:root:not([data-theme="light"]) .t-ops{--tc:#7DB7E3;--ts:#16283A}
+:root:not([data-theme="light"]) .t-admin{--tc:#B79BE3;--ts:#271D36}
+:root:not([data-theme="light"]) .t-media{--tc:#E98AB4;--ts:#361A27}
+:root:not([data-theme="light"]) .t-events{--tc:#F0A65C;--ts:#352312}
+:root:not([data-theme="light"]) .t-grants{--tc:#7BC89A;--ts:#17301F}
+:root:not([data-theme="light"]) .t-none,:root:not([data-theme="light"]) .t-all{--tc:#C9C3BE;--ts:#2A2624}
+:root:not([data-theme="light"]) .t-volunteers{--tc:#E0C060;--ts:#302810}
+:root:not([data-theme="light"]) .wcard.s-stuck{background:var(--red-soft);border-color:#E57C74;border-left-color:#E57C74}
+:root:not([data-theme="light"]) .ibub.mine{background:#3A1F1D;border-color:#5A2E2A}
+:root:not([data-theme="light"]) .wlockbar{background:#352812;border-color:#6B5520;color:#F0DDA0}
+:root:not([data-theme="light"]) .wdue.late,:root:not([data-theme="light"]) .tnums .bad b,:root:not([data-theme="light"]) .lo-mine .bad b,:root:not([data-theme="light"]) .locard.lo-bad h3.area{color:#F08A80}
+:root:not([data-theme="light"]) .wdue.soon{color:#F0BE5C}
+:root:not([data-theme="light"]) .tpick button[aria-pressed="true"]{color:#0F0E0E}
+:root:not([data-theme="light"]) .wreview{background:#7B2121}
+:root:not([data-theme="light"]) .pnums .late{color:#F08A80}
+:root:not([data-theme="light"]) .pnums .ok{color:#7BC89A}
+:root:not([data-theme="light"]) .late,:root:not([data-theme="light"]) .due.late{color:#F08A80}
+:root:not([data-theme="light"]) .ok{color:#7BC89A}
+:root:not([data-theme="light"]) .hgo{color:#F08A80}
+:root:not([data-theme="light"]) .tnums .good b{color:#7BC89A}
+}
+:root[data-theme="dark"] .t-ops{--tc:#7DB7E3;--ts:#16283A}
+:root[data-theme="dark"] .t-admin{--tc:#B79BE3;--ts:#271D36}
+:root[data-theme="dark"] .t-media{--tc:#E98AB4;--ts:#361A27}
+:root[data-theme="dark"] .t-events{--tc:#F0A65C;--ts:#352312}
+:root[data-theme="dark"] .t-grants{--tc:#7BC89A;--ts:#17301F}
+:root[data-theme="dark"] .t-none,:root[data-theme="dark"] .t-all{--tc:#C9C3BE;--ts:#2A2624}
+:root[data-theme="dark"] .t-volunteers{--tc:#E0C060;--ts:#302810}
+:root[data-theme="dark"] .wcard.s-stuck{background:var(--red-soft);border-color:#E57C74;border-left-color:#E57C74}
+:root[data-theme="dark"] .ibub.mine{background:#3A1F1D;border-color:#5A2E2A}
+:root[data-theme="dark"] .wlockbar{background:#352812;border-color:#6B5520;color:#F0DDA0}
+:root[data-theme="dark"] .wdue.late,:root[data-theme="dark"] .tnums .bad b,:root[data-theme="dark"] .lo-mine .bad b,:root[data-theme="dark"] .locard.lo-bad h3.area{color:#F08A80}
+:root[data-theme="dark"] .wdue.soon{color:#F0BE5C}
+:root[data-theme="dark"] .tpick button[aria-pressed="true"]{color:#0F0E0E}
+:root[data-theme="dark"] .wreview{background:#7B2121}
+:root[data-theme="dark"] .pnums .late{color:#F08A80}
+:root[data-theme="dark"] .pnums .ok{color:#7BC89A}
+:root[data-theme="dark"] .late,:root[data-theme="dark"] .due.late{color:#F08A80}
+:root[data-theme="dark"] .ok{color:#7BC89A}
+:root[data-theme="dark"] .hgo{color:#F08A80}
+:root[data-theme="dark"] .tnums .good b{color:#7BC89A}
+
 @media (min-width:700px){.lo-mine{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* Tablet and desktop: the phone layout stays, it just gets more room so it isn't a narrow strip floating in a wide window. No sideways scrolling at any width. */
@@ -4686,7 +4730,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261102230000";
+  var BUILD = "20261103160000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
