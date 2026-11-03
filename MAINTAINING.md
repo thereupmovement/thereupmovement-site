@@ -163,6 +163,18 @@ the Teams view have no buttons. Overview (`overviewTop` and `overviewCards`, sha
 and Late by person. Event pages have a "For the team" section (`evTeamHTML`) that reads Volunteers and storage once
 those have been opened. Nothing here is a separate server report.
 
+## Hand-offs, tags and the Events screen (server version 56, 3 Nov 2026)
+
+Anyone on the team can add a task (`saveWork` with no id); a teammate's task is theirs unless they name someone,
+and only leaders can make one leaders-only. When a task is created for someone else, they get an Inbox message.
+On the task page: "What's next, and who does it?" makes a follow-up task for a teammate (with the files as links and
+the note) when the task is turned in or marked done; "Pass this task to someone" sends `handTo`, which moves the same
+task to them with a note. `@Name` in an update (`workUpdate`) messages that person. All notices go through
+`workNotice_`, which posts a direct message from the person acting and sends the usual email.
+Events is its own screen (`drawEvents`, under More). Hub admins change any date with Add a date (Schedule tab) or
+Change this date (on the date's page), both through `schedEdit`. Past results come from `liveStats_().recent`,
+passed on as `impact.recent`.
+
 ## Open handoff work
 
 - Move ownership of the Sheets, uploads folder and Apps Script project to ReUp's own Google account
