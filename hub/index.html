@@ -1283,13 +1283,13 @@ function evStats(e) {
   const set = items ? items.filter(i => i.ev && String(i.ev).toLowerCase().includes(String(e.name).toLowerCase())) : null;
   return { need: ve ? +ve.needed || 0 : 0, vgo, team: goingList(e).filter(x => x.a === "yes").length, units: set ? set.reduce((a, i) => a + (+i.units || 0), 0) : null, val: set ? set.reduce((a, i) => a + (+i.val || 0), 0) : 0 };
 }
-/* Work tasks for an event: the task title or details share the event's distinctive words. */
+/* Work tasks for an event: the task title shares the event's distinctive words. */
 const EV_SKIP = /^(with|the|and|for|event|events|annual|distribution|apartments|of|at|st)$/i;
 function evTasks(e) {
   const words = String(e.name).toLowerCase().match(/[a-z0-9']+/g) || [], key = words.filter(w => w.length > 2 && !EV_SKIP.test(w));
   if (!key.length || !WORK) return [];
   return (WORK.tasks || []).filter(t => wOpen(t) && !t.goal).filter(t => {
-    const txt = (t.title + " " + (t.details || "")).toLowerCase();
+    const txt = String(t.title).toLowerCase();   /* title only: details often mention other events */
     const hit = key.filter(w => new RegExp("\\b" + w.replace(/'/g, "") + "\\b").test(txt));
     return hit.length >= Math.min(2, key.length) || hit.some(w => w.length >= 8);
   }).sort(wSort);
@@ -4813,7 +4813,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103180000";
+  var BUILD = "20261103181000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
