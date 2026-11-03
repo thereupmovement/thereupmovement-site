@@ -917,6 +917,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 #leadover .rule{grid-template-columns:minmax(0,1fr)}
 /* The Overview cards were touching with no gap between them (one long, cramped column). Grid with a gap gives them real breathing room at every width, and the column count just changes at wider breakpoints below. */
 #leadover{display:block}
+/* That display:block beat the hidden attribute, so Overview stayed on screen under Goals and Team activity. */
+#leadover[hidden],#leaders[hidden],#activity[hidden]{display:none!important}
 .lo-grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:12px}
 #workseg{grid-template-columns:repeat(3,1fr)}
 #workseg button{font-size:14px;padding:10px 6px}
@@ -4826,7 +4828,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103190000";
+  var BUILD = "20261103191000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
