@@ -1081,6 +1081,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div class="banner" data-cover="schedule"><div><h2>Schedule</h2><p>Every distribution, pickup and deadline coming up. Tap one for details.</p></div></div>
       <div id="schedtoggle"></div>
       <div class="legend" id="legend"></div>
+      <div id="schedadmin"></div>
       <div class="filters" id="filters" role="group" aria-label="Show"></div>
       <div id="schedule"></div>
     </section>
@@ -1335,15 +1336,7 @@ function drawEvents() {
   box.querySelectorAll("[data-wev]").forEach(b => b.addEventListener("click", () => openEvent(upcoming[+b.dataset.wev])));
   box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
   box.querySelectorAll("[data-recruit]").forEach(b => b.addEventListener("click", () => { const v = VOL.events.find(x => x.date === b.dataset.recruit); if (v) { copyText(vRecruitText(v)); toast("Copied. Paste it in the group chat, a story or a text."); } }));
-  const edit = async i => {
-    if (!ADMIN) { toast("Loading the Schedule..."); await loadAdmin(); }
-    if (!ADMIN) return;
-    const e = i >= 0 ? upcoming[i] : null, ai = e ? ADMIN.events.findIndex(x => x.date === e.date && x.name === e.name) : -1;
-    if (e && ai < 0) { toast("Couldn't find that date. Edit it under More, Admin."); return; }
-    editEvent(ai);
-    /* After a save, pull the new Schedule so every screen shows the change. */
-    sheet.addEventListener("close", () => { window.api("boot", [KEY]).then(r => { if (r && r.home && window.__applyHome) window.__applyHome(r.home); drawEvents(); }, () => {}); }, { once: true });
-  };
+  const edit = i => schedEdit(i >= 0 ? upcoming[i] : null);
   box.querySelectorAll("[data-evedit]").forEach(b => b.addEventListener("click", () => edit(+b.dataset.evedit)));
   const add = $("evadd"); if (add) add.addEventListener("click", () => edit(-1));
 }
@@ -1378,6 +1371,18 @@ function openGuide() {
   $("sheetBody").querySelectorAll("[data-gclose]").forEach(b => b.addEventListener("click", () => sheet.close()));
 }
 document.addEventListener("click", e => { if (e.target.closest("[data-guide]")) openGuide(); });
+/* Change the Schedule from wherever a date is shown (Hub admins). Uses the same form as More, Admin, Schedule,
+   then pulls the new Schedule so Home, Schedule, Events and the website pick up the change. */
+async function schedEdit(e) {
+  if (sheet.open) sheet.close();
+  if (!TOK) { go("admin"); return; }   /* asks for the PIN first */
+  if (!ADMIN) { toast("Opening the Schedule..."); await loadAdmin(); }
+  if (!ADMIN) { toast("Couldn't open the Schedule. Try again in a minute."); return; }
+  const ai = e ? ADMIN.events.findIndex(x => x.date === e.date && x.name === e.name) : -1;
+  if (e && ai < 0) { toast("Couldn't find that date. Try More, Admin, Schedule."); return; }
+  editEvent(ai);
+  sheet.addEventListener("close", () => { window.api("boot", [KEY]).then(r => { if (r && r.home && window.__applyHome) window.__applyHome(r.home); if (!$("v-events").hidden) drawEvents(); }, () => {}); }, { once: true });
+}
 function openEvent(e) {
   const n = daysAway(e.date);
   const where = [e.place, e.address].filter(Boolean).map(esc).join("<br>");
@@ -1400,8 +1405,10 @@ function openEvent(e) {
       ${e.status !== "tentative" ? `<a class="btn ghost" href="${calLink(e)}" target="_blank" rel="noopener">Add to my calendar</a>` : ""}
       ${e.kind === "Distribution" ? `<button class="btn ghost" type="button" id="toRules">See event-day rules</button>` : ""}
       ${BOOT.work && ["Distribution", "Event"].includes(e.kind) && n === 0 ? `<button class="btn" type="button" id="toCheckin">Open check-in</button>` : ""}
+      ${BOOT.coordinator ? `<button class="btn ghost" type="button" id="evEditDate">Change this date</button>` : ""}
       <button class="btn ghost" type="button" data-close>Close</button>
     </div>`);
+  const ed = $("evEditDate"); if (ed) ed.addEventListener("click", () => schedEdit(e));
   const r = $("toRules"); if (r) r.addEventListener("click", () => { sheet.close(); go("eventday"); });
   const ck = $("toCheckin"); if (ck) ck.addEventListener("click", () => { sheet.close(); CI_EVENT = e.name + " (" + e.date + ")"; try { localStorage.setItem("reupCheckinEvent", CI_EVENT); } catch (er) {} go("checkin"); });
 
@@ -1561,7 +1568,13 @@ function wireCal(root, id, redraw) {
   }));
   root.querySelectorAll(`[data-cd^="${id}|"]`).forEach(b => b.addEventListener("click", () => { calSel[id] = b.dataset.cd.split("|")[1]; redraw(); }));
 }
+function drawSchedAdmin() {
+  const b = $("schedadmin"); if (!b || !BOOT.coordinator) return;
+  b.innerHTML = `<div class="btns" style="margin:0 0 6px"><button class="btn" type="button" id="schedAdd">Add a date</button></div><p class="small" style="margin:0 0 10px">To move or change a pickup, sorting day or event, tap it, then Change this date.</p>`;
+  $("schedAdd").addEventListener("click", () => schedEdit(null));
+}
 function drawSchedule() {
+  drawSchedAdmin();
   $("legend").innerHTML = ["Distribution", "Event", "Pickup", "Sorting", "Deadline"].map(k => `<span class="k-${k}"><i></i>${k}</span>`).join("");
   $("filters").innerHTML = ["All", "Distribution", "Event", "Pickup", "Sorting", "Deadline"].map(k =>
     `<button class="chip" type="button" data-k="${k}" aria-pressed="${k === kindFilter}">${k === "All" ? "All" : k === "Sorting" ? "Sorting days" : k + "s"}</button>`).join("");
@@ -4813,7 +4826,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103181000";
+  var BUILD = "20261103190000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
