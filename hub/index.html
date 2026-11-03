@@ -918,7 +918,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 /* The Overview cards were touching with no gap between them (one long, cramped column). Grid with a gap gives them real breathing room at every width, and the column count just changes at wider breakpoints below. */
 #leadover{display:block}
 .lo-grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:12px}
-#workseg{grid-template-columns:repeat(4,1fr)}
+#workseg{grid-template-columns:repeat(3,1fr)}
 #workseg button{font-size:14px;padding:10px 6px}
 /* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
 #leadover .rule[data-openwork]{cursor:pointer}
@@ -957,6 +957,14 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .evcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
 .evcard .lo-mine{margin-top:4px;grid-template-columns:repeat(3,minmax(0,1fr))}.evcard .lo-mine div{background:var(--bg);padding:8px}.evcard .lo-mine b{font-size:22px}.evcard .lo-mine span{font-size:12.5px}
 .evcard:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.evgrid{display:grid;gap:14px;margin-top:12px}
+@media (min-width:900px){.evgrid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+.evbig{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.evname{margin:0;font-family:var(--display);font-weight:400;font-size:24px;line-height:1.1;text-transform:uppercase}
+.evbig .lo-mine{grid-template-columns:repeat(3,minmax(0,1fr))}.evbig .lo-mine div{background:var(--bg);padding:8px}.evbig .lo-mine b{font-size:22px}.evbig .lo-mine span{font-size:12.5px}
+.evsec .tl{margin-bottom:4px}
+.evmiss{margin:0;padding-left:20px;font-size:15px}.evmiss li{margin:2px 0}
+.evbtns{margin-top:4px}
 /* Dark mode (phones set to dark): these used fixed light colors, which put light text on light boxes. */
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="light"]) .t-ops{--tc:#7DB7E3;--ts:#16283A}
@@ -1082,6 +1090,10 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div id="forms"></div>
     </section>
 
+    <section class="view" id="v-events" hidden>
+      <div class="banner" data-cover="events"><div><h2>Events</h2><p>Every distribution and event coming up: what's ready, what's missing, and how past ones went.</p></div></div>
+      <div id="events"></div>
+    </section>
     <section class="view" id="v-eventday" hidden>
       <div class="banner" data-cover="eventday"><div><h2>Event day</h2><p>Everything for the day, in the order it happens.</p></div></div>
       <button class="guide" type="button" id="handbook" data-guide><span><b>Running this event?</b>Open the Event Lead Guide</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -1271,21 +1283,69 @@ function evStats(e) {
   const set = items ? items.filter(i => i.ev && String(i.ev).toLowerCase().includes(String(e.name).toLowerCase())) : null;
   return { need: ve ? +ve.needed || 0 : 0, vgo, team: goingList(e).filter(x => x.a === "yes").length, units: set ? set.reduce((a, i) => a + (+i.units || 0), 0) : null, val: set ? set.reduce((a, i) => a + (+i.val || 0), 0) : 0 };
 }
-function eventsBoard() {
+/* Work tasks for an event: the task title or details share the event's distinctive words. */
+const EV_SKIP = /^(with|the|and|for|event|events|annual|distribution|apartments|of|at|st)$/i;
+function evTasks(e) {
+  const words = String(e.name).toLowerCase().match(/[a-z0-9']+/g) || [], key = words.filter(w => w.length > 2 && !EV_SKIP.test(w));
+  if (!key.length || !WORK) return [];
+  return (WORK.tasks || []).filter(t => wOpen(t) && !t.goal).filter(t => {
+    const txt = (t.title + " " + (t.details || "")).toLowerCase();
+    const hit = key.filter(w => new RegExp("\\b" + w.replace(/'/g, "") + "\\b").test(txt));
+    return hit.length >= Math.min(2, key.length) || hit.some(w => w.length >= 8);
+  }).sort(wSort);
+}
+function evMissing(e, x, set) {
+  const m = [];
+  if (!e.who || /not set|tbd|to be decided/i.test(e.who)) m.push("No lead yet");
+  if (e.status === "tentative") m.push("Not booked yet");
+  if (!e.place && !e.address) m.push("No place or address on the Schedule");
+  if (x.vgo !== null && !x.need) m.push("Number of volunteers needed not set");
+  if (x.need && x.vgo !== null && x.vgo < x.need) m.push(`${x.need - x.vgo} more volunteer${x.need - x.vgo === 1 ? "" : "s"} needed`);
+  if (set === 0) m.push("Nothing set aside in storage yet");
+  return m;
+}
+function drawEvents() {
+  const box = $("events"); if (!box) return;
   const list = upcoming.filter(e => ["Distribution", "Event"].includes(e.kind));
-  if (TOK && !evLoadTried && ((BOOT.vol && !VOL) || (BOOT.ops && !OPS))) {
+  if (TOK && !evLoadTried && ((BOOT.vol && !VOL) || (BOOT.ops && !OPS) || (BOOT.coordinator && !ADMIN))) {
     evLoadTried = true;
-    const again = () => { if (workView === "events" && !$("v-work").hidden) drawWork(); };
-    Promise.all([BOOT.vol && !VOL ? loadVol(true) : null, BOOT.ops && !OPS ? loadOps(true) : null]).then(again, again);
+    const again = () => { if (!$("v-events").hidden) drawEvents(); };
+    Promise.all([BOOT.vol && !VOL ? loadVol(true) : null, BOOT.ops && !OPS ? loadOps(true) : null, BOOT.coordinator && !ADMIN ? loadAdmin() : null]).then(again, again);
   }
+  if (!WORK && typeof loadWork === "function") loadWork(true).then(() => { if (!$("v-events").hidden) drawEvents(); }, () => {});
   const st = list.map(evStats), short = st.filter(x => x.need && x.vgo !== null && x.vgo < x.need).length;
   const tile = (v, l, bad) => `<div${bad ? ' class="bad"' : ""}><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`;
-  const cards = list.map((e, i) => { const x = st[i], n = daysAway(e.date);
-    return `<button type="button" class="evcard" data-wev="${upcoming.indexOf(e)}"><span class="wptop"><span>${esc(e.kind)} &middot; ${esc(dt(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</span><span class="wpst${n <= 7 ? " late" : ""}">${esc(away(n))}</span></span>
-      <span class="wpname">${esc(e.name)}</span><span class="wpmeta">${esc([e.who || "Lead not set", e.status === "tentative" ? "Not booked yet" : ""].filter(Boolean).join(". "))}</span>
-      <span class="lo-mine ev-nums">${x.vgo !== null ? tile(x.vgo + (x.need ? " of " + x.need : ""), "volunteers", x.need && x.vgo < x.need) : ""}${tile(x.team, "from the team")}${x.units !== null ? tile(x.units.toLocaleString(), "units set aside") : ""}</span></button>`; }).join("");
-  return `<div class="whello"><h2>Events</h2><p>${list.length ? `Distributions and events coming up: <b>${list.length}</b>.${short ? ` Short on volunteers: <b>${short}</b>.` : ""}` : "Nothing on the Schedule yet."} Tap one for its full page.</p></div>
-    ${!TOK && (BOOT.vol || BOOT.ops) ? `<p class="small">Volunteer and storage numbers show once you've entered your PIN.</p>` : ""}<div class="wplain">${cards}</div>`;
+  const cards = list.map((e, i) => {
+    const x = st[i], n = daysAway(e.date), idx = upcoming.indexOf(e);
+    const miss = evMissing(e, x, x.units === null ? null : x.units), tasks = evTasks(e);
+    const ve = VOL && VOL.events ? VOL.events.find(v => v.date === e.date) : null;
+    return `<section class="card evbig"><div class="wptop"><span>${esc(e.kind)} &middot; ${esc(dt(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</span><span class="wpst${n <= 7 ? " late" : ""}">${esc(away(n))}</span></div>
+      <h3 class="evname">${esc(e.name)}</h3><p class="small" style="margin:0">${esc([e.who || "", e.place || ""].filter(Boolean).join(". ") || "Lead and place not set")}</p>
+      <div class="lo-mine ev-nums">${x.vgo !== null ? tile(x.vgo + (x.need ? " of " + x.need : ""), "volunteers", x.need && x.vgo < x.need) : ""}${tile(x.team, "from the team")}${x.units !== null ? tile(x.units.toLocaleString(), "units set aside") : ""}</div>
+      <div class="evsec"><div class="tl">${miss.length ? "Still missing" : "Ready so far"}</div>${miss.length ? `<ul class="evmiss">${miss.map(m => `<li>${esc(m)}</li>`).join("")}</ul>` : `<p class="small" style="margin:0">Lead, booking, volunteers and storage all look set.</p>`}</div>
+      ${tasks.length ? `<div class="evsec"><div class="tl">Tasks for this event (${tasks.length})</div><div class="wrows">${tasks.slice(0, 5).map(t => wrow(t, (t.owners.join(", ") || "Nobody yet") + (t.due ? ". " + dueWords(t.due, false)[0] : "")).replace('class="wrow ', 'class="wrow wdone ')).join("")}</div>${tasks.length > 5 ? `<p class="small" style="margin:6px 0 0">And ${tasks.length - 5} more on Work.</p>` : ""}</div>` : ""}
+      <div class="btns evbtns"><button class="btn" type="button" data-wev="${idx}">Open the event page</button>${ve && x.need > x.vgo ? `<button class="btn ghost" type="button" data-recruit="${esc(e.date)}">Copy a recruiting post</button>` : ""}${BOOT.coordinator ? `<button class="btn ghost" type="button" data-evedit="${idx}">Edit on the Schedule</button>` : ""}</div></section>`;
+  }).join("");
+  const R = (IMPACT && Array.isArray(IMPACT.recent)) ? IMPACT.recent : [];
+  const past = R.length ? `<h2>How past events went</h2><div class="list">${R.map(r => `<div class="irow"><div><b>${esc(r.name)}</b><span>${esc(dt(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} &middot; ${(+r.households).toLocaleString()} households, ${(+r.people).toLocaleString()} people${r.volunteers ? `, ${r.volunteers} volunteer${r.volunteers === 1 ? "" : "s"}` : ""}${r.hours ? `, ${r.hours} hours` : ""}</span></div></div>`).join("")}</div><p class="small" style="margin:6px 2px 0">From check-ins. This year's events, newest first.</p>` : "";
+  box.innerHTML = `<p class="lo-line" style="margin-top:4px">${list.length ? `Coming up: ${list.length}.${short ? ` Short on volunteers: ${short}.` : ""}` : "Nothing on the Schedule yet."}</p>
+    ${BOOT.coordinator ? `<div class="btns" style="margin:8px 0 4px"><button class="btn" type="button" id="evadd">Add a date to the Schedule</button></div>` : `<p class="small">To change a date, ask a Hub admin. They can edit the Schedule from here.</p>`}
+    ${!TOK && (BOOT.vol || BOOT.ops) ? `<p class="small">Volunteer and storage numbers show once you've entered your PIN in Ops or Volunteers.</p>` : ""}
+    <div class="evgrid">${cards}</div>${past}`;
+  box.querySelectorAll("[data-wev]").forEach(b => b.addEventListener("click", () => openEvent(upcoming[+b.dataset.wev])));
+  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  box.querySelectorAll("[data-recruit]").forEach(b => b.addEventListener("click", () => { const v = VOL.events.find(x => x.date === b.dataset.recruit); if (v) { copyText(vRecruitText(v)); toast("Copied. Paste it in the group chat, a story or a text."); } }));
+  const edit = async i => {
+    if (!ADMIN) { toast("Loading the Schedule..."); await loadAdmin(); }
+    if (!ADMIN) return;
+    const e = i >= 0 ? upcoming[i] : null, ai = e ? ADMIN.events.findIndex(x => x.date === e.date && x.name === e.name) : -1;
+    if (e && ai < 0) { toast("Couldn't find that date. Edit it under More, Admin."); return; }
+    editEvent(ai);
+    /* After a save, pull the new Schedule so every screen shows the change. */
+    sheet.addEventListener("close", () => { window.api("boot", [KEY]).then(r => { if (r && r.home && window.__applyHome) window.__applyHome(r.home); drawEvents(); }, () => {}); }, { once: true });
+  };
+  box.querySelectorAll("[data-evedit]").forEach(b => b.addEventListener("click", () => edit(+b.dataset.evedit)));
+  const add = $("evadd"); if (add) add.addEventListener("click", () => edit(-1));
 }
 let evLoadTried = false;
 function evTeamHTML(e, n) {
@@ -1538,6 +1598,7 @@ function wireForms(root) { root.querySelectorAll("[data-form]").forEach(b => b.a
 
 /* ============ TABS ============ */
 const ICONS = {
+  events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
@@ -1574,7 +1635,7 @@ drawTabs();
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab) && !(tab === "checkin" && BOOT.work)) tab = "home";
-  ["home", "work", "inbox", "schedule", "eventday", "forms", "ops", "goals", "admin", "vol", "checkin"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "events", "eventday", "forms", "ops", "goals", "admin", "vol", "checkin"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
@@ -1582,6 +1643,7 @@ function go(tab) {
   if (tab === "inbox" && typeof loadInbox === "function") { drawInbox(); loadInbox(!!INBOX); }
   if ((tab === "admin" || tab === "vol") && typeof openLeader === "function") openLeader(tab);
   if (tab === "checkin") drawCheckin();
+  if (tab === "events") drawEvents();
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -1628,7 +1690,7 @@ const SHOP = [
   { name: "Giving Is a Currency Tee (Ivory)", price: "$36", url: "https://the-reup-shop.fourthwall.com/products/giving-is-a-currency-tee-ivory", img: "../assets/shop-giving-ivory.webp" },
   { name: "Give Back Tour Hoodie", price: "$60", url: "https://the-reup-shop.fourthwall.com/products/scene-hoodie-holiday-festival-black", img: "../assets/shop-holiday-hoodie.webp" }
 ];
-const COVERS = { work: "img11", schedule: "img3b", eventday: "img2b", forms: "img12", ops: "img4b", goals: "img13" };
+const COVERS = { events: "img1", work: "img11", schedule: "img3b", eventday: "img2b", forms: "img12", ops: "img4b", goals: "img13" };
 setTimeout(() => Object.values(COVERS).forEach(c => { const i = new Image(); i.src = A + c + ".webp"; }), 2500);
 document.querySelectorAll(".banner[data-cover]").forEach(b => { const c = COVERS[b.dataset.cover]; if (c) b.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.72) 100%), url("${A}${c}.webp")`; });
 if (PHOTOS[0]) $("poster").style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.88) 100%), url("${A}img1.webp")`;
@@ -1866,7 +1928,7 @@ function fillTask(keep) {
 /* ============ WORK: everyday tasks for the whole team ============ */
 let wMoreOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
-try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team" || wv0 === "events") workView = wv0; } catch (e) {}
+try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team") workView = wv0; } catch (e) {}
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["review", "Turned in"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const LBL = x => x === "Ops" ? "Operations" : x;
@@ -2037,11 +2099,9 @@ function drawWork() {
   let html = `<div class="seg" id="workseg" role="group" aria-label="Work view">
       <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
       <button type="button" data-wv="overview" aria-pressed="${workView === "overview"}">Overview</button>
-      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button>
-      <button type="button" data-wv="events" aria-pressed="${workView === "events"}">Events</button></div>`;
+      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button></div>`;
   if (W.canManage && !W.unlocked && !W.stale) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
-  if (workView === "events") html += eventsBoard();
-  else if (workView === "overview") {
+  if (workView === "overview") {
     /* The same overview leaders see, for everyone: what's stuck, late, finished (and whether anything was turned in), and what's coming. */
     html += `<div class="whello"><h2>Team overview</h2></div>${overviewTop()}
       <div class="lo-grid">${overviewCards()}</div>`;
@@ -2563,7 +2623,7 @@ setInterval(async () => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
-const MORE_SUB = { vol: "Who is signed up, orientation, reminder texts and hours.", admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+const MORE_SUB = { events: "Every event coming up, what's missing, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
   openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
@@ -3976,7 +4036,7 @@ setInterval(() => {
   if (CI_VIEW === "guests") ciLoadCount(); else loadCheckinVols();
 }, 20000);
 
-if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
+if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); TABS.push(["events", "Events"]); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.ops) TABS.push(["ops", "Operations"]);
   if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
@@ -4753,7 +4813,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103170000";
+  var BUILD = "20261103180000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
