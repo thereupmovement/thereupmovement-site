@@ -195,6 +195,12 @@ request, who, and the error. Plain messages people are meant to see ("Add your n
 people typed is never stored. Hub admins see the last two weeks at the top of More, Admin (the Problems card), and
 `appErrorDigest` (run each morning by `dailyVolunteers`) emails them only when there is something new.
 
+## Who approves receipts
+
+Anyone with **Finance** in their Teams on the Access tab (a Hub admin sets it in Admin, People) approves receipts and
+trips, with their PIN (`RC_TEAM` and `rcReviewer_` in Code.gs). No names are written in the code. On 3 Nov 2026 Finance
+was added for Dasia and Janay, who approved receipts before.
+
 ## More, and server calls in the background
 
 More is grouped (`MORE_GROUPS` in hub/index.html): Events and people, Supplies and forms, Leadership, then On this
