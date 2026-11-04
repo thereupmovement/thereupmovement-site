@@ -119,6 +119,13 @@ before committing with `node .github/check-pages.js`.
   is deleted.
 - Data: each Sheet's File, Version history.
 
+## Writing past the end of a tab
+
+Tabs fed by a Google Form (the Item Log, the volunteer Responses tab) end exactly at their last entry, and writing one
+row past a tab's end fails. `room_(sheet, rows)` in Code.gs adds the missing rows first. Call it before any new
+`getRange(sheet.getLastRow() + 1, ...)` write on a tab that could be full. (This is what broke "We got more of this"
+on 3 Nov 2026.) When a save fails, the Hub now shows the server's reason after "That didn't save:".
+
 ## Things that break the app if changed by hand
 
 - Sheet tab names and column order on the Hub and volunteer sheets: the server finds data by tab name
@@ -174,6 +181,18 @@ task to them with a note. `@Name` in an update (`workUpdate`) messages that pers
 Events is its own screen (`drawEvents`, under More). Hub admins change any date with Add a date (Schedule tab) or
 Change this date (on the date's page), both through `schedEdit`. Past results come from `liveStats_().recent`,
 passed on as `impact.recent`.
+
+## Group sign-up (server version 59, 3 Nov 2026)
+
+The volunteer form asks "Who is coming?". A group leader adds the group's name and how many people in all. They do
+orientation for the group and answer the standards and photo questions for it, but agree to the liability release only
+for themselves. Their sign-up saves as usual, then `grpSave_` (volunteer.gs) adds a row to the Hub sheet's **Groups**
+tab and returns the group's link, `thereupmovement.org/?group=CODE`. Each person in the group opens that link
+(`grpGet`, `grpJoin`, public, on `TP_OPEN`) and agrees to the release themselves; a parent or guardian agrees for anyone
+under 18. Those agreements go on the **Group members** tab. In the Hub (`grpForHub_`, added to `volData_` in Code.gs),
+the leader's row counts as the whole group toward volunteers needed (`vHeads` in hub/index.html), and shows
+"Release needed" until everyone has agreed, with a button to copy the group's link again.
+Not built yet: a group asking for its own service day, and the group on the leader's volunteer page.
 
 ## Open handoff work
 
