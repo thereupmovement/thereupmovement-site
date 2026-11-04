@@ -912,6 +912,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .civrow.on{background:#1d3b1d;border-color:#2d5a2d}
 .civstate{font-size:13px;opacity:.75}
 .formgrid{display:grid;gap:10px;margin:10px 0}
+.aprob{border-left:4px solid var(--red,#8E2A2A);margin-bottom:14px}
 .cihl{display:block;font-weight:700;margin-bottom:6px}.cihh{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.cihh .chip{min-height:48px;font-size:18px;font-weight:800;justify-content:center}.cinudge{margin:8px 0 0;font-weight:700;color:var(--ink)}
 .formgrid label{display:block;font-size:13px;opacity:.85}
 .formgrid input{display:block;width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:44px;margin-top:4px}
@@ -2801,7 +2802,13 @@ function drawAdmin() {
   const box = $("admin");
   if (!box || !ADMIN) return;
   const A = ADMIN;
-  let html = `<div class="seg aseg" role="group" aria-label="Admin section">${[["people", "People"], ["schedule", "Schedule"], ["forms", "Forms"]].map(([k, l]) => `<button type="button" data-av="${k}" aria-pressed="${adminView === k}">${l}</button>`).join("")}</div>
+  // Problems: saves that failed in the last two weeks (the server's "App errors" tab), so nobody has to dig through logs.
+  const probs = Array.isArray(A.problems) ? A.problems : [];
+  const probCard = probs.length ? `<div class="card aprob"><b>${probs.length} save${probs.length === 1 ? "" : "s"} failed in the last two weeks</b>
+    <p class="small" style="margin:4px 0 8px">Newest first. Send this list to whoever maintains the app.</p>
+    <div class="wrows">${probs.slice(0, 8).map(x => `<div class="wrow" style="cursor:default"><span class="wrname">${esc(x.what)}<span class="idmlast">${esc(x.who)} &middot; ${esc(x.at)}</span><span class="small" style="display:block;overflow-wrap:anywhere">${esc(x.error)}</span></span></div>`).join("")}</div>
+    <div class="btns"><button class="btn ghost" type="button" id="aprobcopy">Copy the list</button></div></div>` : "";
+  let html = probCard + `<div class="seg aseg" role="group" aria-label="Admin section">${[["people", "People"], ["schedule", "Schedule"], ["forms", "Forms"]].map(([k, l]) => `<button type="button" data-av="${k}" aria-pressed="${adminView === k}">${l}</button>`).join("")}</div>
     ${ADMIN_GUIDE.indexOf("http") === 0 ? `<p class="small" style="margin:-4px 0 12px">New to this? <a class="wlink" href="${esc(ADMIN_GUIDE)}" target="_blank" rel="noopener">Open the Admin guide</a></p>` : ""}`;
   if (adminView === "people") {
     html += `<button class="btn aadd" type="button" id="aaddp">Add a person</button>
@@ -2826,6 +2833,7 @@ function drawAdmin() {
       <div class="wrows">${A.forms.map((f, i) => `<button type="button" class="wrow" data-af="${i}"><span class="wrname">${esc(f.title)}<span class="idmlast">${esc(f.group || "")}${f.sub ? " &middot; " + esc(f.sub) : ""}</span></span></button>`).join("")}</div>`;
   }
   box.innerHTML = html;
+  const apc = $("aprobcopy"); if (apc) apc.addEventListener("click", () => { copyText(probs.map(x => `${x.at} | ${x.what} | ${x.who} | ${x.error}`).join("\n")); toast("Copied."); });
   box.querySelectorAll("[data-av]").forEach(b => b.addEventListener("click", () => { adminView = b.dataset.av; drawAdmin(); }));
   box.querySelectorAll("[data-ap]").forEach(b => b.addEventListener("click", () => editPerson(+b.dataset.ap)));
   box.querySelectorAll("[data-ae]").forEach(b => b.addEventListener("click", () => editEvent(+b.dataset.ae)));
@@ -4950,7 +4958,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104013000";
+  var BUILD = "20261104013500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
