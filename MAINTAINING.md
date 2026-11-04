@@ -344,6 +344,12 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Turning in, from 3 Nov 2026 (build 20261104100000, server version after 71): everyone, leaders too, turns in a
+  task someone else gave them ("Turn it in", status Turned in). Whoever assigned it gets an Inbox message and email,
+  and approves it or sends it back. Any leader who is not on the task can approve it too; nobody approves their own.
+  "Mark it done" is only for tasks you made yourself, tasks with no Created by, and tasks the Hub made (Created by
+  "Hub"). In saveWork, `reviews` and the "gets turned in" check carry this rule. When an approved task is a project
+  step, the next-step message names the owner who did it, not the approver (`doer`).
 - Where projects show (build 20261104090000): "Your projects" on My work (`wProjects`, `wInProj`: you own it, made it,
   or have a step in it), never in a fold; and a Projects card on the Overview with every open project. On the
   Overview, every "Your numbers" tile that has somewhere to go can be tapped, even at 0.

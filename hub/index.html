@@ -2798,17 +2798,17 @@ function fillWork(keep) {
   const doneWhen = ((t.details || "").match(/^\s*Done when:\s*(.+)$/im) || [])[1] || "";   // a "Done when:" line in the details shows where the task is closed
   /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
   const by = t.createdBy || "", meP = (W.people || []).find(p => p.name === me), amLeader = !!(meP && meP.leader);
-  const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || manage;
+  const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || by === "Hub";
   const filesHtml = (t.files || []).length ? `<div class="tfiles">${t.files.map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.who)}, ${stamp(f.at)}</span></a>`).join("")}</div>` : "";
   const tin = (t.updates || []).find(u => /^Turned in for review/.test(u.text || ""));
-  const reviewHtml = !isNew && !G && t.status === "review" && (by === me || amLeader) ? `<div class="tsec trev"><div class="tl">Turned in for you to review</div>
+  const reviewHtml = !isNew && !G && t.status === "review" && (by === me || (amLeader && !onTask(t, me))) ? `<div class="tsec trev"><div class="tl">Turned in for you to review</div>
       <p style="margin:0 0 6px">${tin ? `Turned in by ${esc(tin.who)}, ${stamp(tin.at)}.` : "Turned in."}</p>${tin && /: /.test(tin.text) ? `<p class="wtext" style="margin:0 0 8px">${linkify(tin.text.replace(/^Turned in for review: /, ""))}</p>` : ""}${filesHtml}
       <div class="btns"><button class="btn" type="button" id="wapprove">Approve</button><button class="btn ghost" type="button" id="wsendback">Send it back</button></div>
       <div id="wbackbox" hidden><textarea id="wback" class="tarea" placeholder="What needs to change? They'll see this."></textarea><button type="button" class="tbtn" id="wbacksave">Send it back with this note</button></div></div>` : "";
   const showTurnIn = iDo && t.status !== "done" && t.status !== "review";
   const turnHtml = !iDo ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0"><span class="st ws-${t.status}">${WLABEL[t.status] || "To do"}</span></p></div>`
     : t.status === "done" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0">Done${t.doneAt ? ", " + stamp(t.doneAt) : ""}.</p></div>`
-    : t.status === "review" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0 0 6px">Turned in. ${esc(by && by !== me ? by + " reviews it" : "A leader reviews it")}, and you'll see the answer here.</p>${by === me || amLeader ? "" : `<button type="button" class="linkish" id="wtakeback">Take it back to change something</button>`}</div>`
+    : t.status === "review" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0 0 6px">Turned in. ${esc(by && by !== me ? by + " reviews it" : "A leader reviews it")}, and you'll see the answer here.</p>${by === me || (amLeader && !onTask(t, me)) ? "" : `<button type="button" class="linkish" id="wtakeback">Take it back to change something</button>`}</div>`
     : `<div class="tsec ttin"><div class="tl">2. Turn it in</div>${filesHtml}
       <div class="tdue"><label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
       ${doneWhen ? `<p class="wdonewhen"><b>Done when:</b> ${linkify(doneWhen)}</p>` : ""}${selfDone ? `<div class="tl wend">How did it end?</div><div class="wchips" id="wendc">${WEND.map(([k, l]) => `<button type="button" data-wend="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
@@ -2834,7 +2834,7 @@ function fillWork(keep) {
       <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What to do, links, who to call. End with a line like: Done when: the flyer is posted.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
     ${GD ? decisionHtml : isNew || G || reviewHtml ? "" : turnHtml}
     <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueWords(t.due, t.status === "done")[0] : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
-    ${manage && !isNew && !G ? `<div class="tsec"><div class="tl">Status (leaders)</div><div class="tseg">${WSTAT.filter(([k]) => k !== "review").map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div></div>` : ""}
+    ${manage && !isNew && !G ? `<div class="tsec"><div class="tl">Status (leaders)</div><div class="tseg">${WSTAT.filter(([k]) => k !== "review" && (k !== "done" || selfDone || !onTask(t, me))).map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div></div>` : ""}
     ${manage && WORK.unlocked && !G ? `<div class="tsec"><div class="tl">Who can see it</div><div class="wchips"><button type="button" data-wvis="0" aria-pressed="${!t.private}">Whole team</button><button type="button" data-wvis="1" aria-pressed="${!!t.private}">Leaders only</button></div></div>` : ""}
     ${manage || isNew ? `${G ? "" : teamHtml}
       <div class="tsec"><div class="tl">Who owns it</div>${isNew && !manage ? `<p class="small" style="margin:0 0 6px">Leave it blank and it's yours. Pick a teammate to ask them for it.</p>` : ""}${chips("wown", t.owners, (G || t.private) ? leadNames : undefined)}${(G || t.private) ? `<p class="small" style="margin:6px 0 0">Leaders only, so only leaders can own it.</p>` : ""}</div>` : `<div class="tsec"><div class="tl">Who owns it</div><p style="margin:0">${esc(t.owners.join(", ") || "No one yet")}</p></div>`}
@@ -5394,7 +5394,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104090000";
+  var BUILD = "20261104100000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
