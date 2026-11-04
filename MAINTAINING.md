@@ -344,6 +344,9 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Where projects show (build 20261104090000): "Your projects" on My work (`wProjects`, `wInProj`: you own it, made it,
+  or have a step in it), never in a fold; and a Projects card on the Overview with every open project. On the
+  Overview, every "Your numbers" tile that has somewhere to go can be tapped, even at 0.
 
 ## Group sign-up (server version 59, 3 Nov 2026)
 
