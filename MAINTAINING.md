@@ -121,23 +121,34 @@ before committing with `node .github/check-pages.js`.
   is deleted.
 - Data: each Sheet's File, Version history.
 
-## Ask a question (server version 61, 3 Nov 2026)
+## Ask a question (server version 64, 3 Nov 2026)
 
 **Answers:** the "ReUp Answers" Google Doc (ReUp Drive folder). Each question is a Heading 2 with its answer under it;
 a Heading 1 containing "Team only" starts the part volunteers do not see. `answers_` in Code.gs reads it (cached 10
 minutes). The Hub's Ask screen and the volunteer page's Questions tab search it on the phone. To change an answer,
 edit the doc.
 
+**Where people ask:** the round Ask button on every Hub screen (except check-in) opens a panel over the screen, so
+nobody loses their place; "All answers" in the panel opens the full Ask screen with the ReUp Answers list. Both share
+one conversation (`askSend` in hub/index.html).
+
 **AI answers (team only):** `askTeam_` in Code.gs sends the question, plus the text of the docs in `AI_DOCS` (ReUp
 Answers, Message Guide, Admin Guide, Event Lead Guide, Fix-It Guide), to Google's free Gemini, and answers only from
-them. Current Status is left out on purpose. The key is the Script Property `GEMINI_KEY`, never in code. On the free
+them and from **live Hub data**. The Hub page builds that data (`hubContext` in hub/index.html) from what it has
+already loaded for that person: the Schedule, impact, Work, volunteers, storage, request counts and applications.
+So nobody's answer holds more than they can see, and it is the same data as the screens (no second report). Phone
+numbers, emails and addresses are never included, community requests are counts only, and volunteers and applicants
+are first name and last initial. `askWarm` loads Work, Volunteers, Operations and Applications (for the people who
+can see them) when the panel opens, so the numbers are ready by the time they ask. The docs are kept in one zipped
+copy for 15 minutes (cache `aidocs1`), so doc edits reach the AI within 15 minutes. Current Status is left out on purpose. The key is the Script Property `GEMINI_KEY`, never in code. On the free
 tier Google may read what is sent, so the box tells the team never to type a community guest's details. Limit: 40
 questions per person per hour.
 - Model: picked once into the Script Property `GEMINI_MODEL`; delete it to pick again.
 - When Google says the model is busy (503) or it takes over a minute, `aiAlts_` tries up to three other free "flash"
   models. The one that answers is remembered for 6 hours (cache `aigood`), and a busy main model is skipped for 10
   minutes (`aibusy`), so most answers take seconds.
-- Answers use short thinking (`thinkingLevel: 'low'`), dropped automatically if a model refuses it.
+- Answers use as little thinking as each model allows (`THINK` in `askTeam_`: minimal, then low, then none). The level
+  that worked is remembered per model for 6 hours (cache `aithink:<model>`). With warm caches an answer takes about 3 seconds.
 - Test from the editor with `checkAI`: it logs each doc's size, the models, and one test answer.
 - If the docs disagree, the AI says so. That is a sign to fix the docs, not the code.
 
@@ -173,6 +184,26 @@ More, Applications (`appsList` / `appsSave`; statuses in `APP_STATUS`). Phone nu
 request, who, and the error. Plain messages people are meant to see ("Add your name.") are not recorded, and what
 people typed is never stored. Hub admins see the last two weeks at the top of More, Admin (the Problems card), and
 `appErrorDigest` (run each morning by `dailyVolunteers`) emails them only when there is something new.
+
+## More, and server calls in the background
+
+More is grouped (`MORE_GROUPS` in hub/index.html): Events and people, Supplies and forms, Leadership, then On this
+device. Add a new screen to a group there. The Inbox checks for new messages every 5 seconds while it is open and
+every 30 seconds otherwise (the badge), to keep server calls down.
+
+## Fixes from the 3 Nov 2026 code review (server version 64)
+
+- Volunteer password sign-in read its saved hash as "[object Object]", so it could never work (`volAuthRow_`). Fixed;
+  anyone who asked for a set-password link before this needs to ask again. `vpAuthSendAllSetup` (no underscore now,
+  so it shows in the Run menu) sends the invites.
+- Check-in: if a check-in fails to save, its id is freed so the tablet's retry is saved (it was skipped as "already in").
+- Every tab the app makes keeps 50 empty rows at the bottom (`tab_` calls `room_`), so no tab stops at row 1,000.
+- The Updates tab is written under the lock, and Updates and Files are cached for 5 minutes (`logs1`, cleared on writes).
+- Typed text that was not cleaned for the sheet (the count-change reason, "In Houston" on applications) now is.
+- First and last sign-up dates compare as dates, not text.
+- Removed code nothing used: Turnin.gs, Leadership.gs (`getLeadership`), `recentWorkDone_`, `aiLite_`. They are in
+  the server's version history if ever needed.
+- A person who signed in with email and password and lands on the PIN screen can tap "Sign in with your email instead".
 
 ## Writing past the end of a tab
 
@@ -233,7 +264,9 @@ On the task page: "What's next, and who does it?" makes a follow-up task for a t
 the note) when the task is turned in or marked done; "Pass this task to someone" sends `handTo`, which moves the same
 task to them with a note. `@Name` in an update (`workUpdate`) messages that person. All notices go through
 `workNotice_`, which posts a direct message from the person acting and sends the usual email.
-Events is its own screen (`drawEvents`, under More). Hub admins change any date with Add a date (Schedule tab) or
+Events is its own screen (`drawEvents`, under More), in three parts: Coming up (the team's dashboard), On the day
+(what used to be the Event day tab; `go("eventday")` still lands there), and Past. People without Work see On the day
+and Past only. It opens on On the day when a distribution is today. Hub admins change any date with Add a date (Schedule tab) or
 Change this date (on the date's page), both through `schedEdit`. Past results come from `liveStats_().recent`,
 passed on as `impact.recent`.
 

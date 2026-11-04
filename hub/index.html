@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: a phone app. Black "team only" header, four views (Home, Schedule, Forms, Event day) switched by a bottom tab bar within thumb reach. Tapping anything opens a detail sheet inside the page first; only the final "Open form" step leaves. */
+/* Layout: a phone app. Black "team only" header, four views (Home, Schedule, Events, Forms) switched by a bottom tab bar within thumb reach. Tapping anything opens a detail sheet inside the page first; only the final "Open form" step leaves. */
 :root{
   --bg:#F2F2EF; --surface:#FFFFFF; --ink:#121212; --muted:#5D5A57; --line:#DCDAD6;
   --band:#121212; --band-ink:#FFFFFF; --red:#7B2121; --red-soft:#F2E2E1;
@@ -702,6 +702,7 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .hio{font-weight:700}
 .hgo{font-weight:800;color:#7B2121;text-decoration:underline;text-underline-offset:3px}
 .morelist{display:grid;gap:8px;margin-top:8px}
+.moreh{margin:16px 0 0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .moreitem{display:flex;align-items:center;gap:14px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;min-height:56px}
 .moreitem svg{width:26px;height:26px;flex:none}
 .moreitem b{display:block;font-size:16px}
@@ -930,7 +931,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 #leadover .rule[data-openwork]{cursor:pointer}
 #leadover .rule[data-openwork]:hover{background:var(--surface2,rgba(0,0,0,.03))}
 /* The Leadership section has three tabs (Overview / Goals / Team activity), not the two the shared .seg toggle was built for - at 1fr 1fr it left the third button alone on its own half-width row. */
-#leadseg{grid-template-columns:repeat(3,1fr)}
+#leadseg,#evseg{grid-template-columns:repeat(3,1fr)}
+#evseg.two{grid-template-columns:1fr 1fr}
 #leadseg button{font-size:14px;padding:10px 6px}
 /* Finished tasks carry a turned-in flag: green when files are attached, amber when it was marked done with nothing attached. */
 .wfiles{font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-radius:6px;padding:1px 6px;background:#F1EFEA;color:var(--muted)}
@@ -981,6 +983,30 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .askform{display:grid;gap:8px}.askform .askq{margin:6px 0 0;min-height:64px}
 .askwarn{margin:8px 0 12px}
 .askans{padding:14px 16px;margin-bottom:10px}.askans.old{opacity:.8}.askyou{margin:0 0 8px;font-weight:700}.askans .aska{padding:0}
+/* Ask button on every screen: a round button above the bottom bar opens a panel over the screen, so nobody loses their place. */
+.askfab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:8px;height:52px;padding:0 18px 0 14px;border-radius:26px;border:2px solid var(--band-ink);background:var(--band);color:var(--band-ink);font:inherit;font-weight:800;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.28);cursor:pointer}
+.askfab svg{width:22px;height:22px;flex:none}
+.askpanel{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;flex-direction:column;max-height:min(82vh,720px);background:var(--surface);color:var(--ink);border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.25);padding-bottom:env(safe-area-inset-bottom,0px)}
+.askpanel[hidden]{display:none}
+.askph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.askph b{font-family:var(--display);font-size:22px;font-weight:400;text-transform:uppercase;letter-spacing:.01em;flex:1}
+.askph button{font:inherit;font-weight:700;font-size:14px;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.askph .askx{width:44px;padding:0;display:grid;place-items:center}
+.askpbody{overflow-y:auto;padding:12px 16px;flex:1;min-height:120px;overscroll-behavior:contain}
+.askpbody .askans{border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.askpform{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 16px 4px;border-top:1px solid var(--line)}
+.askpform textarea{font:inherit;font-size:17px;resize:none;min-height:48px;max-height:140px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.askpform .btn{padding:0 18px}
+.askpanel .askwarn{margin:4px 16px 10px;font-size:12.5px}
+.askhint{color:var(--muted);font-size:14.5px;margin:0 0 10px}
+.askchips{display:flex;flex-wrap:wrap;gap:8px}
+.askchips button{font:inherit;font-size:14px;font-weight:600;min-height:40px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
+body.askopen .askfab,body.nofab .askfab{display:none}
+body.hasfab{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}   /* the last thing on a screen is never hidden behind the Ask button */
+@media (min-width:760px){
+  .askpanel{left:auto;right:24px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:420px;border:1px solid var(--line);border-radius:18px;max-height:min(70vh,680px)}
+  .askfab{right:24px;bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
 /* Dark mode (phones set to dark): these used fixed light colors, which put light text on light boxes. */
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="light"]) .t-ops{--tc:#7DB7E3;--ts:#16283A}
@@ -1061,7 +1087,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div id="homeinbox"></div>
       <div id="homerc"></div>
       <div id="homework"></div>
-      <button type="button" class="askbar" id="toAsk" hidden><span>Have a question?</span><b>Search the team's answers</b></button>
+      <button type="button" class="askbar" id="toAsk" hidden><span>Have a question?</span><b>Ask about ReUp or anything in the Hub</b></button>
       <div id="impactmap"></div>
       <div class="hsec"><h3>Coming up</h3><button class="hlink" type="button" id="toSchedule">Full schedule</button></div>
       <div class="list" id="soon"></div>
@@ -1110,7 +1136,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-ask" hidden>
       <h2>Ask a question</h2>
-      <p class="lead">Ask anything about how ReUp works. Answers come only from the team's docs: ReUp Answers, the Message Guide, the Admin Guide, the Event Lead Guide and the Fix-It Guide.</p>
+      <p class="lead">Ask how ReUp works, or where things stand right now. Answers come from the team's docs (ReUp Answers, the Message Guide, the Admin Guide, the Event Lead Guide and the Fix-It Guide) and from what you can see in the Hub: the Schedule, Work, volunteers, storage and requests. The Ask button on every screen does the same.</p>
       <form id="askform" class="askform"><textarea class="tarea askq" id="askq" rows="2" placeholder="For example: Charles is out Saturday. Who runs check-in, and what do they need to do?" aria-label="Your question"></textarea>
         <button class="btn" type="submit" id="askgo">Get an answer</button></form>
       <p class="small askwarn">Never type a community guest's name, phone number or situation here. Google can read what's typed into the free AI.</p>
@@ -1123,11 +1149,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div id="apps"><p class="small">Loading...</p></div>
     </section>
     <section class="view" id="v-events" hidden>
-      <div class="banner" data-cover="events"><div><h2>Events</h2><p>Every distribution and event coming up: what's ready, what's missing, and how past ones went.</p></div></div>
+      <div class="banner" data-cover="events"><div><h2>Events</h2><p>What's coming up, what to do on the day, and how past events went.</p></div></div>
+      <div class="seg" id="evseg" role="group" aria-label="Events section"><button type="button" data-evv="coming" aria-pressed="true">Coming up</button><button type="button" data-evv="day" aria-pressed="false">On the day</button><button type="button" data-evv="past" aria-pressed="false">Past</button></div>
       <div id="events"></div>
-    </section>
-    <section class="view" id="v-eventday" hidden>
-      <div class="banner" data-cover="eventday"><div><h2>Event day</h2><p>Everything for the day, in the order it happens.</p></div></div>
+      <div id="evpast" hidden></div>
+      <div id="evday" hidden>
       <button class="guide" type="button" id="handbook" data-guide><span><b>Running this event?</b>Open the Event Lead Guide</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
       <h2>When you get there</h2>
       <div class="card">
@@ -1163,6 +1189,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
         <div class="rule"><i>3</i><div><b>Snap your receipts.</b><span>Gas, food, supplies. Same day.</span></div></div>
         <div class="rule"><i>4</i><div><b>Event lead: log the six fields.</b><span>Date, location, households served, what went out and how much, partners there, volunteer hours.</span></div></div>
       </div>
+      </div>
     </section>
 
     <section class="view" id="v-goals" hidden>
@@ -1197,6 +1224,13 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
   <div class="in" id="tabs"></div>
 </nav>
 
+<button type="button" class="askfab" id="askFab" hidden aria-haspopup="dialog" aria-controls="askPanel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M10 9.5a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2v.5"/><path d="M12 15.5h.01"/></svg><span>Ask</span></button>
+<section class="askpanel" id="askPanel" role="dialog" aria-modal="false" aria-labelledby="askPanelH" hidden>
+  <div class="askph"><b id="askPanelH">Ask a question</b><button type="button" id="askAll">All answers</button><button type="button" class="askx" id="askX" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="askpbody" id="askpai" aria-live="polite"></div>
+  <form class="askpform" id="askform2"><textarea id="askq2" rows="1" maxlength="800" placeholder="Type your question" aria-label="Your question"></textarea><button class="btn" type="submit" id="askgo2">Ask</button></form>
+  <p class="small askwarn">Never type a community guest's name, phone number or situation. Google can read what's typed here.</p>
+</section>
 <dialog id="sheet" aria-labelledby="sheetTitle"><div class="sheet" id="sheetBody"></div></dialog>
 
 <script type="text/plain" id="app">
@@ -1345,23 +1379,128 @@ document.addEventListener("input", e => { if (e.target && e.target.id === "askq"
 let askHist = [], askBusy = false;
 const aiHtml = t => esc(t).replace(/^[ \t]*-{3,}[ \t]*$/gm, "").replace(/^[ \t]*#{1,6}[ \t]*(.+)$/gm, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n{3,}/g, "\n\n").replace(/\n/g, "<br>");
 function drawAskAi(pending) {
-  const box = $("askai"); if (!box) return;
-  box.innerHTML = askHist.slice().reverse().map((h, i) => `<div class="card askans${i ? " old" : ""}"><p class="askyou">${esc(h.q)}</p><div class="aska">${h.a ? aiHtml(h.a) : `<span class="small">${esc(h.msg || "")}</span>`}</div></div>`).join("")
-    .replace(/^/, pending ? `<div class="card askans"><p class="askyou">${esc(pending)}</p><div class="aska"><span class="small">Reading ReUp's docs...</span></div></div>` : "");
+  const html = askHist.slice().reverse().map((h, i) => `<div class="card askans${i ? " old" : ""}"><p class="askyou">${esc(h.q)}</p><div class="aska">${h.a ? aiHtml(h.a) : `<span class="small">${esc(h.msg || "")}</span>`}</div></div>`).join("")
+    .replace(/^/, pending ? `<div class="card askans"><p class="askyou">${esc(pending)}</p><div class="aska"><span class="small">Looking in ReUp's docs and the Hub...</span></div></div>` : "");
+  const page = $("askai"); if (page) page.innerHTML = html;
+  const pan = $("askpai");
+  if (pan) {
+    pan.innerHTML = html || `<p class="askhint">Ask how something works, or where things stand. For example:</p><div class="askchips">${askIdeas().map(q => `<button type="button" data-askidea="${esc(q)}">${esc(q)}</button>`).join("")}</div>`;
+    pan.scrollTop = 0;
+  }
 }
-document.addEventListener("submit", async e => {
-  if (!e.target || e.target.id !== "askform") return;
-  e.preventDefault();
-  const q = $("askq").value.trim(); if (!q || askBusy) return;
-  askBusy = true; $("askgo").disabled = true; drawAskAi(q);
+/* Example questions for the Ask panel, matched to what this person can see. */
+function askIdeas() {
+  const out = [];
+  if (BOOT.vol) out.push("Where are we with volunteer sign-ups for the next event?");
+  if (BOOT.work) out.push("What's overdue on Work, and who has it?");
+  if (BOOT.ops) out.push("What do we have the most of in storage?");
+  out.push("What do I do at the check-in table?");
+  if (!BOOT.vol) out.push("When is volunteer orientation?");
+  return out.slice(0, 4);
+}
+/* What the Hub shows this person right now, as plain lines for the AI. Built only from what this page already loaded for
+   them (so it never shows the AI more than they can see), and never with phone numbers, emails, addresses or anything
+   about a community guest: requests are counts only, and volunteers are first name and last initial. */
+function hubContext() {
+  const L = [], nm = s => { const w = String(s || "").trim().split(/\s+/).filter(Boolean); return w.length > 1 ? w[0] + " " + w[w.length - 1][0] + "." : (w[0] || ""); };
+  const d = s => s ? dt(String(s).slice(0, 10)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "";
+  const tab = (location.hash || "#home").slice(1), view = ((TABS.find(t => t[0] === tab) || [])[1]) || (tab === "checkin" ? "Check-in" : "Home");
+  L.push(`Person asking: ${BOOT.name}. They are on the ${view} screen${sheet.open && $("sheetTitle") ? `, with "${$("sheetTitle").textContent}" open` : ""}.`);
+  if (upcoming.length) {
+    L.push("", "SCHEDULE, coming up:");
+    upcoming.slice(0, 12).forEach(e => { const y = goingList(e).filter(x => x.a === "yes").map(x => x.who); L.push(`- ${d(e.date)}${e.time ? ", " + e.time : ""}: ${e.name} (${e.kind}${e.status ? ", " + (STATUS[e.status] || e.status) : ""})${e.place ? ", at " + e.place : ""}${e.who ? ". Lead: " + e.who : ""}${y.length ? ". Team going: " + y.join(", ") : ""}`); });
+  }
+  if (IMPACT) {
+    const g = IMPACT.goal || {};
+    L.push("", "IMPACT (counted since October 8):", `- Households served: ${(+g.now || 0).toLocaleString()}${g.target ? ` of a ${(+g.target).toLocaleString()} goal by ${g.by}` : ""}`);
+    (IMPACT.tiles || []).forEach(t => { if (t && t.label && t.value) L.push(`- ${t.label}: ${t.value}`); });
+    (IMPACT.recent || []).forEach(r => L.push(`- Past event ${d(r.date)}, ${r.name}: ${r.households} households, ${r.people} people, ${r.volunteers} volunteers, ${r.hours} volunteer hours`));
+  }
+  if (WORK && Array.isArray(WORK.tasks)) {
+    const open = WORK.tasks.filter(t => wOpen(t) && !t.goal), now = new Date().toISOString().slice(0, 10);
+    const late = open.filter(t => t.due && t.due < now), wk = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+    const done = WORK.tasks.filter(t => t.status === "done" && String(t.doneAt || "").slice(0, 10) >= wk);
+    L.push("", `WORK: ${open.length} open tasks, ${late.length} overdue, ${done.length} done in the last 14 days.`);
+    open.slice().sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))).slice(0, 60)
+      .forEach(t => L.push(`- ${t.title} [${t.team || "No team"}] ${t.status}${t.due ? ", due " + t.due : ""}. Owner: ${t.owners.join(", ") || "nobody yet"}${t.helpers && t.helpers.length ? ". Helping: " + t.helpers.join(", ") : ""}`));
+    done.slice(0, 15).forEach(t => L.push(`- Done ${String(t.doneAt).slice(0, 10)}: ${t.title} (${t.owners.join(", ")})`));
+  }
+  if (VOL && Array.isArray(VOL.events)) {
+    const today = VOL.today || new Date().toISOString().slice(0, 10), ppl = vPeople();
+    L.push("", "VOLUNTEERS (names are first name and last initial):");
+    VOL.events.filter(e => e.date >= today).slice(0, 8).forEach(e => {
+      const on = vOn(e.date).filter(p => vStatus(p, e.date) !== "cancelled"), n = vHeads(on), need = +e.needed || 0;
+      L.push(`- ${d(e.date)}, ${e.name}: ${n} signed up${need ? " of " + need + " needed" : ""}${on.filter(vNeedsOrient).length ? `, ${on.filter(vNeedsOrient).length} new and not oriented yet` : ""}. ${on.map(p => nm(p.name) + (p.group ? ` (group of ${p.group.size})` : "")).join(", ")}`);
+    });
+    const since = Date.now() - 14 * 864e5, recent = ppl.filter(p => { const t = new Date(p.last || ""); return !isNaN(t) && +t >= since; });
+    L.push(`- New or updated sign-ups in the last 14 days: ${recent.length}${recent.length ? ". " + recent.slice(0, 40).map(p => `${nm(p.name)} (${vIsNew(p) ? "new" : "returning"}${p.dates.length ? ", for " + p.dates.filter(x => x >= today).map(d).join(" and ") : ""})`).join("; ") : ""}`);
+    L.push(`- Waiting for orientation: ${ppl.filter(vNeedsOrient).length}. This year: ${VOL.stats ? VOL.stats.cameYear + " volunteer shifts, " + VOL.stats.hoursYear + " hours" : "not counted"}.`);
+  }
+  if (OPS) {
+    const oh = OPS.inventory && OPS.inventory.onHand;
+    if (oh) {
+      L.push("", `STORAGE: ${(+oh.units || 0).toLocaleString()} units, ${(oh.items || []).length} kinds of item.`);
+      (oh.categories || []).forEach(c => L.push(`- ${c[0]}: ${c[1]} units`));
+      (oh.items || []).slice(0, 250).forEach(i => L.push(`- ${i.desc || i.sub}: ${(+i.units || 0)} units${i.cond ? ", " + i.cond : ""}${i.loc ? ", " + i.loc : ""}${i.ev ? ", set aside for " + i.ev : ""}${i.expiry ? ", expires " + i.expiry : ""}`));
+      const pk = (OPS.inventory.pickups || []).filter(p => p.unlogged || !p.rows).length;
+      if (pk) L.push(`- Pickups not sorted or logged yet: ${pk}`);
+    }
+    if (Array.isArray(OPS.list)) {
+      const st = id => ((OPSTAT[id] || {}).s) || "new", by = {};
+      OPS.list.forEach(r => { const k = st(r.id); by[k] = (by[k] || 0) + 1; });
+      L.push("", `COMMUNITY REQUESTS (counts only): ${OPS.list.length} in all. ` + Object.keys(by).map(k => `${by[k]} ${k}`).join(", ") + ".");
+      (OPS.mainNeeds || []).slice(0, 8).forEach(m => L.push(`- Asked for ${m[0]}: ${m[1]}`));
+    }
+  }
+  if (APPS && Array.isArray(APPS.items)) {
+    const by = {}; APPS.items.forEach(x => { by[x.status] = (by[x.status] || 0) + 1; });
+    L.push("", `TEAM APPLICATIONS: ${APPS.items.length}. ` + Object.keys(by).map(k => `${by[k]} ${k}`).join(", ") + ".");
+    APPS.items.filter(x => x.status === "New").slice(0, 15).forEach(x => L.push(`- ${nm(x.name)}, ${x.roles}, applied ${String(x.at).slice(0, 10)}`));
+  }
+  if (!VOL && BOOT.vol) L.push("", "(Volunteer details were still loading, so they are not included.)");
+  if (!OPS && BOOT.ops) L.push("", "(Storage and requests were still loading, so they are not included.)");
+  return L.join("\n").slice(0, 40000);
+}
+/* Load what the person can see, once, so a question about sign-ups or storage has the numbers. Waits up to 6 seconds. */
+function askWarm() {
+  const p = [];
+  if (BOOT.work && !WORK && typeof loadWork === "function") p.push(loadWork(true));
+  if (TOK && BOOT.vol && !VOL) p.push(loadVol(true));
+  if (TOK && BOOT.ops && !OPS) p.push(loadOps(true));
+  if ((BOOT.leader || BOOT.coordinator) && !APPS) p.push(run("appsList", KEY).then(r => { APPS = r; }, () => {}));
+  return Promise.race([Promise.all(p.map(x => Promise.resolve(x).catch(() => {}))), new Promise(r => setTimeout(r, 6000))]);
+}
+async function askSend(q, from) {
+  q = String(q || "").trim(); if (!q || askBusy) return;
+  askBusy = true; ["askgo", "askgo2"].forEach(id => { if ($(id)) $(id).disabled = true; }); drawAskAi(q);
   try {
-    const r = await run("askTeam", KEY, q, askHist.filter(h => h.a).slice(-2).map(h => ({ q: h.q, a: h.a })));
+    await askWarm();
+    const r = await run("askTeam", KEY, q, askHist.filter(h => h.a).slice(-2).map(h => ({ q: h.q, a: h.a })), hubContext());
     askHist.push(r && r.ok ? { q, a: r.answer } : { q, msg: (r && r.msg) || "The AI could not answer right now." });
-    if (r && r.ok) { $("askq").value = ""; }
+    if (r && r.ok && from && $(from)) $(from).value = "";
   } catch (er) { askHist.push({ q, msg: isAuth(er) ? "Enter your PIN again to keep asking." : "That didn't go through. Check your connection and try again." }); }
-  askHist = askHist.slice(-6); askBusy = false; $("askgo").disabled = false; drawAskAi(); drawAsk();
+  askHist = askHist.slice(-6); askBusy = false; ["askgo", "askgo2"].forEach(id => { if ($(id)) $(id).disabled = false; }); drawAskAi(); if (!$("v-ask").hidden) drawAsk();
+}
+document.addEventListener("submit", e => {
+  if (!e.target || (e.target.id !== "askform" && e.target.id !== "askform2")) return;
+  e.preventDefault();
+  const id = e.target.id === "askform" ? "askq" : "askq2";
+  askSend($(id).value, id);
 });
-document.addEventListener("keydown", e => { if (e.target && e.target.id === "askq" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("askform").requestSubmit(); } });
+document.addEventListener("keydown", e => { if (e.target && (e.target.id === "askq" || e.target.id === "askq2") && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit(); } });
+/* The Ask button on every screen. The panel sits over the screen, so closing it puts the person right back where they were. */
+function askOpen() {
+  $("askPanel").hidden = false; document.body.classList.add("askopen"); $("askFab").setAttribute("aria-expanded", "true");
+  drawAskAi(); askWarm();
+  setTimeout(() => $("askq2").focus(), 30);
+}
+function askClose() { $("askPanel").hidden = true; document.body.classList.remove("askopen"); $("askFab").setAttribute("aria-expanded", "false"); $("askFab").focus(); }
+$("askFab").addEventListener("click", askOpen);
+$("askX").addEventListener("click", askClose);
+$("askAll").addEventListener("click", () => { askClose(); go("ask"); });
+$("askpai").addEventListener("click", e => { const b = e.target.closest("[data-askidea]"); if (b) { $("askq2").value = b.dataset.askidea; askSend(b.dataset.askidea, "askq2"); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("askPanel").hidden && !sheet.open) askClose(); });
+$("askq2").addEventListener("input", e => { const t = e.target; t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; });
 /* Work tasks for an event: the task title shares the event's distinctive words. */
 const EV_SKIP = /^(with|the|and|for|event|events|annual|distribution|apartments|of|at|st)$/i;
 function evTasks(e) {
@@ -1383,8 +1522,17 @@ function evMissing(e, x, set) {
   if (set === 0) m.push("Nothing set aside in storage yet");
   return m;
 }
+let evView = "";
 function drawEvents() {
   const box = $("events"); if (!box) return;
+  // Three parts: Coming up (the team's dashboard), On the day (the run of the day, for everyone), Past (results).
+  if (!evView) evView = !BOOT.work || (upcoming[0] && daysAway(upcoming[0].date) === 0 && ["Distribution", "Event"].includes(upcoming[0].kind)) ? "day" : "coming";
+  if (!BOOT.work && evView === "coming") evView = "day";
+  const seg = $("evseg"); seg.classList.toggle("two", !BOOT.work);
+  seg.querySelectorAll("[data-evv]").forEach(b => { b.hidden = b.dataset.evv === "coming" && !BOOT.work; b.setAttribute("aria-pressed", String(b.dataset.evv === evView)); });
+  box.hidden = evView !== "coming"; $("evday").hidden = evView !== "day"; $("evpast").hidden = evView !== "past";
+  if (evView === "past") return drawEvPast();
+  if (evView === "day") return;
   const list = upcoming.filter(e => ["Distribution", "Event"].includes(e.kind));
   if (TOK && !evLoadTried && ((BOOT.vol && !VOL) || (BOOT.ops && !OPS) || (BOOT.coordinator && !ADMIN))) {
     evLoadTried = true;
@@ -1405,12 +1553,11 @@ function drawEvents() {
       ${tasks.length ? `<div class="evsec"><div class="tl">Tasks for this event (${tasks.length})</div><div class="wrows">${tasks.slice(0, 5).map(t => wrow(t, (t.owners.join(", ") || "Nobody yet") + (t.due ? ". " + dueWords(t.due, false)[0] : "")).replace('class="wrow ', 'class="wrow wdone ')).join("")}</div>${tasks.length > 5 ? `<p class="small" style="margin:6px 0 0">And ${tasks.length - 5} more on Work.</p>` : ""}</div>` : ""}
       <div class="btns evbtns"><button class="btn" type="button" data-wev="${idx}">Open the event page</button>${ve && x.need > x.vgo ? `<button class="btn ghost" type="button" data-recruit="${esc(e.date)}">Copy a recruiting post</button>` : ""}${BOOT.coordinator ? `<button class="btn ghost" type="button" data-evedit="${idx}">Edit on the Schedule</button>` : ""}</div></section>`;
   }).join("");
-  const R = (IMPACT && Array.isArray(IMPACT.recent)) ? IMPACT.recent : [];
-  const past = R.length ? `<h2>How past events went</h2><div class="list">${R.map(r => `<div class="irow"><div><b>${esc(r.name)}</b><span>${esc(dt(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} &middot; ${(+r.households).toLocaleString()} households, ${(+r.people).toLocaleString()} people${r.volunteers ? `, ${r.volunteers} volunteer${r.volunteers === 1 ? "" : "s"}` : ""}${r.hours ? `, ${r.hours} hours` : ""}</span></div></div>`).join("")}</div><p class="small" style="margin:6px 2px 0">From check-ins. This year's events, newest first.</p>` : "";
+
   box.innerHTML = `<p class="lo-line" style="margin-top:4px">${list.length ? `Coming up: ${list.length}.${short ? ` Short on volunteers: ${short}.` : ""}` : "Nothing on the Schedule yet."}</p>
     ${BOOT.coordinator ? `<div class="btns" style="margin:8px 0 4px"><button class="btn" type="button" id="evadd">Add a date to the Schedule</button></div>` : `<p class="small">To change a date, ask a Hub admin. They can edit the Schedule from here.</p>`}
     ${!TOK && (BOOT.vol || BOOT.ops) ? `<p class="small">Volunteer and storage numbers show once you've entered your PIN in Ops or Volunteers.</p>` : ""}
-    <div class="evgrid">${cards}</div>${past}`;
+    <div class="evgrid">${cards}</div>`;
   box.querySelectorAll("[data-wev]").forEach(b => b.addEventListener("click", () => openEvent(upcoming[+b.dataset.wev])));
   box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
   box.querySelectorAll("[data-recruit]").forEach(b => b.addEventListener("click", () => { const v = VOL.events.find(x => x.date === b.dataset.recruit); if (v) { copyText(vRecruitText(v)); toast("Copied. Paste it in the group chat, a story or a text."); } }));
@@ -1419,6 +1566,11 @@ function drawEvents() {
   const add = $("evadd"); if (add) add.addEventListener("click", () => edit(-1));
 }
 let evLoadTried = false;
+function drawEvPast() {
+  const R = (IMPACT && Array.isArray(IMPACT.recent)) ? IMPACT.recent : [];
+  $("evpast").innerHTML = R.length ? `<h2>How past events went</h2><div class="list">${R.map(r => `<div class="irow"><div><b>${esc(r.name)}</b><span>${esc(dt(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} &middot; ${(+r.households).toLocaleString()} households, ${(+r.people).toLocaleString()} people${r.volunteers ? `, ${r.volunteers} volunteer${r.volunteers === 1 ? "" : "s"}` : ""}${r.hours ? `, ${r.hours} hours` : ""}</span></div></div>`).join("")}</div><p class="small" style="margin:6px 2px 0">From check-ins. This year's events, newest first.</p>` : "";
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-evv]"); if (!b) return; evView = b.dataset.evv; drawEvents(); });
 function evTeamHTML(e, n) {
   if (!BOOT.work || !["Distribution", "Event"].includes(e.kind) || n < 0) return "";
   const team = goingList(e).filter(x => x.a === "yes").length;
@@ -1747,7 +1899,6 @@ const ICONS = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
-  eventday: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
   vol: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
@@ -1756,7 +1907,7 @@ const ICONS = {
   work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11l2 2 4-4M8 17h8"/></svg>',
   goals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
 };
-const TABS = [["home", "Home"], ["schedule", "Schedule"], ["eventday", "Event day"], ["forms", "Forms"]];
+const TABS = [["home", "Home"], ["schedule", "Schedule"], ["events", "Events"], ["forms", "Forms"]];
 /* Five buttons at most: the everyday tabs, then More for the rest. */
 const PRIMARY_TABS = ["home", "schedule", "work", "inbox"];
 function drawTabs() {
@@ -1779,8 +1930,10 @@ drawTabs();
 
 function go(tab) {
   if (tab === "leaders") tab = "goals";
+  if (tab === "eventday") { tab = "events"; evView = "day"; }   // Event day is now the "On the day" part of Events
   if (!TABS.some(([k]) => k === tab) && !(tab === "checkin" && BOOT.work)) tab = "home";
-  ["home", "work", "inbox", "schedule", "events", "ask", "eventday", "forms", "ops", "goals", "admin", "vol", "checkin", "apps"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "events", "ask", "forms", "ops", "goals", "admin", "vol", "checkin", "apps"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  document.body.classList.toggle("nofab", tab === "checkin");
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
@@ -1788,6 +1941,7 @@ function go(tab) {
   if (tab === "inbox" && typeof loadInbox === "function") { drawInbox(); loadInbox(!!INBOX); }
   if ((tab === "admin" || tab === "vol") && typeof openLeader === "function") openLeader(tab);
   if (tab === "checkin") drawCheckin();
+  if (tab !== "ask" && !$("askPanel").hidden && tab === "checkin") askClose();
   if (tab === "events") drawEvents();
   if (tab === "ask") drawAsk();
   if (tab === "apps") loadApps();
@@ -1837,7 +1991,7 @@ const SHOP = [
   { name: "Giving Is a Currency Tee (Ivory)", price: "$36", url: "https://the-reup-shop.fourthwall.com/products/giving-is-a-currency-tee-ivory", img: "../assets/shop-giving-ivory.webp" },
   { name: "Give Back Tour Hoodie", price: "$60", url: "https://the-reup-shop.fourthwall.com/products/scene-hoodie-holiday-festival-black", img: "../assets/shop-holiday-hoodie.webp" }
 ];
-const COVERS = { events: "img1", work: "img11", schedule: "img3b", eventday: "img2b", forms: "img12", ops: "img4b", goals: "img13" };
+const COVERS = { events: "img2b", work: "img11", schedule: "img3b", forms: "img12", ops: "img4b", goals: "img13" };
 setTimeout(() => Object.values(COVERS).forEach(c => { const i = new Image(); i.src = A + c + ".webp"; }), 2500);
 document.querySelectorAll(".banner[data-cover]").forEach(b => { const c = COVERS[b.dataset.cover]; if (c) b.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.72) 100%), url("${A}${c}.webp")`; });
 if (PHOTOS[0]) $("poster").style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.88) 100%), url("${A}img1.webp")`;
@@ -2232,9 +2386,6 @@ function wplain(t) {
     <span class="wpname">${esc(t.title)}</span>${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
 }
 const wfoldPlain = (title, list) => list.length ? `<details class="dhist wpfold"><summary>${title} (${list.length})</summary><div class="wplain">${list.map(wplain).join("")}</div></details>` : "";
-const wlist = (title, cls, list, note, fold) => !list.length ? "" : fold
-  ? `<details class="wgroup wfold ${cls}"><summary><h3><span>${title}</span><b>${list.length}</b></h3></summary>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></details>`
-  : `<section class="wgroup ${cls}"><h3><span>${title}</span><b>${list.length}</b></h3>${note ? `<p class="wnote">${note}</p>` : ""}<div class="wrows">${list.map(t => wrow(t)).join("")}</div></section>`;
 /* A number that jumps to its section when tapped (only when there is something to jump to). */
 const jtile = (n, label, cls, to) => n ? `<button type="button" class="${cls}" data-jump="${to}"><b>${n}</b><span>${label}</span></button>` : `<div class="${cls}"><b>${n}</b><span>${label}</span></div>`;
 document.addEventListener("click", e => {
@@ -2783,10 +2934,14 @@ function fillDm() {
 }
 // New messages: a tiny check every 5 seconds (it does not read the sheet), and the full Inbox only when
 // something changed, plus a full refresh every minute as a backstop.
-let inboxStamp = "", pinging = false;
+let inboxStamp = "", pinging = false, pingAt = 0;
 setInterval(async () => {
   if (document.hidden || !BOOT.work || inboxSending || pinging || loadingInbox) return;
-  if (Date.now() - inboxAt > 60e3) { loadInbox(true); return; }
+  // Every 5 seconds while the Inbox is open; every 30 seconds elsewhere (enough for the badge, and far fewer server calls).
+  const onInbox = !$("v-inbox").hidden;
+  if (Date.now() - inboxAt > (onInbox ? 60e3 : 300e3)) { loadInbox(true); return; }
+  if (!onInbox && Date.now() - pingAt < 30e3) return;
+  pingAt = Date.now();
   pinging = true;
   try {
     const r = await run("inboxPing", KEY);
@@ -2798,12 +2953,18 @@ setInterval(async () => {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && BOOT.work && Date.now() - inboxAt > 20e3) loadInbox(true); });
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
-const MORE_SUB = { ask: "Answers to common questions, from the team's ReUp Answers doc.", events: "Every event coming up, what's missing, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", admin: "People, the Schedule and the forms. Only you see this.", eventday: "Everything for the day, in the order it happens.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+/* More is grouped so it stays easy to scan as the Hub grows. Ask is not here: the Ask button is on every screen. */
+const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
+const MORE_GROUPS = [["Events and people", ["events", "vol", "apps"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership", ["goals", "admin"]]];
 function openMore() {
-  const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k));
-  openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3><div class="morelist">${more.map(([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`).join("")}</div>
+  const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k) && k !== "ask"), item = ([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`;
+  const groups = MORE_GROUPS.map(([h, ks]) => [h, ks.map(k => more.find(t => t[0] === k)).filter(Boolean)]).filter(g => g[1].length);
+  const rest = more.filter(t => !MORE_GROUPS.some(g => g[1].includes(t[0])));
+  openSheet(`<div class="k">More</div><h3 id="sheetTitle">Where to?</h3>${groups.map(([h, list]) => `<div class="moreh">${esc(h)}</div><div class="morelist">${list.map(item).join("")}</div>`).join("")}${rest.length ? `<div class="morelist">${rest.map(item).join("")}</div>` : ""}
+    <div class="moreh">On this device</div><div class="morelist">
     ${typeof appStandalone === "function" && !appStandalone() ? `<button type="button" class="moreitem" id="moreapp"><img src="${A}app-192.png" alt="" width="24" height="24" style="border-radius:6px"><span><b>Add to home screen</b><em>Open the Hub like an app, full screen.</em></span></button>` : ""}
     <button type="button" class="moreitem" id="moreout"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg><span><b>Sign out</b><em>Sign out of the Hub on this phone or computer.</em></span></button>
+    </div>
     <div class="btns"><button class="btn ghost" type="button" id="moreclose">Close</button></div>`);
   $("moreout").addEventListener("click", () => signOutAsk());
   document.querySelectorAll("[data-more]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.more; sheet.close(); go(k); }));
@@ -2888,7 +3049,7 @@ function drawAdmin() {
     }
   } else {
     html += `<button class="btn aadd" type="button" id="aaddf">Add a form</button>
-      <p class="small">The forms on the Forms tab, Home and Event day. Tap one to change its words or link.</p>
+      <p class="small">The forms on the Forms tab, Home and Events (On the day). Tap one to change its words or link.</p>
       <div class="wrows">${A.forms.map((f, i) => `<button type="button" class="wrow" data-af="${i}"><span class="wrname">${esc(f.title)}<span class="idmlast">${esc(f.group || "")}${f.sub ? " &middot; " + esc(f.sub) : ""}</span></span></button>`).join("")}</div>`;
   }
   box.innerHTML = html;
@@ -2919,7 +3080,7 @@ function editPerson(row) {
   openSheet(`${aTop("apsave", isNew ? "Add and get their link" : "Save", "apclose")}<div class="k">${isNew ? "Add a person" : "Person"}</div>
     <input class="wtitle" id="apname" type="text" maxlength="40" placeholder="First name" value="${esc(p ? p.name : "")}" aria-label="Name">
     <div class="tsec"><div class="tl">Role</div>${chipRow("arole", A.roles, st.role, false)}
-      <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Operations: Operations tab too. Team: Home, Schedule, Work, Inbox, Event day, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
+      <p class="small" style="margin:6px 0 0">Leadership: everything, with a PIN. Operations: Operations tab too. Team: Home, Schedule, Work, Inbox, Events, Forms. Shared: one link for a group, no Work or Inbox.</p></div>
     <div class="tsec"><div class="tl">Teams</div>${chipRow("ateam", A.teams, st.teams, true)}</div>
     <div class="tsec"><div class="tl">Email</div><input class="ainput" id="apemail" type="email" value="${esc(p ? p.email : "")}" placeholder="For announcements and messages" aria-label="Email"></div>
     ${p ? `<div class="tsec"><div class="tl">Their link</div><p class="small" style="margin:0 0 8px;overflow-wrap:anywhere">${esc(p.link)}</p>
@@ -2981,7 +3142,7 @@ function editEvent(i, presetDate) {
 function editForm(i) {
   const A = ADMIN, f = i >= 0 ? A.forms[i] : null, isNew = !f;
   const v = k => esc(f ? (f[k] || "") : "");
-  const flags = [["main", "Big button"], ["quick", "On Home"], ["eventday", "On Event day"], ["share", "Can be shared"]];
+  const flags = [["main", "Big button"], ["quick", "On Home"], ["eventday", "On Events, On the day"], ["share", "Can be shared"]];
   const st = { flags: flags.filter(([k]) => f && f[k]).map(([, l]) => l) };
   openSheet(`${aTop("afsave", isNew ? "Add the form" : "Save", "afclose")}<div class="k">${isNew ? "Add a form" : "Form"}</div>
     <input class="wtitle" id="aftitle" type="text" maxlength="60" placeholder="Title, for example Snap a receipt" value="${v("title")}" aria-label="Title">
@@ -4240,7 +4401,7 @@ setInterval(() => {
   if (CI_VIEW === "guests") ciLoadCount(); else loadCheckinVols();
 }, 20000);
 
-if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); TABS.push(["events", "Events"]); TABS.push(["ask", "Ask a question"]); $("toAsk").hidden = false; $("toAsk").addEventListener("click", () => go("ask")); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
+if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); TABS.push(["ask", "Ask a question"]); $("toAsk").hidden = false; $("toAsk").addEventListener("click", askOpen); $("askFab").hidden = false; document.body.classList.add("hasfab"); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.ops) TABS.push(["ops", "Operations"]);
   if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
@@ -4958,7 +5119,8 @@ function vWireOrient(box) {
       b.innerHTML = '<div class="pinbox" style="max-width:360px;width:100%;margin:0 auto"><div class="pinic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>' +
         '<h3>' + (choose ? "Choose your PIN" : "Enter your PIN") + '</h3><p id="gpl">' + (choose ? "Hi " + String(r.name || "").replace(/[<>&"]/g, "") + ". Pick 4 numbers you'll remember. You'll use them to open the ReUp Hub. Nobody else sees it, not even the Hub admins." : "Hi " + String(r.name || "").replace(/[<>&"]/g, "") + ". This phone stays unlocked for 30 days.") + '</p>' +
         '<form id="pinf" autocomplete="off"><input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" aria-label="' + (choose ? "Choose a 4-digit PIN" : "Your 4-digit PIN") + '" placeholder="&bull;&bull;&bull;&bull;"> <button class="btn" type="submit" id="gpb">' + (choose ? "Next" : "Unlock") + '</button></form>' +
-        '<p class="pinmsg" id="gpm" role="alert"></p><p class="small" style="margin:6px 0 0">' + (choose ? "Not all the same number, and not 4 in a row like 1234." : "Forgot your PIN? Ask a Hub admin to reset it, then choose a new one.") + '</p></div>';
+        '<p class="pinmsg" id="gpm" role="alert"></p><p class="small" style="margin:6px 0 0">' + (choose ? "Not all the same number, and not 4 in a row like 1234." : "Forgot your PIN? Ask a Hub admin to reset it, then choose a new one.") + '</p>' +
+          (choose ? "" : '<button type="button" class="vlink" id="gpe" style="margin-top:10px;font:inherit;font-weight:700;background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;min-height:44px">Sign in with your email instead</button>') + '</div>';
       var f = document.getElementById("pinf"), inp = document.getElementById("pin"), msg = document.getElementById("gpm"), btn = document.getElementById("gpb");
       function submit() {
         var pin = inp.value.trim();
@@ -4978,6 +5140,8 @@ function vWireOrient(box) {
         }, function () { msg.textContent = "Couldn't reach the Hub. Check your connection and try again."; btn.disabled = false; });
       }
       f.addEventListener("submit", function (e) { e.preventDefault(); submit(); });
+      // People who signed in with email and password never chose a PIN, so they need a way back to the email sign-in.
+      var ge = document.getElementById("gpe"); if (ge) ge.addEventListener("click", function () { try { localStorage.removeItem("reupHubKey"); } catch (e) {} location.replace(location.pathname); });
       inp.addEventListener("input", function () { inp.value = inp.value.replace(/\D/g, "").slice(0, 4); if (inp.value.length === 4) submit(); });
       setTimeout(function () { inp.focus(); }, 50);
     }, function () { note("The Hub couldn't load. Check your connection.", true); });
@@ -5018,7 +5182,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104014500";
+  var BUILD = "20261104034500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
@@ -5050,6 +5214,6 @@ function vWireOrient(box) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
 })();
 </script>
-<script src="../forms.js?v=1"></script>
+<script src="../forms.js?v=2"></script>
 </body>
 </html>
