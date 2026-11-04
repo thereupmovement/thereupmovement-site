@@ -119,6 +119,13 @@ before committing with `node .github/check-pages.js`.
   is deleted.
 - Data: each Sheet's File, Version history.
 
+## Writing past the end of a tab
+
+Tabs fed by a Google Form (the Item Log, the volunteer Responses tab) end exactly at their last entry, and writing one
+row past a tab's end fails. `room_(sheet, rows)` in Code.gs adds the missing rows first. Call it before any new
+`getRange(sheet.getLastRow() + 1, ...)` write on a tab that could be full. (This is what broke "We got more of this"
+on 3 Nov 2026.) When a save fails, the Hub now shows the server's reason after "That didn't save:".
+
 ## Things that break the app if changed by hand
 
 - Sheet tab names and column order on the Hub and volunteer sheets: the server finds data by tab name

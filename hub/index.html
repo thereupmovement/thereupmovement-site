@@ -3568,7 +3568,7 @@ function openAdjust(row) {
       aerr.textContent = (r && r.msg) || "That didn't save. Try again.";
     } catch (x) {
       if (isAuth(x)) { sheet.close(); relock(); return; }
-      aerr.textContent = "That didn't save. Check your connection and try again.";
+      aerr.textContent = saveErr(x);
     }
     abtn.disabled = false; abtn.textContent = "Save event";
   });
@@ -3599,7 +3599,7 @@ function openAdjust(row) {
       err.textContent = (r && r.msg) || "That didn't save. Try again.";
     } catch (x) {
       if (isAuth(x)) { sheet.close(); relock(); return; }
-      err.textContent = "That didn't save. Check your connection and try again.";
+      err.textContent = saveErr(x);
     }
     busy = false; btn.disabled = false; btn.textContent = "Save";
   });
@@ -3641,7 +3641,7 @@ function openRestock(row) {
       err.textContent = (r && r.msg) || "That didn't save. Try again.";
     } catch (x) {
       if (isAuth(x)) { sheet.close(); relock(); return; }
-      err.textContent = "That didn't save. Check your connection and try again.";
+      err.textContent = saveErr(x);
     }
     btn.disabled = false; btn.textContent = "Add to storage";
   });
@@ -3736,6 +3736,8 @@ function toast(msg) {
 /* ============ SERVER: personal link + PIN for leadership tabs ============ */
 const run = (fn, ...args) => window.api(fn, args);
 const isAuth = e => /\bauth\b/.test(String((e && e.message) || e));
+// A failed save: show the server's reason when there is one, so the team (and whoever fixes it) can see what went wrong.
+const saveErr = e => { const m = String((e && e.message) || ""); return !m || /network|fetch|load failed|timed? ?out/i.test(m) ? "That didn't save. Check your connection and try again." : "That didn't save: " + m; };
 const TOKK = "reupHubTok_" + KEY;
 let TOK = null;
 try { TOK = localStorage.getItem(TOKK); } catch (e) { TOK = null; }
@@ -4870,7 +4872,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103235500";
+  var BUILD = "20261103235900";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
