@@ -2420,15 +2420,19 @@ const wSteps = id => (WORK && WORK.tasks || []).filter(x => x.project === id).so
 const wCurStep = id => wSteps(id).find(x => x.status !== "done");
 /* A step waits until every step before it is done. */
 const wWaitOn = t => t.project && t.status !== "done" ? wSteps(t.project).find(x => x.id !== t.id && x.status !== "done" && x.step < t.step) : null;
+/* Steps with the same number run side by side, so they count as one stage ("Step 2 of 3", not "2 of 4"). */
+const wStage = (id, step) => [...new Set(wSteps(id).map(x => x.step))].indexOf(step) + 1;
+const wStages = id => new Set(wSteps(id).map(x => x.step)).size;
 function wProgress(id) {
   const s = wSteps(id), c = wCurStep(id); if (!s.length) return "";
-  return c ? `Step ${s.indexOf(c) + 1} of ${s.length}, with ${c.owners.join(", ") || "nobody yet"}${wLate(c) ? ", late" : ""}` : `All ${s.length} steps done`;
+  const now = c ? s.filter(x => x.step === c.step && x.status !== "done") : [], who = [...new Set(now.flatMap(x => x.owners))];
+  return c ? `Step ${wStage(id, c.step)} of ${wStages(id)}, with ${who.join(", ") || "nobody yet"}${now.some(wLate) ? ", late" : ""}` : `All ${wStages(id)} steps done`;
 }
 /* One line for cards: where a project stands, or which step of which project this is. */
 function wStepLine(t) {
   if (!t.project) return wProgress(t.id);
   const s = wSteps(t.project), pr = (WORK.tasks || []).find(x => x.id === t.project);
-  return `Step ${s.indexOf(t) + 1} of ${s.length}` + (pr ? `: ${pr.title}` : "");
+  return `Step ${wStage(t.project, t.step)} of ${wStages(t.project)}` + (pr ? `: ${pr.title}` : "");
 }
 const wNotYet = t => !!wWaitOn(t) || (t.opens ? daysAway(t.opens) > 0 : (t.status === "todo" && !!t.due && daysAway(t.due) > 21));
 const wShowsOn = t => t.opens || new Date(dt(t.due).getTime() - 21 * 864e5).toISOString().slice(0, 10);
@@ -2762,7 +2766,7 @@ function fillWork(keep) {
   const others = names.filter(n => n !== me);
   /* Projects: a step shows its project and what comes next; any other task lists its steps and can get new ones. */
   const parent = t.project ? (W.tasks || []).find(x => x.id === t.project) : null, steps = isNew || G || t.project ? [] : wSteps(t.id);
-  const sRow = (x, i) => `<button type="button" class="wrow ${x.status === "done" ? "wdone" : ""}" data-wopen="${esc(x.id)}"><span class="wrname">${i + 1}. ${esc(x.title)}</span><span class="wrmeta"><span>${esc(x.owners.join(", ") || "Nobody yet")}</span><span class="wdue ${dueWords(x.due, x.status === "done")[1]}">${esc(x.status === "done" ? "Done" : WLABEL[x.status] === "To do" || !WLABEL[x.status] ? dueWords(x.due, false)[0] : WLABEL[x.status])}</span></span></button>`;
+  const sRow = (x, i) => `<button type="button" class="wrow ${x.status === "done" ? "wdone" : ""}" data-wopen="${esc(x.id)}"><span class="wrname">${wStage(t.id, x.step)}. ${esc(x.title)}</span><span class="wrmeta"><span>${esc(x.owners.join(", ") || "Nobody yet")}</span><span class="wdue ${dueWords(x.due, x.status === "done")[1]}">${esc(x.status === "done" ? "Done" : WLABEL[x.status] === "To do" || !WLABEL[x.status] ? dueWords(x.due, false)[0] : WLABEL[x.status])}</span></span></button>`;
   const addStep = mine && !G && !t.project ? `<details class="wnextbox"${steps.length ? "" : ""}><summary>${steps.length ? "Add a step" : "Break this into steps for different people (optional)"}</summary>
       <input class="ainput" id="wstitle" type="text" maxlength="200" placeholder="For example: Review the study guide">
       <div class="wchips">${names.map(n => `<button type="button" data-wso="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join("")}</div>
@@ -2771,8 +2775,8 @@ function fillWork(keep) {
       <p class="small" style="margin:6px 0 0">Each step is its own task. Only the current step shows on its owner's My work; when it is done, the next owner gets a message.</p></details>` : "";
   let projHtml = "";
   if (parent) {
-    const s = wSteps(parent.id), i = s.findIndex(x => x.id === t.id), nx = s.slice(i + 1).find(x => x.status !== "done"), wt = wWaitOn(t);
-    projHtml = `<div class="tsec wproj"><div class="tl">Step ${i + 1} of ${s.length} in a project</div><button type="button" class="wrow" data-wopen="${esc(parent.id)}"><span class="wrname">${esc(parent.title)}</span><span class="wrmeta"><span>${esc(wProgress(parent.id))}</span></span></button>
+    const s = wSteps(parent.id), nx = s.find(x => x.step > t.step && x.status !== "done"), wt = wWaitOn(t);
+    projHtml = `<div class="tsec wproj"><div class="tl">Step ${wStage(parent.id, t.step)} of ${wStages(parent.id)} in a project</div><button type="button" class="wrow" data-wopen="${esc(parent.id)}"><span class="wrname">${esc(parent.title)}</span><span class="wrmeta"><span>${esc(wProgress(parent.id))}</span></span></button>
       ${wt ? `<p class="small" style="margin:6px 0 0">Waiting on ${esc(wt.owners.join(", ") || "the step before")}: "${esc(wt.title)}". You get a message when it's your turn.</p>` : ""}${nx ? `<p class="small" style="margin:6px 0 0">Next: ${esc(nx.title)} (${esc(nx.owners.join(", ") || "nobody yet")}). They get a message when this is done.</p>` : `<p class="small" style="margin:6px 0 0">This is the last step.</p>`}</div>`;
   } else if (steps.length || addStep) {
     projHtml = `<div class="tsec wproj">${steps.length ? `<div class="tl">Steps (${wProgress(t.id)})</div><div class="wrows">${steps.map(sRow).join("")}</div>` : ""}${addStep}</div>`;
@@ -5375,7 +5379,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104061500";
+  var BUILD = "20261104063000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
