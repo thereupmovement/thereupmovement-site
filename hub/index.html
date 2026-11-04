@@ -931,6 +931,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .askpform .btn{padding:0 18px}
 .askpanel .askwarn{margin:4px 16px 10px;font-size:12.5px}
 .askhint{color:var(--muted);font-size:14.5px;margin:0 0 10px}
+.asklink{display:inline-flex;align-items:center;min-height:36px;margin:4px 6px 2px 0;padding:6px 12px;border-radius:18px;border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:left}
+.asklink:after{content:"";width:7px;height:7px;margin-left:8px;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:rotate(45deg)}
 .askchips{display:flex;flex-wrap:wrap;gap:8px}
 .askchips button{font:inherit;font-size:14px;font-weight:600;min-height:40px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left}
 body.askopen .askfab,body.nofab .askfab{display:none}
@@ -1311,7 +1313,25 @@ document.addEventListener("input", e => { if (e.target && e.target.id === "askq"
 /* AI answer: the server sends the question and the docs to Google's free Gemini and returns its answer.
    The last few questions go along, so a follow-up ("and on Sunday?") makes sense. */
 let askHist = [], askBusy = false;
-const aiHtml = t => esc(t).replace(/^[ \t]*-{3,}[ \t]*$/gm, "").replace(/^[ \t]*#{1,6}[ \t]*(.+)$/gm, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n{3,}/g, "\n\n").replace(/\n/g, "<br>");
+const aiHtml = t => esc(t).replace(/^[ \t]*-{3,}[ \t]*$/gm, "").replace(/^[ \t]*#{1,6}[ \t]*(.+)$/gm, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n{3,}/g, "\n\n").replace(/\n/g, "<br>")
+  /* The AI adds [[kind:value|label]] after anything the person can open; each becomes a button that goes there (askGo). */
+  .replace(/\[\[(task|event|vol|team|screen|chat|dm|form):([^|\]]{1,80})\|([^\]]{1,60})\]\]/g, (m, k, v, l) => `<button type="button" class="asklink" data-ak="${k}" data-av="${v}">${l}</button>`)
+  .replace(/\[\[[^\]]{0,140}\]\]/g, "");
+/* Where an Ask link goes. Anything not found (a task the person can't see, a date no longer on the Schedule) says so. */
+function askGo(k, v) {
+  if (!$("askPanel").hidden) askClose();
+  if (sheet.open) sheet.close();
+  const ev = upcoming.find(e => e.date === v) || EVENTS.find(e => e.date === v);
+  if (k === "task") { const t = WORK && (WORK.tasks || []).find(x => x.id === v); if (!t) return toast("That task isn't on your Work list."); go("work"); return openWork(v); }
+  if (k === "event") { if (!ev) return toast("That date isn't on the Schedule."); go("events"); return openEvent(ev); }
+  if (k === "vol") { if (!BOOT.vol) return toast("Only the volunteer team sees that list."); go("vol"); return setTimeout(() => { try { volEvent(v); } catch (e) {} }, 400); }
+  if (k === "team") { workView = "team"; workTeam = v; workPerson = null; return go("work"); }
+  if (k === "screen") { if (!TABS.some(t => t[0] === v)) return toast("You don't have that screen."); return go(v); }
+  if (k === "chat") { inboxView = v === "announce" ? "announce" : "team"; return go("inbox"); }
+  if (k === "dm") { const p = WORK && (WORK.people || []).find(x => x.name === v); if (!p) return toast("Couldn't find " + v + " on the team."); go("inbox"); return openDm(v); }
+  if (k === "form") { const f = FORMS.find(x => x.title === v); if (!f) return toast("Couldn't find that form."); return openForm(f); }
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-ak]"); if (b) askGo(b.dataset.ak, b.dataset.av); });
 function drawAskAi(pending) {
   const html = askHist.slice().reverse().map((h, i) => `<div class="card askans${i ? " old" : ""}"><p class="askyou">${esc(h.q)}</p><div class="aska">${h.a ? aiHtml(h.a) : `<span class="small">${esc(h.msg || "")}</span>`}</div></div>`).join("")
     .replace(/^/, pending ? `<div class="card askans"><p class="askyou">${esc(pending)}</p><div class="aska"><span class="small">Looking in ReUp's docs and the Hub...</span></div></div>` : "");
@@ -1342,7 +1362,7 @@ function hubContext() {
   L.push(`Person asking: ${BOOT.name}. They are on the ${view} screen${sheet.open && $("sheetTitle") ? `, with "${$("sheetTitle").textContent}" open` : ""}.`);
   if (upcoming.length) {
     L.push("", "SCHEDULE, coming up:");
-    upcoming.slice(0, 12).forEach(e => { const y = goingList(e).filter(x => x.a === "yes").map(x => x.who); L.push(`- ${d(e.date)}${e.time ? ", " + e.time : ""}: ${e.name} (${e.kind}${e.status ? ", " + (STATUS[e.status] || e.status) : ""})${e.place ? ", at " + e.place : ""}${e.who ? ". Lead: " + e.who : ""}${y.length ? ". Team going: " + y.join(", ") : ""}`); });
+    upcoming.slice(0, 12).forEach(e => { const y = goingList(e).filter(x => x.a === "yes").map(x => x.who); L.push(`- [event ${e.date}] ${d(e.date)}${e.time ? ", " + e.time : ""}: ${e.name} (${e.kind}${e.status ? ", " + (STATUS[e.status] || e.status) : ""})${e.place ? ", at " + e.place : ""}${e.who ? ". Lead: " + e.who : ""}${y.length ? ". Team going: " + y.join(", ") : ""}`); });
   }
   if (IMPACT) {
     const g = IMPACT.goal || {};
@@ -1356,15 +1376,17 @@ function hubContext() {
     const done = WORK.tasks.filter(t => t.status === "done" && String(t.doneAt || "").slice(0, 10) >= wk);
     L.push("", `WORK: ${open.length} open tasks, ${late.length} overdue, ${done.length} done in the last 14 days.`);
     open.slice().sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))).slice(0, 60)
-      .forEach(t => L.push(`- ${t.title} [${t.team || "No team"}] ${t.status}${t.due ? ", due " + t.due : ""}. Owner: ${t.owners.join(", ") || "nobody yet"}${t.helpers && t.helpers.length ? ". Helping: " + t.helpers.join(", ") : ""}`));
+      .forEach(t => L.push(`- [task ${t.id}] ${t.title} [${t.team || "No team"}] ${t.status}${t.due ? ", due " + t.due : ""}. Owner: ${t.owners.join(", ") || "nobody yet"}${t.helpers && t.helpers.length ? ". Helping: " + t.helpers.join(", ") : ""}`));
     done.slice(0, 15).forEach(t => L.push(`- Done ${String(t.doneAt).slice(0, 10)}: ${t.title} (${t.owners.join(", ")})`));
   }
+  if (WORK && Array.isArray(WORK.people)) L.push("", "TEAM (for direct messages): " + WORK.people.map(p => p.name).join(", ") + ". Work team boards: " + (WORK.teams || []).join(", ") + ".");
+  if (FORMS.length) L.push("FORMS: " + FORMS.map(f => f.title).join("; ") + ".");
   if (VOL && Array.isArray(VOL.events)) {
     const today = VOL.today || new Date().toISOString().slice(0, 10), ppl = vPeople();
     L.push("", "VOLUNTEERS (names are first name and last initial):");
     VOL.events.filter(e => e.date >= today).slice(0, 8).forEach(e => {
       const on = vOn(e.date).filter(p => vStatus(p, e.date) !== "cancelled"), n = vHeads(on), need = +e.needed || 0;
-      L.push(`- ${d(e.date)}, ${e.name}: ${n} signed up${need ? " of " + need + " needed" : ""}${on.filter(vNeedsOrient).length ? `, ${on.filter(vNeedsOrient).length} new and not oriented yet` : ""}. ${on.map(p => nm(p.name) + (p.group ? ` (group of ${p.group.size})` : "")).join(", ")}`);
+      L.push(`- [vol ${e.date}] ${d(e.date)}, ${e.name}: ${n} signed up${need ? " of " + need + " needed" : ""}${on.filter(vNeedsOrient).length ? `, ${on.filter(vNeedsOrient).length} new and not oriented yet` : ""}. ${on.map(p => nm(p.name) + (p.group ? ` (group of ${p.group.size})` : "")).join(", ")}`);
     });
     const since = Date.now() - 14 * 864e5, recent = ppl.filter(p => { const t = new Date(p.last || ""); return !isNaN(t) && +t >= since; });
     L.push(`- New or updated sign-ups in the last 14 days: ${recent.length}${recent.length ? ". " + recent.slice(0, 40).map(p => `${nm(p.name)} (${vIsNew(p) ? "new" : "returning"}${p.dates.length ? ", for " + p.dates.filter(x => x >= today).map(d).join(" and ") : ""})`).join("; ") : ""}`);
@@ -5127,7 +5149,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104043000";
+  var BUILD = "20261104044500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

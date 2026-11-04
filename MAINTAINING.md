@@ -149,6 +149,11 @@ questions per person per hour.
   minutes (`aibusy`), so most answers take seconds.
 - Answers use as little thinking as each model allows (`THINK` in `askTeam_`: minimal, then low, then none). The level
   that worked is remembered per model for 6 hours (cache `aithink:<model>`). With warm caches an answer takes about 3 seconds.
+- Links in answers: the AI writes `[[kind:value|label]]` after anything the person can open, and the page turns each into
+  a button (`aiHtml` and `askGo` in hub/index.html): a task, an event page, a date's volunteer list, a Work team board, a
+  screen, Team chat or Announcements, a direct message to a teammate, or a form. The ids come from the live Hub data
+  (`[task t12]`, `[event 2026-11-24]`), so it can only link what the person can see. The rule is in the `sys` text in
+  `askTeam_`.
 - Test from the editor with `checkAI`: it logs each doc's size, the models, and one test answer.
 - If the docs disagree, the AI says so. That is a sign to fix the docs, not the code.
 
