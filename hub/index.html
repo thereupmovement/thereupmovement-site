@@ -1494,6 +1494,20 @@ function openEvent(e) {
   const su = $("toSignup"); if (su) su.addEventListener("click", () => openSignup({ date: e.date, name: e.name }));
 }
 
+function openNF(name, f) {
+  const pub = window.ReUpForms.isPublic(name), link = "https://thereupmovement.org/" + name;
+  openSheet(`<div class="k">${esc(f.group || "Forms")}${f.time ? " &middot; " + esc(f.time) : ""}</div>
+    <h3 id="sheetTitle">${esc(f.title)}</h3>
+    ${pub ? `<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" id="copyLink">Copy the link to send</button></div><p class="small" id="copyNote" style="overflow-wrap:anywhere;margin:0">${esc(link)}</p>` : ""}
+    <div id="nfbox" style="margin-top:12px"></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  window.ReUpForms.mount($("nfbox"), { team: true, hideTitle: true, fallback: f.url, load: () => run("formDefTeam", KEY, name), send: (a, photo) => run("formSendTeam", KEY, name, a, photo) });
+  const c = $("copyLink");
+  if (c) c.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(link); c.textContent = "Copied"; }
+    catch (err) { const r = document.createRange(); r.selectNodeContents($("copyNote")); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); c.textContent = "Link selected below"; }
+  });
+}
 function openSignup(preset, f) {
   openSheet(`<div class="k">Volunteers</div>
     <h3 id="sheetTitle">Sign up for an event</h3>
@@ -1509,6 +1523,11 @@ function openSignup(preset, f) {
 }
 function openForm(f) {
   if (f.native === "volunteer") return openSignup(null, f);
+  // Check-in has its own screen in the Hub (it keeps saving with no signal).
+  if (/1Ds7bGpFsxFxh5e6o8N5gW7vp_YfzX0E1Wam47cE-2Fw/.test(f.url || "") && BOOT.work) { if (sheet.open) sheet.close(); return go("checkin"); }
+  // Every other Google Form ReUp uses opens as the app's own screen (forms.js); answers still go through that Google Form.
+  const nf = window.ReUpForms && window.ReUpForms.nameOf(f.url);
+  if (nf) return openNF(nf, f);
   if (f.native === "receipt" || f.native === "trip") return openMoney(f.native, f);
   openSheet(`<div class="k">${esc(f.group)}${f.time ? " &middot; " + esc(f.time) : ""}</div>
     <h3 id="sheetTitle">${esc(f.title)}</h3>
@@ -3583,11 +3602,11 @@ function drawStorage(d) {
 }
 function opsActions() {
   const sortF = FORMS.find(f => f.title === "Sort an item"), pickF = FORMS.find(f => f.title === "Pallet pickup");
-  const tile = (inner, attrs) => attrs.href ? `<a class="qab" href="${esc(attrs.href)}" target="_blank" rel="noopener">${inner}</a>` : `<button class="qab" type="button" data-openmoney="${attrs.money}">${inner}</button>`;
+  const tile = (inner, attrs) => attrs.form ? `<button class="qab" type="button" data-openform="${esc(attrs.form)}">${inner}</button>` : `<button class="qab" type="button" data-openmoney="${attrs.money}">${inner}</button>`;
   const t = (icon, title, sub) => `<i aria-hidden="true">${icon}</i><span><b>${title}</b><small>${sub}</small></span>`;
   return `<div class="hsec opshead"><h3>Quick actions</h3></div><div class="qa opsqa">
-    ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { href: sortF.url }) : ""}
-    ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { href: pickF.url }) : ""}
+    ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { form: "Sort an item" }) : ""}
+    ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { form: "Pallet pickup" }) : ""}
     ${tile(t(QICON["Snap a receipt"] || "", "Snap a receipt", "Gas, storage, supplies"), { money: "receipt" })}
     ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}
     ${(+BOOT.rc) >= 0 ? `<button class="qab wide" type="button" data-openreview><i aria-hidden="true">${qi('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>')}</i><span><b>Approvals</b><small id="opsapprn">${(+BOOT.rc) > 0 ? BOOT.rc + " waiting" : "Nothing waiting"}</small></span></button>` : ""}</div>`;
@@ -4941,7 +4960,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104011500";
+  var BUILD = "20261104012000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
@@ -4973,5 +4992,6 @@ function vWireOrient(box) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
 })();
 </script>
+<script src="../forms.js?v=1"></script>
 </body>
 </html>
