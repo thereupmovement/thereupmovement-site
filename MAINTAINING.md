@@ -192,6 +192,10 @@ Added later on 3 Nov 2026 (server version after 61):
 - Notes add up: each note is saved under the earlier ones with the date and who wrote it (`appsSave`). The cell keeps
   the newest 1,900 characters.
 - An application still at New after 5 days shows "Waiting N days" in red in the Hub (`appWait` in hub/index.html).
+- Open roles (server version 67): leaders and Hub admins change the roles from the Hub, under Applications, Open roles.
+  `rolesGet` / `rolesSave` at the end of Code.gs write straight into the Team Roles doc: the number after "Openings:" and
+  the summary line (with "Opening soon. " in front when the role is closed). Adding or removing a role is still done in
+  the doc. If a save says the role was not found, someone renamed its heading in the doc; reload the list.
 
 ## When saves fail (3 Nov 2026)
 

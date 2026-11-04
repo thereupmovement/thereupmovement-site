@@ -1081,7 +1081,7 @@ body.hasfab{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}   /* t
     </section>
     <section class="view" id="v-apps" hidden>
       <h2>Applications</h2>
-      <p class="lead">People who applied to join the core team on the community page. The roles come from the ReUp Team Roles doc. Reach out, then set where each one stands.</p>
+      <p class="lead">People who applied to join the core team on the community page. Reach out, then set where each one stands. Open roles changes what people can apply for.</p>
       <div id="apps"><p class="small">Loading...</p></div>
     </section>
     <section class="view" id="v-events" hidden>
@@ -1635,12 +1635,48 @@ function drawApps() {
   const st = ["New"].concat(APPS.statuses.filter(x => x !== "New")).concat(["All"]);
   const list = APPS.items.filter(x => appsF === "All" || x.status === appsF);
   const nWait = APPS.items.filter(x => appWait(x) >= 5).length;
-  box.innerHTML = `<div class="filters" role="group" aria-label="Show" style="margin:4px 0 10px">${st.map(k => { const n = k === "All" ? APPS.items.length : APPS.items.filter(x => x.status === k).length; return `<button class="chip" type="button" data-apf="${esc(k)}" aria-pressed="${appsF === k}">${esc(k)}${n ? " " + n : ""}</button>`; }).join("")}</div>
+  box.innerHTML = `<button class="tbtn ghost" type="button" id="rolesGo" style="margin:0 0 12px">Open roles: change what people can apply for</button>
+    <div class="filters" role="group" aria-label="Show" style="margin:4px 0 10px">${st.map(k => { const n = k === "All" ? APPS.items.length : APPS.items.filter(x => x.status === k).length; return `<button class="chip" type="button" data-apf="${esc(k)}" aria-pressed="${appsF === k}">${esc(k)}${n ? " " + n : ""}</button>`; }).join("")}</div>
     ${nWait ? `<p class="small late" style="margin:0 0 10px">${nWait} ${nWait === 1 ? "person has" : "people have"} waited 5 days or more for a first reply.</p>` : ""}
     <div class="wrows">${list.map(x => { const w = appWait(x); return `<button type="button" class="wrow" data-apr="${x.row}"><span class="wrname">${esc(x.name)}<span class="idmlast">${esc(x.roles)}</span></span><span class="wrmeta"><span${w >= 5 ? ' class="late"' : ""}>${w >= 5 ? `Waiting ${w} days` : esc(x.status)} &middot; ${esc(String(x.at).slice(0, 10))}</span></span></button>`; }).join("") ||
       `<p class="small">${APPS.items.length ? "None here." : "No applications yet. They show up here as soon as someone applies at thereupmovement.org/apply."}</p>`}</div>`;
   box.querySelectorAll("[data-apf]").forEach(b => b.addEventListener("click", () => { appsF = b.dataset.apf; drawApps(); }));
   box.querySelectorAll("[data-apr]").forEach(b => b.addEventListener("click", () => openApp(+b.dataset.apr)));
+  $("rolesGo").addEventListener("click", () => openRoles());
+}
+/* Open roles: what thereupmovement.org/apply lists. rolesGet / rolesSave in Code.gs write straight into the
+   "ReUp Team Roles" doc, so the doc stays the one place the roles live. "Opening soon" = listed, can't be applied for. */
+let ROLES = null;
+function openRoles() {
+  openSheet(`<div class="k">Applications</div><h3 id="sheetTitle">Open roles</h3><div id="rolesBox"><p class="small">Loading...</p></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  run("rolesGet", KEY).then(r => { ROLES = r; drawRoles(); }, e => { const b = $("rolesBox"); if (b) b.innerHTML = `<p class="small">${isAuth(e) ? "Only leaders and Hub admins can change the roles." : "The roles could not load. Check your connection and try again."}</p>`; });
+}
+function drawRoles() {
+  const box = $("rolesBox"); if (!box || !ROLES) return;
+  box.innerHTML = `<p class="small" style="margin:0 0 10px">These are the roles on the website's Join the team page. Tap one to open it, set it to Opening soon, or change its openings or description. Changes show on the website within a minute.</p>
+    ${ROLES.departments.map((d, di) => `<div class="tsec"><div class="tl">${esc(d.name)}</div><div class="wrows">${d.roles.map((x, ri) => `<button type="button" class="wrow" data-role="${di}-${ri}"><span class="wrname">${esc(x.title)}<span class="idmlast">${esc(x.openings)}</span></span><span class="wrmeta"><span${x.open ? "" : ' class="late"'}>${x.open ? "Open" : "Opening soon"}</span></span></button>`).join("")}</div></div>`).join("")}
+    <p class="small" style="margin:14px 0 0">To add or remove a role, edit the <a href="${esc(ROLES.doc)}" target="_blank" rel="noopener">ReUp Team Roles doc</a>.</p>`;
+  box.querySelectorAll("[data-role]").forEach(b => b.addEventListener("click", () => { const [di, ri] = b.dataset.role.split("-").map(Number); openRole(di, ri); }));
+}
+function openRole(di, ri) {
+  const d = ROLES.departments[di], x = d && d.roles[ri]; if (!x) return;
+  let open = x.open;
+  openSheet(`<div class="k">Open roles &middot; ${esc(d.name)}</div><h3 id="sheetTitle">${esc(x.title)}</h3>
+    <div class="tsec"><div class="tl">Can people apply?</div><div class="seg" role="group" aria-label="Can people apply?"><button type="button" data-ro="1" aria-pressed="${open}">Open</button><button type="button" data-ro="0" aria-pressed="${!open}">Opening soon</button></div>
+      <p class="small" style="margin:0">Opening soon keeps it on the website, but nobody can pick it yet.</p></div>
+    <div class="tsec"><div class="tl">Openings</div><input class="ainput" id="roOpen" maxlength="60" value="${esc(x.openings)}" aria-label="Openings"><p class="small" style="margin:6px 0 0">For example: 1, or 1 lead and 1 to 2 assistants.</p></div>
+    <div class="tsec"><div class="tl">One-line description</div><textarea class="tarea" id="roSum" maxlength="400" aria-label="One-line description">${esc(x.summary)}</textarea>
+      <p class="small" style="margin:6px 0 0">This is the line under the role on the website. The duties list stays in the doc.</p></div>
+    <p class="tmsg" id="romsg" role="status" aria-live="polite"></p>
+    <div class="btns"><button class="btn" type="button" id="roSave">Save</button><button class="btn ghost" type="button" id="roBack">Back to the roles</button></div>`);
+  document.querySelectorAll("[data-ro]").forEach(b => b.addEventListener("click", () => { open = b.dataset.ro === "1"; document.querySelectorAll("[data-ro]").forEach(c => c.setAttribute("aria-pressed", String((c.dataset.ro === "1") === open))); }));
+  $("roBack").addEventListener("click", () => { openRoles(); });
+  $("roSave").addEventListener("click", () => {
+    const b = $("roSave"); b.disabled = true; $("romsg").textContent = "Saving...";
+    run("rolesSave", KEY, d.name, x.title, { open, openings: $("roOpen").value, summary: $("roSum").value })
+      .then(r => { ROLES = r; toast("Saved. The website updates within a minute."); openRoles(); }, e => { b.disabled = false; $("romsg").textContent = saveErr(e); });
+  });
 }
 // Days a New application has waited for a first reply ("When" is written as yyyy-MM-dd HH:mm, Central time).
 function appWait(x) {
@@ -5149,7 +5185,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104044500";
+  var BUILD = "20261104050000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
