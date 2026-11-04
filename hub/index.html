@@ -1135,7 +1135,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div class="tiles" id="edforms"></div>
       <h2>Spots on the line</h2>
       <div class="spots">
-        <div class="spot"><b>Check-in table</b><span>Every guest checks in. Hand out the needs form here too.</span></div>
+        <div class="spot"><b>Check-in table</b><span>Every guest checks in. Ask each family how many live in their home. Hand out the needs form here too.</span></div>
         <div class="spot"><b>Head of the line</b><span>Keeps the line calm and moving.</span></div>
         <div class="spot"><b>Behind the line</b><span>Hands goods to each guest.</span></div>
         <div class="spot"><b>End of the line</b><span>Checks with each community guest that they received the number of items we told them. Manages crowd control, and makes sure everyone comes in at the front of the event, never from the back.</span></div>
@@ -4950,7 +4950,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104012500";
+  var BUILD = "20261104013000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
