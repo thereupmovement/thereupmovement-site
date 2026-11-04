@@ -34,6 +34,8 @@ Three doors, three parts.
 - `hub/sw.js`: keeps the Hub working with a weak signal. It never stores server responses.
 - `volunteer/index.html`, `volunteer/reset.html`, `hub/reset.html`: the volunteer page and the two
   password set/reset pages.
+- `404.html`: the "page isn't here" page GitHub Pages shows for any address that does not exist. Its links and
+  images start with `/` because it can be shown from any folder.
 - `assets/`: images. `plan-img/`: sample-data screenshots only.
 - `.github/check-pages.js`: the automatic check (below).
 
