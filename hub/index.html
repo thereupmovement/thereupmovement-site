@@ -976,6 +976,9 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .askcard summary em{font-style:normal;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .aska{padding:0 16px 14px;line-height:1.5}
 .asknone{padding:14px 16px;margin-top:6px}
+.askform{display:grid;gap:8px}.askform .askq{margin:6px 0 0;min-height:64px}
+.askwarn{margin:8px 0 12px}
+.askans{padding:14px 16px;margin-bottom:10px}.askans.old{opacity:.8}.askyou{margin:0 0 8px;font-weight:700}.askans .aska{padding:0}
 /* Dark mode (phones set to dark): these used fixed light colors, which put light text on light boxes. */
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="light"]) .t-ops{--tc:#7DB7E3;--ts:#16283A}
@@ -1105,8 +1108,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 
     <section class="view" id="v-ask" hidden>
       <h2>Ask a question</h2>
-      <p class="lead">Type a few words. Answers come from the team's ReUp Answers doc.</p>
-      <input class="ainput askq" id="askq" type="search" placeholder="For example: orientation, turn in, receipt" aria-label="Your question" autocomplete="off">
+      <p class="lead">Ask anything about how ReUp works. Answers come only from the team's docs: ReUp Answers, the Message Guide, the Admin Guide, the Event Lead Guide and the Fix-It Guide.</p>
+      <form id="askform" class="askform"><textarea class="tarea askq" id="askq" rows="2" placeholder="For example: Charles is out Saturday. Who runs check-in, and what do they need to do?" aria-label="Your question"></textarea>
+        <button class="btn" type="submit" id="askgo">Get an answer</button></form>
+      <p class="small askwarn">Never type a community guest's name, phone number or situation here. Google can read what's typed into the free AI.</p>
+      <div id="askai" aria-live="polite"></div>
       <div id="askres" aria-live="polite"></div>
     </section>
     <section class="view" id="v-events" hidden>
@@ -1320,13 +1326,35 @@ function drawAsk() {
   }
   const items = ANSWERS.items || [], found = q.value.trim() ? findAnswers(items, q.value) : null;
   const card = (x, open) => `<details class="card askcard"${open ? " open" : ""}><summary>${esc(x.q)}${x.sec === "team" ? `<em>Team</em>` : ""}</summary><div class="aska">${linkify(x.a).replace(/\n/g, "<br>")}</div></details>`;
-  res.innerHTML = (found ? (found.length ? found.map((x, i) => card(x, i === 0)).join("") : `<p class="lead">No answer for that yet.</p>`)
-      : `<h3 class="wlabel">All questions (${items.length})</h3>` + items.map(x => card(x, false)).join(""))
+  res.innerHTML = (found ? (found.length ? `<h3 class="wlabel">Matching questions</h3>` + found.map((x, i) => card(x, i === 0 && !askHist.length)).join("") : "")
+      : askHist.length ? "" : `<h3 class="wlabel">Or browse all questions (${items.length})</h3>` + items.map(x => card(x, false)).join(""))
     + `<div class="card asknone"><b>Didn't find it?</b><p class="small" style="margin:4px 0 8px">Ask in Team chat, and someone on the team will answer.</p><button class="btn ghost" type="button" id="askchat">Open Team chat</button></div>`
     + (ANSWERS.doc ? `<p class="small" style="margin-top:10px"><a href="${esc(ANSWERS.doc)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Add or change answers in the ReUp Answers doc</a>. Changes show here within 10 minutes.</p>` : "");
   $("askchat").addEventListener("click", () => { inboxView = "team"; go("inbox"); });
 }
 document.addEventListener("input", e => { if (e.target && e.target.id === "askq" && ANSWERS) drawAsk(); });
+/* AI answer: the server sends the question and the docs to Google's free Gemini and returns its answer.
+   The last few questions go along, so a follow-up ("and on Sunday?") makes sense. */
+let askHist = [], askBusy = false;
+const aiHtml = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n/g, "<br>");
+function drawAskAi(pending) {
+  const box = $("askai"); if (!box) return;
+  box.innerHTML = askHist.slice().reverse().map((h, i) => `<div class="card askans${i ? " old" : ""}"><p class="askyou">${esc(h.q)}</p><div class="aska">${h.a ? aiHtml(h.a) : `<span class="small">${esc(h.msg || "")}</span>`}</div></div>`).join("")
+    .replace(/^/, pending ? `<div class="card askans"><p class="askyou">${esc(pending)}</p><div class="aska"><span class="small">Reading ReUp's docs...</span></div></div>` : "");
+}
+document.addEventListener("submit", async e => {
+  if (!e.target || e.target.id !== "askform") return;
+  e.preventDefault();
+  const q = $("askq").value.trim(); if (!q || askBusy) return;
+  askBusy = true; $("askgo").disabled = true; drawAskAi(q);
+  try {
+    const r = await run("askTeam", KEY, q, askHist.filter(h => h.a).slice(-2).map(h => ({ q: h.q, a: h.a })));
+    askHist.push(r && r.ok ? { q, a: r.answer } : { q, msg: (r && r.msg) || "The AI could not answer right now." });
+    if (r && r.ok) { $("askq").value = ""; }
+  } catch (er) { askHist.push({ q, msg: isAuth(er) ? "Enter your PIN again to keep asking." : "That didn't go through. Check your connection and try again." }); }
+  askHist = askHist.slice(-6); askBusy = false; $("askgo").disabled = false; drawAskAi(); drawAsk();
+});
+document.addEventListener("keydown", e => { if (e.target && e.target.id === "askq" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("askform").requestSubmit(); } });
 /* Work tasks for an event: the task title shares the event's distinctive words. */
 const EV_SKIP = /^(with|the|and|for|event|events|annual|distribution|apartments|of|at|st)$/i;
 function evTasks(e) {
@@ -4902,7 +4930,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104000000";
+  var BUILD = "20261104010000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
