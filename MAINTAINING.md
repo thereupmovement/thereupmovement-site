@@ -249,6 +249,8 @@ Add one line whenever something goes wrong, so it does not happen twice.
 - 3 Nov 2026: two people (or two AI sessions) editing the Apps Script project at once overwrite each other; whoever saves
   last wins. One editor at a time, and reload the editor before changing anything.
 - 3 Nov 2026: Deploy ships whatever is saved at that moment. Check what is saved before clicking it.
+- 3 Nov 2026: after pulling someone else's Hub change, raise the build number again before pushing. Two changes with
+  the same number fail the automatic check, and open phones do not reload until the number goes up.
 
 ## Things that break the app if changed by hand
 
