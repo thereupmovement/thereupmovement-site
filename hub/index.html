@@ -880,6 +880,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .wdonewhen{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--red-soft);font-size:14.5px}
 .wstep{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:3px 0 0}
 .wproj .wrows{margin:4px 0 6px}
+.wbar{display:block;height:6px;margin:6px 0 2px;border-radius:3px;background:var(--line);overflow:hidden}.wbar i{display:block;height:100%;background:var(--ink);border-radius:3px}
 /* How did it end? (when marking a task done) */
 .wend{margin:10px 0 8px}
 /* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
@@ -2382,7 +2383,7 @@ function wcard(t, opts) {
   return `<div class="wcard ${TEAMCLS[t.team] || "t-none"} s-${t.status}">
     <button type="button" class="wmain" data-work="${esc(t.id)}">
       <span class="wtop"><span class="wteam">${esc(LBL(t.team) || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.goal ? `<span class="wlock">${t.goal === "decision" ? "Decision" : "Grant readiness"}</span>` : t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
-      <span class="wname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>` : ""}
+      <span class="wname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>${t.project ? "" : wBar(t.id)}` : ""}
       <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
     </button>${t.status === "doing" ? `<div class="wprog" aria-hidden="true"><i></i>In progress</div>` : ""}${acts}</div>`;
 }
@@ -2418,6 +2419,8 @@ const wNextStepNo = t => { const after = wSteps(t.project).find(x => x.step > t.
 /* ---- Projects: a task with steps; each step is its own task (project = the parent's id, step = its place in the order) ---- */
 const wSteps = id => (WORK && WORK.tasks || []).filter(x => x.project === id).sort((a, b) => a.step - b.step);
 const wCurStep = id => wSteps(id).find(x => x.status !== "done");
+/* Someone's later step is waiting on this one, so it goes to the top of My work (Taskwarrior's idea). */
+const wBlocks = t => !!t.project && t.status !== "done" && wSteps(t.project).some(x => x.step > t.step && x.status !== "done");
 /* A step waits until every step before it is done. */
 const wWaitOn = t => t.project && t.status !== "done" ? wSteps(t.project).find(x => x.id !== t.id && x.status !== "done" && x.step < t.step) : null;
 /* Steps with the same number run side by side, so they count as one stage ("Step 2 of 3", not "2 of 4"). */
@@ -2429,6 +2432,12 @@ function wProgress(id) {
   return c ? `Step ${wStage(id, c.step)} of ${wStages(id)}, with ${who.join(", ") || "nobody yet"}${now.some(wLate) ? ", late" : ""}` : `All ${wStages(id)} steps done`;
 }
 /* One line for cards: where a project stands, or which step of which project this is. */
+/* A thin bar of how many stages of a project are done. */
+function wBar(id) {
+  const st = [...new Set(wSteps(id).map(x => x.step))]; if (!st.length) return "";
+  const done = st.filter(n => wSteps(id).filter(x => x.step === n).every(x => x.status === "done")).length;
+  return `<span class="wbar" role="img" aria-label="${done} of ${st.length} steps done"><i style="width:${Math.round(100 * done / st.length)}%"></i></span>`;
+}
 function wStepLine(t) {
   if (!t.project) return wProgress(t.id);
   const s = wSteps(t.project), pr = (WORK.tasks || []).find(x => x.id === t.project);
@@ -2517,7 +2526,7 @@ function wplain(t) {
   const from = t.createdBy && t.createdBy !== WORK.me ? "From " + t.createdBy + "." : "";
   const help = t.helpers.length ? " " + t.helpers.join(", ") + (t.helpers.length === 1 ? " is" : " are") + " helping." : "";
   return `<button type="button" class="wpcard ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wptop"><span class="wpteam">${esc(LBL(t.team) || "No team")}</span><span class="wpst ${right[1]}">${esc(right[0])}</span></span>
-    <span class="wpname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>` : ""}${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
+    <span class="wpname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>${t.project ? "" : wBar(t.id)}` : ""}${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
 }
 const wfoldPlain = (title, list) => list.length ? `<details class="dhist wpfold"><summary>${title} (${list.length})</summary><div class="wplain">${list.map(wplain).join("")}</div></details>` : "";
 /* A number that jumps to its section when tapped (only when there is something to jump to). */
@@ -2552,7 +2561,7 @@ function drawWork() {
     const open = mine.filter(t => wOpen(t) && t.status !== "review").sort(wSort);
     const notYet = open.filter(t => wNotYet(t) && t.status !== "stuck");
     const active = open.filter(t => !notYet.includes(t));
-    const now = active.filter(t => t.status === "stuck" || wLate(t) || d(t) <= 7).slice(0, 5);
+    const now = active.filter(t => t.status === "stuck" || wLate(t) || d(t) <= 7 || wBlocks(t)).sort((x, y) => wBlocks(y) - wBlocks(x)).slice(0, 5);
     const later = active.filter(t => !now.includes(t)).sort((x, y) => d(x) - d(y) || x.title.localeCompare(y.title));
     const turnedIn = mine.filter(t => t.status === "review");
     const toReview = all.filter(t => t.status === "review" && t.createdBy === me);
@@ -2779,7 +2788,7 @@ function fillWork(keep) {
     projHtml = `<div class="tsec wproj"><div class="tl">Step ${wStage(parent.id, t.step)} of ${wStages(parent.id)} in a project</div><button type="button" class="wrow" data-wopen="${esc(parent.id)}"><span class="wrname">${esc(parent.title)}</span><span class="wrmeta"><span>${esc(wProgress(parent.id))}</span></span></button>
       ${wt ? `<p class="small" style="margin:6px 0 0">Waiting on ${esc(wt.owners.join(", ") || "the step before")}: "${esc(wt.title)}". You get a message when it's your turn.</p>` : ""}${nx ? `<p class="small" style="margin:6px 0 0">Next: ${esc(nx.title)} (${esc(nx.owners.join(", ") || "nobody yet")}). They get a message when this is done.</p>` : `<p class="small" style="margin:6px 0 0">This is the last step.</p>`}</div>`;
   } else if (steps.length || addStep) {
-    projHtml = `<div class="tsec wproj">${steps.length ? `<div class="tl">Steps (${wProgress(t.id)})</div><div class="wrows">${steps.map(sRow).join("")}</div>` : ""}${addStep}</div>`;
+    projHtml = `<div class="tsec wproj">${steps.length ? `<div class="tl">Steps (${wProgress(t.id)})</div>${wBar(t.id)}<div class="wrows">${steps.map(sRow).join("")}</div>` : ""}${addStep}</div>`;
   }
   const doneWhen = ((t.details || "").match(/^\s*Done when:\s*(.+)$/im) || [])[1] || "";   // a "Done when:" line in the details shows where the task is closed
   /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
@@ -2828,7 +2837,7 @@ function fillWork(keep) {
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     ${isNew || G || !(mine || manage) ? "" : `<div class="tsec"><div class="tl">Size</div><div class="wchips"><button type="button" data-wquick="1" aria-pressed="${!!t.quick}">Quick one</button><button type="button" data-wquick="0" aria-pressed="${!t.quick}">Takes longer</button></div></div>`}
     ${isNew || G || !manage || steps.length ? "" : `<div class="tsec"><div class="tl">Part of a project</div><select class="ainput" id="wpj" aria-label="Part of a project"><option value="">Not part of a project</option>${(W.tasks || []).filter(x => x.id !== t.id && !x.project && x.status !== "done" && wSteps(x.id).length).map(x => `<option value="${esc(x.id)}"${x.id === t.project ? " selected" : ""}>${esc(x.title)}</option>`).join("")}</select><p class="small" style="margin:6px 0 0">Pick a project and this task becomes its last step. To start a new project, open the bigger task and add steps to it.</p></div>`}
-    ${isNew || G || !manage ? "" : `<div class="tsec"><div class="tl">Shows up on</div><div class="tdue"><input type="date" id="wopens" value="${esc(t.opens || "")}" aria-label="Shows up on">${t.opens ? `<button type="button" class="linkish" id="wopensclear">Show it now</button>` : ""}</div><p class="small" style="margin:6px 0 0">Leave empty to show it right away. Set a date to keep it out of the way until then.</p></div>`}
+    ${isNew || G || !mine ? "" : `<div class="tsec"><div class="tl">Not until (snooze)</div><div class="tdue"><input type="date" id="wopens" value="${esc(t.opens || "")}" aria-label="Shows up on">${t.opens ? `<button type="button" class="linkish" id="wopensclear">Show it now</button>` : ""}</div><p class="small" style="margin:6px 0 0">Can't start it yet? Pick a date and it waits under Coming later until then. Leave empty to show it now.</p></div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
     </details>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
@@ -5379,7 +5388,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104063000";
+  var BUILD = "20261104064500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

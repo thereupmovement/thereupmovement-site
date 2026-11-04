@@ -340,6 +340,10 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   someone else's step" on My work, not in Now. The task page shows the steps in order with "Add a step"; a step shows
   its project and what comes next. "What's next, and who does it?" on a step adds a step right after it. Leaders can
   put an existing task into a project under "Owner, due date and more". Ask sees every open project's steps.
+- A step someone else is waiting on goes to the top of its owner's My work (`wBlocks`). Projects show a progress bar
+  (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
+- Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
+  tasks due in 2 days (steps still waiting on an earlier step are left out).
 
 ## Group sign-up (server version 59, 3 Nov 2026)
 
