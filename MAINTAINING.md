@@ -141,6 +141,24 @@ questions per person per hour.
 - Test from the editor with `checkAI`: it logs each doc's size, the models, and one test answer.
 - If the docs disagree, the AI says so. That is a sign to fix the docs, not the code.
 
+## Forms inside the app (3 Nov 2026)
+
+Every Google Form ReUp uses opens as the app's own screen (`forms.js` at the repository root, used by the community
+page and the Hub). The questions are read from the Google Form itself (`nfDef_` in Code.gs, cached 10 minutes), and
+answers are submitted through that same Google Form with FormApp (`nfSubmit_`). So the response sheets, their columns,
+the budget formulas and any form-submit triggers work exactly as before, and editing a Google Form changes the screen.
+- The list of forms is `NFORMS` in Code.gs (short name and Google Form id; `open: true` means anyone can use it from
+  the community page). The page side has the same ids in `IDS` in forms.js. Add a form in both places.
+- Public: `formDef` / `formSend` (volunteer.gs, on `TP_OPEN`, 300 sends per form per hour, hidden robot box).
+  Team: `formDefTeam` / `formSendTeam` (Code.gs, PIN-checked). The Hub opens a form when its Forms entry links to one
+  of these Google Forms; "Check someone in" opens the Hub's own check-in screen instead.
+- Direct links: thereupmovement.org/needs, /give and /story (folders that forward to `/?f=needs` and so on).
+- Photo questions (Sort an item) cannot be filled by a script: the photo goes into the form's own photo folder
+  ("Item photo (File responses)", id remembered in the Script Property `NF_PHOTO_sort`) and its link is written into
+  the new row (`nfPhotoCell_`).
+- If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
+  Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
+
 ## Writing past the end of a tab
 
 Tabs fed by a Google Form (the Item Log, the volunteer Responses tab) end exactly at their last entry, and writing one
