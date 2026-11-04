@@ -1034,7 +1034,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 </head>
 <body>
 <header class="band pad">
-  <div class="wrap top"><span class="brand"><img src="https://thereupmovement.org/hub/img0.webp?v=yu1" alt="The ReUp Movement" width="114" height="40"></span><span class="only">Team Hub</span></div>
+  <div class="wrap top"><a class="brand" href="https://thereupmovement.org/" aria-label="Go to the ReUp website"><img src="https://thereupmovement.org/hub/img0.webp?v=yu1" alt="The ReUp Movement" width="114" height="40"></a><span class="only">Team Hub</span></div>
 </header>
 
 <main class="pad">
@@ -4858,7 +4858,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103210000";
+  var BUILD = "20261103220000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
