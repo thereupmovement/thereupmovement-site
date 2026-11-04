@@ -561,13 +561,13 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 @media (prefers-reduced-motion:reduce){.wprog i{animation:none}}
 .wrows{display:grid;gap:6px}
 /* My work, simplified (Nov 2026): plain cards, no buttons on them; the task opens with one tap. */
-.wplain{display:grid;gap:8px}
-.wpcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;min-height:44px}
+.wplain{display:grid;gap:6px}
+.wpcard{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px}
 .wpcard:focus-visible,.wbig:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .wptop{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
 .wpteam{display:flex;align-items:center;gap:6px}.wpteam::before{content:"";width:8px;height:8px;background:var(--tc,var(--muted));flex:none}
 .wpst{font-weight:700;color:var(--ink)}.wpst.late{color:var(--red)}.wpst.soon{color:var(--ink)}
-.wpname{font-size:17px;font-weight:700;line-height:1.3}
+.wpname{font-size:16px;font-weight:700;line-height:1.3}
 .wpmeta{font-size:14px;color:var(--muted)}
 .wbig{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;border-radius:10px;padding:14px 16px;margin-top:10px;cursor:pointer;min-height:52px}
 .wreview{background:var(--red);color:#fff;border:0}.wreview b{font-family:var(--display,inherit);font-size:28px;line-height:1}
@@ -2443,6 +2443,9 @@ function wStepLine(t) {
   const s = wSteps(t.project), pr = (WORK.tasks || []).find(x => x.id === t.project);
   return `Step ${wStage(t.project, t.step)} of ${wStages(t.project)}` + (pr ? `: ${pr.title}` : "");
 }
+/* Open projects (tasks that have steps), and the ones a person is part of. */
+const wProjects = () => (WORK.tasks || []).filter(t => wOpen(t) && wSteps(t.id).length).sort((a, b) => a.title.localeCompare(b.title));
+const wInProj = (t, n) => t.owners.includes(n) || t.createdBy === n || wSteps(t.id).some(x => x.owners.includes(n) || x.helpers.includes(n));
 const wNotYet = t => !!wWaitOn(t) || (t.opens ? daysAway(t.opens) > 0 : (t.status === "todo" && !!t.due && daysAway(t.due) > 21));
 const wShowsOn = t => t.opens || new Date(dt(t.due).getTime() - 21 * 864e5).toISOString().slice(0, 10);
 /* Lines the Hub writes by itself on a task (status, owners, dates). Everything else in Updates is someone's own words. */
@@ -2523,7 +2526,7 @@ function wrow(t, sub) {
 function wplain(t) {
   const [dw, dc] = dueWords(t.due, t.status === "done");
   const right = t.status === "stuck" ? ["Stuck", "late"] : t.status === "review" ? ["Turned in", ""] : t.status === "done" ? ["Done", ""] : [dw, dc];
-  const from = t.createdBy && t.createdBy !== WORK.me ? "From " + t.createdBy + "." : "";
+  const from = t.createdBy && t.createdBy !== WORK.me && t.createdBy !== "Hub" ? "From " + t.createdBy + "." : "";
   const help = t.helpers.length ? " " + t.helpers.join(", ") + (t.helpers.length === 1 ? " is" : " are") + " helping." : "";
   return `<button type="button" class="wpcard ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wptop"><span class="wpteam">${esc(LBL(t.team) || "No team")}</span><span class="wpst ${right[1]}">${esc(right[0])}</span></span>
     <span class="wpname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>${t.project ? "" : wBar(t.id)}` : ""}${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
@@ -2558,7 +2561,8 @@ function drawWork() {
     /* My work: only what matters now, as plain cards. Everything else folds away. Tap a card to open the task. */
     const d = t => t.due ? daysAway(t.due) : 9999;
     const mine = all.filter(t => t.owners.includes(me));
-    const open = mine.filter(t => wOpen(t) && t.status !== "review").sort(wSort);
+    const open = mine.filter(t => wOpen(t) && t.status !== "review" && !wSteps(t.id).length).sort(wSort);
+    const projs = wProjects().filter(t => wInProj(t, me));
     const notYet = open.filter(t => wNotYet(t) && t.status !== "stuck");
     const active = open.filter(t => !notYet.includes(t));
     const now = active.filter(t => t.status === "stuck" || wLate(t) || d(t) <= 7 || wBlocks(t)).sort((x, y) => wBlocks(y) - wBlocks(x)).slice(0, 5);
@@ -2571,6 +2575,7 @@ function drawWork() {
     if (toReview.length) html += `<button type="button" class="wbig wreview" data-work="${esc(toReview[0].id)}"><b>${toReview.length}</b><span>To review. Work your team turned in.</span></button>`;
     if (next) { const g = myGoing(next); html += `<button type="button" class="wbig wnext" data-wev="${esc(String(upcoming.indexOf(next)))}"><span><b>Next event: ${esc(next.name)}, ${esc(dt(next.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))}</b><em>${g === "yes" ? "You're going." : g === "no" ? "You said you can't make it." : "Are you going? Tap to answer."}</em></span></button>`; }
     if (now.length) html += `<h3 class="wlabel">Now</h3><div class="wplain">${now.map(wplain).join("")}</div>`;
+    if (projs.length) html += `<h3 class="wlabel">Your projects</h3><div class="wplain">${projs.map(wplain).join("")}</div>`;
     html += wfoldPlain("Later", later);
     html += wfoldPlain("Turned in, waiting on review", turnedIn);
     html += wfoldPlain("You're helping", helping);
@@ -4359,11 +4364,11 @@ function overviewData() {
   const review = open.filter(t => t.status === "review");
   const doneWk = all.filter(t => wRecentDone(t, 7) && !t.goal).sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)));
   const late = open.filter(t => t.status !== "stuck" && t.status !== "review" && wLate(t)).sort(wSort);
-  return { all, me, stuck, decide, review, doneWk, late };
+  return { all, me, stuck, decide, review, doneWk, late, proj: wProjects() };
 }
 function overviewTop() {
   const D = overviewData(), me = D.me;
-  const nums = [], add = (v, l, sub, act) => nums.push({ v, l, sub, act: v && v !== "0" ? act : "" });
+  const nums = [], add = (v, l, sub, act) => nums.push({ v, l, sub, act: act || "" });
   const myDecide = D.decide.length + D.stuck.filter(t => t.createdBy === me || t.owners.includes(me)).length;
   const toMe = D.review.filter(t => t.createdBy === me);
   const dueWk = D.all.filter(t => wOpen(t) && t.status !== "review" && t.owners.includes(me) && t.due && daysAway(t.due) <= 7);
@@ -4372,8 +4377,8 @@ function overviewTop() {
   const lst = OPS && Array.isArray(OPS.list) ? OPS.list : null, oh = (OPS && OPS.inventory && OPS.inventory.onHand) || null;
   const next = upcoming.find(e => ["Distribution", "Event"].includes(e.kind));
   if (BOOT.leader) add(myDecide, "Need a decision or help", myDecide ? "Each one says what it's waiting on." : "Nothing waiting.", 'data-jump="#lo-need"');
-  if ((+BOOT.rc) >= 0) add(+BOOT.rc || 0, "Receipts and trips to approve", (+BOOT.rc) > 0 ? "Approve them and they count in the budget." : "Nothing waiting.");
-  add(toMe.length, "Turned in to you", toMe.length ? "Approve it or send it back with a note." : "Nothing waiting.", 'data-jump="#lo-review"');
+  if ((+BOOT.rc) >= 0) add(+BOOT.rc || 0, "Receipts and trips to approve", (+BOOT.rc) > 0 ? "Approve them and they count in the budget." : "Nothing waiting.", 'data-logo="finance"');
+  add(toMe.length, "Turned in to you", toMe.length ? "Approve it or send it back with a note." : "Nothing waiting. Work your team turns in shows up here.", 'data-jump="#lo-review"');
   add(dueWk.length, "Your tasks due this week", dueWk.length ? dueWk.sort(wSort)[0].title : "Nothing due this week.", 'data-wgo="mine"');
   if (BOOT.ops && lst) add(lst.filter(x => stOf(x.id) === "new").length, "Requests nobody has called yet", "Call or text within a week.", 'data-logo="ops"');
   if (BOOT.leader && g.now) add((+g.now).toLocaleString(), "Households served this year", g.target && g.target > g.now ? `${(g.target - g.now).toLocaleString()} more by ${g.by} to reach ${(+g.target).toLocaleString()}.` : "");
@@ -4396,13 +4401,14 @@ function overviewCards() {
   D.late.forEach(t => (t.owners.length ? t.owners : ["Nobody"]).forEach(n => (byPerson[n] = byPerson[n] || []).push(t)));
   const people = Object.keys(byPerson).sort((a, b) => byPerson[b].length - byPerson[a].length);
   return `${card("Needs a decision or help", needs.length, "Stuck tasks, and decisions for leaders.", needs.length ? `<div class="wrows">${needs.slice(0, 6).map(t => row(t, t.status === "stuck" ? why(t) : "Decision")).join("")}</div>${more(needs, 6)}` : `<p class="lead">Nothing waiting.</p>`, needs.length ? "lo-bad" : "", "lo-need")}
-    ${card("Waiting for review", D.review.length, "Turned in. The person who assigned it approves it or sends it back.", D.review.length ? `<div class="wrows">${D.review.slice(0, 6).map(t => row(t, tin(t))).join("")}</div>${more(D.review, 6)}` : `<p class="lead">Nothing turned in right now.</p>`, "", "lo-review")}
+    ${card("Waiting for review", D.review.length, "When someone taps Turn in on a task, it waits here. The person who assigned it sees it at the top of their My work, then approves it or sends it back.", D.review.length ? `<div class="wrows">${D.review.slice(0, 6).map(t => row(t, tin(t))).join("")}</div>${more(D.review, 6)}` : `<p class="lead">Nothing turned in right now.</p>`, "", "lo-review")}
     ${card("Finished this week", D.doneWk.length, "With what was turned in.", D.doneWk.length ? `<div class="wrows">${D.doneWk.slice(0, 6).map(t => wDoneRow(t)).join("")}</div>${more(D.doneWk, 6)}` : `<p class="lead">Nothing finished yet this week.</p>`)}
+    ${D.proj.length ? card("Projects", D.proj.length, "Bigger tasks broken into steps. Each one says which step it is on and who has it.", `<div class="wrows">${D.proj.map(t => row(t, wProgress(t.id))).join("")}</div>`) : ""}
     ${people.length ? `<details class="dhist lo-late"><summary>Late (${D.late.length}), by person</summary>${people.map(n => `<h4 class="wlabel">${esc(n)} (${byPerson[n].length})</h4><div class="wrows">${byPerson[n].map(t => row(t)).join("")}</div>`).join("")}</details>` : ""}`;
 }
 function bindOverview(box, rowsBound) {
   if (!rowsBound) box.querySelectorAll(".lo-grid [data-work], .lo-mine [data-work]").forEach(b => b.addEventListener("click", () => openOverviewWork(b.dataset.work)));
-  box.querySelectorAll("[data-logo]").forEach(b => b.addEventListener("click", () => { if (b.dataset.logo === "inv") opsView = "storage"; else { opsView = "requests"; opsFilter = "open"; } go("ops"); }));
+  box.querySelectorAll("[data-logo]").forEach(b => b.addEventListener("click", () => { if (b.dataset.logo === "finance") { go("finance"); return; } if (b.dataset.logo === "inv") opsView = "storage"; else { opsView = "requests"; opsFilter = "open"; } go("ops"); }));
 }
 function drawOverview() {
   const box = $("leadover"); if (!box) return;
@@ -5388,7 +5394,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104064500";
+  var BUILD = "20261104090000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
