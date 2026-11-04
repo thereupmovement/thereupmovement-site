@@ -314,6 +314,21 @@ All on the page (hub/index.html), from the same Work data; no server change.
 - **Later fold** (`wNotYet`, `wShowsOn`): a task not started and due more than 3 weeks away sits in "Coming later" on My
   work and shows up by itself 3 weeks before it is due. A "Shows up on" date set by a leader still wins.
 
+## Projects with steps (server version after 67, 3 Nov 2026)
+
+Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message when it is your turn) and ClickUp
+(later steps move with an earlier one). No code was copied from any tool.
+- A project is an ordinary Work task with steps. Each step is its own task, with two Work tab columns: **Project** (the
+  parent task's id) and **Step** (its place in the order; decimals put a step between two, and two steps with the same
+  number run side by side). One level only: a step is never itself a project.
+- `saveWork` (Code.gs) accepts `project` and `step`. When a step is marked done (or approved), the next unfinished
+  step's owner gets an Inbox message with the last note; after the last step, the project's owner does. When a step's
+  due date moves, the later unfinished steps move by the same number of days.
+- On the page: `wSteps`, `wWaitOn`, `wProgress`, `wStepLine`. A step that waits on an earlier one is in "Waiting on
+  someone else's step" on My work, not in Now. The task page shows the steps in order with "Add a step"; a step shows
+  its project and what comes next. "What's next, and who does it?" on a step adds a step right after it. Leaders can
+  put an existing task into a project under "Owner, due date and more". Ask sees every open project's steps.
+
 ## Group sign-up (server version 59, 3 Nov 2026)
 
 The volunteer form asks "Who is coming?". A group leader adds the group's name and how many people in all. They do

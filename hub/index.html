@@ -877,6 +877,8 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 /* Task history: people's own words stand out; automatic lines (status, owners, dates) are small and grey */
 .tlog li.tsys{padding:5px 0;font-size:12.5px;color:var(--muted)}
 .tlog li.tsys span{display:inline;margin:0 6px 0 0}
+.wstep{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:3px 0 0}
+.wproj .wrows{margin:4px 0 6px}
 /* How did it end? (when marking a task done) */
 .wend{margin:10px 0 8px}
 /* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
@@ -1400,6 +1402,8 @@ function hubContext() {
     open.slice().sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))).slice(0, 60)
       .forEach(t => L.push(`- [task ${t.id}] ${t.title} [${t.team || "No team"}] ${t.status}${t.due ? ", due " + t.due : ""}. Owner: ${t.owners.join(", ") || "nobody yet"}${t.helpers && t.helpers.length ? ". Helping: " + t.helpers.join(", ") : ""}`));
     done.slice(0, 15).forEach(t => L.push(`- Done ${String(t.doneAt).slice(0, 10)}: ${t.title} (${t.owners.join(", ")})`));
+    const projs = WORK.tasks.filter(t => !t.project && wOpen(t) && wSteps(t.id).length);
+    if (projs.length) { L.push("", "PROJECTS (tasks with steps for different people):"); projs.forEach(pj => L.push(`- [task ${pj.id}] ${pj.title}: ${wProgress(pj.id)}. Steps: ` + wSteps(pj.id).map((x, i) => `${i + 1}. [task ${x.id}] ${x.title} (${x.owners.join(", ") || "nobody"}, ${x.status === "done" ? "done" : WLABEL[x.status] || "to do"}${x.due && x.status !== "done" ? ", due " + x.due : ""})`).join("; "))); }
     // What each person did in the last 7 days, in their own words (the same list as Work, Recap).
     const [f7, t7] = recapRange("week"), KL = { changed: "plan changed or still waiting", stuck: "stuck", done: "finished", worked: "worked on", added: "added" }, rc = [];
     (WORK.people || []).forEach(p => recapItems(p.name, f7, t7).forEach(x => rc.push(`- ${d(localDay(x.at))}, ${p.name}, [task ${x.t.id}] ${x.t.title}: ${KL[x.kind]}${x.notes.length ? ". Their words: " + x.notes.join(" / ").slice(0, 300) : ""}`)));
@@ -2311,7 +2315,7 @@ let wq = [], wqRunning = false, wqNote = "", wGen = 0;
 function wApply(id, patch) {
   const t = WORK && (WORK.tasks || []).find(x => x.id === id);
   if (!t || !patch) return;
-  ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title", "opens", "quick"].forEach(k => { if (k in patch) t[k] = patch[k]; });
+  ["status", "owners", "helpers", "team", "due", "details", "notes", "private", "title", "opens", "quick", "project", "step"].forEach(k => { if (k in patch) t[k] = patch[k]; });
   if (patch.status === "done" && !t.doneAt) t.doneAt = new Date().toISOString();
   if (patch.status && patch.status !== "done") t.doneAt = "";
   if (patch.status === "stuck" && patch.why && String(patch.why).trim()) t.updates = [{ at: new Date().toISOString(), who: WORK.me, text: "Stuck, needs help: " + String(patch.why).trim() }].concat(t.updates || []);
@@ -2377,7 +2381,7 @@ function wcard(t, opts) {
   return `<div class="wcard ${TEAMCLS[t.team] || "t-none"} s-${t.status}">
     <button type="button" class="wmain" data-work="${esc(t.id)}">
       <span class="wtop"><span class="wteam">${esc(LBL(t.team) || "No team")}</span><span class="wst">${WLABEL[t.status] || "To do"}</span>${t.goal ? `<span class="wlock">${t.goal === "decision" ? "Decision" : "Grant readiness"}</span>` : t.private ? `<span class="wlock">Leaders only</span>` : ""}</span>
-      <span class="wname">${esc(t.title)}</span>
+      <span class="wname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>` : ""}
       <span class="wmeta"><span class="wdue ${dc}">${dw}</span>${who ? `<span class="wwho">${esc(who)}</span>` : ""}${t.helpers.length ? `<span class="wwho">Helping: ${esc(t.helpers.join(", "))}</span>` : ""}</span>
     </button>${t.status === "doing" ? `<div class="wprog" aria-hidden="true"><i></i>In progress</div>` : ""}${acts}</div>`;
 }
@@ -2406,12 +2410,29 @@ const wShortDate = s => dt(String(s).slice(0, 10)).toLocaleDateString("en-US", {
 const WEND = [["planned", "Done as planned", "Good. A note is optional."], ["moved", "Moved to a new date", "Pick the new date. The task stays open with that due date."],
   ["changed", "Plan changed", "Say what changed in the note box. If someone has a next step, add it below."], ["notneeded", "Not needed", "It closes. A note on why helps the team."]];
 let wEnd = null;
+/* The step number for a new step right after this one (half-way to the next, so nothing has to be renumbered). */
+const wNextStepNo = t => { const after = wSteps(t.project).find(x => x.step > t.step); return after ? (t.step + after.step) / 2 : t.step + 1; };
 /* Not on the board yet: a "Shows up on" date still ahead, or (no such date) a task not started that is due more than
    3 weeks away. Those fold into "Coming later" and show up by themselves 3 weeks before they are due. */
-const wNotYet = t => t.opens ? daysAway(t.opens) > 0 : (t.status === "todo" && !!t.due && daysAway(t.due) > 21);
+/* ---- Projects: a task with steps; each step is its own task (project = the parent's id, step = its place in the order) ---- */
+const wSteps = id => (WORK && WORK.tasks || []).filter(x => x.project === id).sort((a, b) => a.step - b.step);
+const wCurStep = id => wSteps(id).find(x => x.status !== "done");
+/* A step waits until every step before it is done. */
+const wWaitOn = t => t.project && t.status !== "done" ? wSteps(t.project).find(x => x.id !== t.id && x.status !== "done" && x.step < t.step) : null;
+function wProgress(id) {
+  const s = wSteps(id), c = wCurStep(id); if (!s.length) return "";
+  return c ? `Step ${s.indexOf(c) + 1} of ${s.length}, with ${c.owners.join(", ") || "nobody yet"}${wLate(c) ? ", late" : ""}` : `All ${s.length} steps done`;
+}
+/* One line for cards: where a project stands, or which step of which project this is. */
+function wStepLine(t) {
+  if (!t.project) return wProgress(t.id);
+  const s = wSteps(t.project), pr = (WORK.tasks || []).find(x => x.id === t.project);
+  return `Step ${s.indexOf(t) + 1} of ${s.length}` + (pr ? `: ${pr.title}` : "");
+}
+const wNotYet = t => !!wWaitOn(t) || (t.opens ? daysAway(t.opens) > 0 : (t.status === "todo" && !!t.due && daysAway(t.due) > 21));
 const wShowsOn = t => t.opens || new Date(dt(t.due).getTime() - 21 * 864e5).toISOString().slice(0, 10);
 /* Lines the Hub writes by itself on a task (status, owners, dates). Everything else in Updates is someone's own words. */
-const WSYS = /^(Status: |Assigned to |Unassigned$|Due |Due date removed|Edited the (details|notes)$|Helpers|.+ is helping$|.+ stopped helping$|Made leaders only|Opened to the whole team|Marked as a quick one|No longer marked quick|Shows up (now|on )|Team( removed|: )|Renamed to: |Took it back|New task from |Turned in for review$|Approved$)/;
+const WSYS = /^(Status: |Assigned to |Unassigned$|Due |Due date removed|Edited the (details|notes)$|Helpers|.+ is helping$|.+ stopped helping$|Made leaders only|Opened to the whole team|Marked as a quick one|No longer marked quick|Shows up (now|on )|Team( removed|: )|Renamed to: |Took it back|New task from |Turned in for review$|Approved$|Added to a project: |Taken out of its project|Moved to step |Created the task$)/;
 const wSys = u => WSYS.test(String((u && u.text) || ""));
 /* Updates, newest first: people's words as before; automatic lines in a row fold into one small grey line. */
 function wHistory(ups) {
@@ -2491,7 +2512,7 @@ function wplain(t) {
   const from = t.createdBy && t.createdBy !== WORK.me ? "From " + t.createdBy + "." : "";
   const help = t.helpers.length ? " " + t.helpers.join(", ") + (t.helpers.length === 1 ? " is" : " are") + " helping." : "";
   return `<button type="button" class="wpcard ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wptop"><span class="wpteam">${esc(LBL(t.team) || "No team")}</span><span class="wpst ${right[1]}">${esc(right[0])}</span></span>
-    <span class="wpname">${esc(t.title)}</span>${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
+    <span class="wpname">${esc(t.title)}</span>${wStepLine(t) ? `<span class="wstep">${esc(wStepLine(t))}</span>` : ""}${from || help ? `<span class="wpmeta">${esc((from + help).trim())}</span>` : ""}</button>`;
 }
 const wfoldPlain = (title, list) => list.length ? `<details class="dhist wpfold"><summary>${title} (${list.length})</summary><div class="wplain">${list.map(wplain).join("")}</div></details>` : "";
 /* A number that jumps to its section when tapped (only when there is something to jump to). */
@@ -2539,7 +2560,9 @@ function drawWork() {
     html += wfoldPlain("Later", later);
     html += wfoldPlain("Turned in, waiting on review", turnedIn);
     html += wfoldPlain("You're helping", helping);
-    if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own 3 weeks before they are due</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(wShowsOn(t)))).join("")}</div></details>`;
+    const waiting = notYet.filter(wWaitOn), later2 = notYet.filter(t => !wWaitOn(t));
+    if (waiting.length) html += `<details class="dhist"><summary>Waiting on someone else's step (${waiting.length}): you get a message when it is your turn</summary><div class="wrows">${waiting.map(t => { const w = wWaitOn(t); return wrow(t, "After " + (w.owners.join(", ") || "the step before")); }).join("")}</div></details>`;
+    if (later2.length) html += `<details class="dhist"><summary>Coming later (${later2.length}): these show up on their own 3 weeks before they are due</summary><div class="wrows">${later2.map(t => wrow(t, "Shows up " + wShortDate(wShowsOn(t)))).join("")}</div></details>`;
     const done = mine.filter(t => wRecentDone(t, 14));
     if (done.length) html += wfoldPlain("Finished in the last 2 weeks", done);
     html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
@@ -2736,6 +2759,23 @@ function fillWork(keep) {
   const leadNames = (W.people || []).filter(p => p.leader || p.coordinator).map(p => p.name);
   const chips = (kind, chosen, only) => `<div class="wchips">${(only || names).map(n => `<button type="button" data-${kind}="${esc(n)}" aria-pressed="${chosen.includes(n)}">${esc(n)}</button>`).join("")}</div>`;
   const others = names.filter(n => n !== me);
+  /* Projects: a step shows its project and what comes next; any other task lists its steps and can get new ones. */
+  const parent = t.project ? (W.tasks || []).find(x => x.id === t.project) : null, steps = isNew || G || t.project ? [] : wSteps(t.id);
+  const sRow = (x, i) => `<button type="button" class="wrow ${x.status === "done" ? "wdone" : ""}" data-wopen="${esc(x.id)}"><span class="wrname">${i + 1}. ${esc(x.title)}</span><span class="wrmeta"><span>${esc(x.owners.join(", ") || "Nobody yet")}</span><span class="wdue ${dueWords(x.due, x.status === "done")[1]}">${esc(x.status === "done" ? "Done" : WLABEL[x.status] === "To do" || !WLABEL[x.status] ? dueWords(x.due, false)[0] : WLABEL[x.status])}</span></span></button>`;
+  const addStep = mine && !G && !t.project ? `<details class="wnextbox"${steps.length ? "" : ""}><summary>${steps.length ? "Add a step" : "Break this into steps for different people (optional)"}</summary>
+      <input class="ainput" id="wstitle" type="text" maxlength="200" placeholder="For example: Review the study guide">
+      <div class="wchips">${names.map(n => `<button type="button" data-wso="${esc(n)}" aria-pressed="false">${esc(n)}</button>`).join("")}</div>
+      <div class="tdue" style="margin-top:8px"><input type="date" id="wsdue" aria-label="When this step is due"></div>
+      <button type="button" class="tbtn" id="wsadd" style="margin-top:8px">Add this step</button>
+      <p class="small" style="margin:6px 0 0">Each step is its own task. Only the current step shows on its owner's My work; when it is done, the next owner gets a message.</p></details>` : "";
+  let projHtml = "";
+  if (parent) {
+    const s = wSteps(parent.id), i = s.findIndex(x => x.id === t.id), nx = s.slice(i + 1).find(x => x.status !== "done"), wt = wWaitOn(t);
+    projHtml = `<div class="tsec wproj"><div class="tl">Step ${i + 1} of ${s.length} in a project</div><button type="button" class="wrow" data-wopen="${esc(parent.id)}"><span class="wrname">${esc(parent.title)}</span><span class="wrmeta"><span>${esc(wProgress(parent.id))}</span></span></button>
+      ${wt ? `<p class="small" style="margin:6px 0 0">Waiting on ${esc(wt.owners.join(", ") || "the step before")}: "${esc(wt.title)}". You get a message when it's your turn.</p>` : ""}${nx ? `<p class="small" style="margin:6px 0 0">Next: ${esc(nx.title)} (${esc(nx.owners.join(", ") || "nobody yet")}). They get a message when this is done.</p>` : `<p class="small" style="margin:6px 0 0">This is the last step.</p>`}</div>`;
+  } else if (steps.length || addStep) {
+    projHtml = `<div class="tsec wproj">${steps.length ? `<div class="tl">Steps (${wProgress(t.id)})</div><div class="wrows">${steps.map(sRow).join("")}</div>` : ""}${addStep}</div>`;
+  }
   /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
   const by = t.createdBy || "", meP = (W.people || []).find(p => p.name === me), amLeader = !!(meP && meP.leader);
   const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || manage;
@@ -2769,7 +2809,7 @@ function fillWork(keep) {
   box.innerHTML = `<p class="tmsg wsticky" id="wmsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "New task" : esc(LBL(t.team) || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
-    ${reviewHtml}${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">${isNew ? "Details" : showTurnIn ? "1. What to do" : "What to do"}</div>${!isNew && by && by !== me ? `<p class="small" style="margin:0 0 6px">From ${esc(by)}.</p>` : ""}${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
+    ${projHtml}${reviewHtml}${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">${isNew ? "Details" : showTurnIn ? "1. What to do" : "What to do"}</div>${!isNew && by && by !== me ? `<p class="small" style="margin:0 0 6px">From ${esc(by)}.</p>` : ""}${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
       : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
       <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
     ${GD ? decisionHtml : isNew || G || reviewHtml ? "" : turnHtml}
@@ -2781,6 +2821,7 @@ function fillWork(keep) {
     ${isNew || G ? "" : `<div class="tsec"><div class="tl">Leaders helping</div>${manage ? chips("whelp", t.helpers, leadNames) : `<p style="margin:0 0 6px">${esc(t.helpers.join(", ") || "No one yet")}</p>`}
       ${!t.owners.includes(me) && isLeader(me) ? (t.helpers.includes(me) ? `<button type="button" class="tbtn ghost" id="wunhelp">Stop helping</button>` : `<button type="button" class="tbtn" id="whelpme">I'll help with this</button>`) : ""}</div>`}
     ${isNew || G || !(mine || manage) ? "" : `<div class="tsec"><div class="tl">Size</div><div class="wchips"><button type="button" data-wquick="1" aria-pressed="${!!t.quick}">Quick one</button><button type="button" data-wquick="0" aria-pressed="${!t.quick}">Takes longer</button></div></div>`}
+    ${isNew || G || !manage || steps.length ? "" : `<div class="tsec"><div class="tl">Part of a project</div><select class="ainput" id="wpj" aria-label="Part of a project"><option value="">Not part of a project</option>${(W.tasks || []).filter(x => x.id !== t.id && !x.project && x.status !== "done" && wSteps(x.id).length).map(x => `<option value="${esc(x.id)}"${x.id === t.project ? " selected" : ""}>${esc(x.title)}</option>`).join("")}</select><p class="small" style="margin:6px 0 0">Pick a project and this task becomes its last step. To start a new project, open the bigger task and add steps to it.</p></div>`}
     ${isNew || G || !manage ? "" : `<div class="tsec"><div class="tl">Shows up on</div><div class="tdue"><input type="date" id="wopens" value="${esc(t.opens || "")}" aria-label="Shows up on">${t.opens ? `<button type="button" class="linkish" id="wopensclear">Show it now</button>` : ""}</div><p class="small" style="margin:6px 0 0">Leave empty to show it right away. Set a date to keep it out of the way until then.</p></div>`}
     <div class="tsec"><div class="tl">Due date</div>${isNew || mine ? `<div class="tdue"><input type="date" id="wdue" value="${esc(t.due || "")}" aria-label="Due date">${t.due && !isNew ? `<button type="button" class="linkish" id="wdueclear">Clear</button>` : ""}</div>` : `<p style="margin:0">${t.due ? dueTxt(t.due, t.status === "done") : "No due date"}</p>`}</div>
     </details>
@@ -2837,6 +2878,7 @@ function fillWork(keep) {
   const hm = $("whelpme"); if (hm) hm.addEventListener("click", () => save("saveWork", [t.id, { helpMe: true }], "You're on it as a helper."));
   const uh = $("wunhelp"); if (uh) uh.addEventListener("click", () => save("saveWork", [t.id, { stopHelping: true }], "Removed you as a helper."));
   box.querySelectorAll("[data-wquick]").forEach(b => b.addEventListener("click", () => { const q = b.dataset.wquick === "1"; if (q !== !!t.quick) save("saveWork", [t.id, { quick: q }], q ? "Marked as a quick one." : "Marked as taking longer."); }));
+  const wpj = $("wpj"); if (wpj) wpj.addEventListener("change", e => { const v = e.target.value, s2 = v ? wSteps(v) : []; save("saveWork", [t.id, { project: v, step: s2.length ? s2[s2.length - 1].step + 1 : 1 }], v ? "Added as the last step of that project." : "Taken out of the project."); });
   const wo = $("wopens"); if (wo) wo.addEventListener("change", e => save("saveWork", [t.id, { opens: e.target.value }], e.target.value ? "It will show up on that date." : "It shows up now."));
   const woc = $("wopensclear"); if (woc) woc.addEventListener("click", () => save("saveWork", [t.id, { opens: "" }], "It shows up now."));
   const wd = $("wdue"); if (wd) wd.addEventListener("change", e => save("saveWork", [t.id, { due: e.target.value }], "Due date saved."));
@@ -2862,7 +2904,7 @@ function fillWork(keep) {
     if (next && !nextPick) { msg("Pick who does the next step, or clear it."); return; }
     if (next) {
       const fl = (t.files || []).map(f => f.name + ": " + f.url).join("\n");
-      wQueue("saveWork", ["", { title: next, owners: [nextPick], team: t.team, details: `Follows on from "${t.title}", from ${me}.` + (note ? "\n" + note : "") + (fl ? "\nFiles:\n" + fl : "") }], "Next step sent to " + nextPick + ".");
+      wQueue("saveWork", ["", Object.assign(t.project ? { project: t.project, step: wNextStepNo(t) } : {}, { title: next, owners: [nextPick], team: t.team, details: `Follows on from "${t.title}", from ${me}.` + (note ? "\n" + note : "") + (fl ? "\nFiles:\n" + fl : "") })], "Next step sent to " + nextPick + ".");
       wNextOpen = false;
     }
     if (selfDone) {
@@ -2880,6 +2922,15 @@ function fillWork(keep) {
       wEnd = null; save("saveWork", [t.id, { status: "done" }], "Nice work. Marked done.");
     }
     else save("saveWork", [t.id, { status: "review", note: note }], "Turned in. " + by + " will review it.");
+  });
+  box.querySelectorAll("[data-wopen]").forEach(b => b.addEventListener("click", () => { wMoreOpen = false; openWorkId = b.dataset.wopen; fillWork(); $("sheetBody").scrollTop = 0; }));
+  let stepPick = "";
+  box.querySelectorAll("[data-wso]").forEach(b => b.addEventListener("click", () => { stepPick = stepPick === b.dataset.wso ? "" : b.dataset.wso; box.querySelectorAll("[data-wso]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.wso === stepPick))); }));
+  const wsa = $("wsadd"); if (wsa) wsa.addEventListener("click", () => {
+    const ti = $("wstitle").value.trim(); if (!ti) { msg("Name the step first."); $("wstitle").focus(); return; }
+    if (!stepPick) { msg("Pick who does this step."); return; }
+    const last = steps.length ? steps[steps.length - 1].step : 0;
+    save("saveWork", ["", { title: ti, owners: [stepPick], team: t.team, due: $("wsdue").value, project: t.id, step: last + 1, details: `A step of "${t.title}".` }], "Step added. " + stepPick + " gets a message when it is their turn.");
   });
   box.querySelectorAll("[data-wend]").forEach(b => b.addEventListener("click", () => {
     wEnd = b.dataset.wend;
@@ -5322,7 +5373,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104053000";
+  var BUILD = "20261104060000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
