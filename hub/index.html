@@ -1094,6 +1094,12 @@ body.hasfab{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}   /* t
       <div id="askai" aria-live="polite"></div>
       <div id="askres" aria-live="polite"></div>
     </section>
+    <section class="view" id="v-finance" hidden>
+      <h2>Finance</h2>
+      <p class="lead">Receipts and trips waiting to approve, and what was approved. Approving adds it to the budget workbook; Undo takes it back out.</p>
+      <div class="btns" style="margin:0 0 12px"><a class="btn ghost" id="finbook" href="#" target="_blank" rel="noopener" hidden>Open the budget workbook</a></div>
+      <div id="finbox"></div>
+    </section>
     <section class="view" id="v-apps" hidden>
       <h2>Applications</h2>
       <p class="lead">People who applied to join the core team on the community page. Reach out, then set where each one stands. Open roles changes what people can apply for.</p>
@@ -1922,6 +1928,7 @@ const ICONS = {
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   forms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+  finance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
   ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
   vol: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
   admin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
@@ -1955,7 +1962,7 @@ function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (tab === "eventday") { tab = "events"; evView = "day"; }   // Event day is now the "On the day" part of Events
   if (!TABS.some(([k]) => k === tab) && !(tab === "checkin" && BOOT.work)) tab = "home";
-  ["home", "work", "inbox", "schedule", "events", "ask", "forms", "ops", "goals", "admin", "vol", "checkin", "apps"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "events", "ask", "forms", "ops", "goals", "admin", "vol", "checkin", "apps", "finance"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   document.body.classList.toggle("nofab", tab === "checkin");
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
@@ -1968,6 +1975,7 @@ function go(tab) {
   if (tab === "events") drawEvents();
   if (tab === "ask") drawAsk();
   if (tab === "apps") loadApps();
+  if (tab === "finance") loadFinance();
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -3084,8 +3092,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && BO
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
 /* More is grouped so it stays easy to scan as the Hub grows. Ask is not here: the Ask button is on every screen. */
-const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", goals: "Goals, grant readiness and team activity." };
-const MORE_GROUPS = [["Events and people", ["events", "vol", "apps"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership", ["goals", "admin"]]];
+const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", finance: "Receipts and trips to approve, and the budget.", goals: "Goals, grant readiness and team activity." };
+const MORE_GROUPS = [["Events and people", ["events", "vol", "apps"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership and money", ["goals", "finance", "admin"]]];
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k) && k !== "ask"), item = ([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`;
   const groups = MORE_GROUPS.map(([h, ks]) => [h, ks.map(k => more.find(t => t[0] === k)).filter(Boolean)]).filter(g => g[1].length);
@@ -3949,7 +3957,7 @@ function opsActions() {
     ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { form: "Pallet pickup" }) : ""}
     ${tile(t(QICON["Snap a receipt"] || "", "Snap a receipt", "Gas, storage, supplies"), { money: "receipt" })}
     ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}
-    ${(+BOOT.rc) >= 0 ? `<button class="qab wide" type="button" data-openreview><i aria-hidden="true">${qi('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>')}</i><span><b>Approvals</b><small id="opsapprn">${(+BOOT.rc) > 0 ? BOOT.rc + " waiting" : "Nothing waiting"}</small></span></button>` : ""}</div>`;
+    </div>`;
 }
 /* ============ Change a count (step 122, 25 Oct 2026) ============
    Anyone who can open Ops can add units they found, or fix a wrong count with a reason.
@@ -4094,7 +4102,6 @@ function drawOps() {
   $("ops").querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => { opsFilter = b.dataset.f; drawOps(); }));
   $("ops").querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => { opsMap = b.dataset.map; drawOps(); }));
   $("ops").querySelectorAll("[data-openmoney]").forEach(b => b.addEventListener("click", () => openMoney(b.dataset.openmoney)));
-  $("ops").querySelectorAll("[data-openreview]").forEach(b => b.addEventListener("click", openReview));
   $("ops").querySelectorAll("[data-openform]").forEach(b => b.addEventListener("click", () => { const f = FORMS.find(x => x.title === b.dataset.openform); if (f) openForm(f); }));
   $("ops").querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => { invCat = b.dataset.cat; drawOps(); }));
   $("ops").querySelectorAll("[data-adj]").forEach(b => b.addEventListener("click", () => openAdjust(+b.dataset.adj)));
@@ -4538,6 +4545,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
   if (BOOT.leader || BOOT.coordinator) TABS.push(["apps", "Applications"]);
+  if ((+BOOT.rc) >= 0) TABS.push(["finance", "Finance"]);   // the Finance team (Finance in Teams on the Access tab)
   drawTabs();
   const want = start === "leaders" ? "goals" : (start || BOOT.start || "");
   go(TABS.some(([k]) => k === want) ? want : "home");
@@ -4888,12 +4896,15 @@ function drawTrip(info) {
 
 /* ---- Review, for the Finance team (Finance on the Access tab) with their PIN ---- */
 let rcView = "receipts";
-async function openReview() {
-  openSheet(`<div class="k">Money</div><h3 id="sheetTitle">Approvals</h3><div id="rvbox"><p class="lead">Loading...</p></div>
-    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
-  if (!TOK) { $("rvbox").innerHTML = `<p class="lead">Enter your PIN on the Leadership tab first, then come back here.</p><div class="btns"><button class="btn" type="button" id="rvpin">Go to Leadership</button></div>`; $("rvpin").addEventListener("click", () => { sheet.close(); go("goals"); }); return; }
-  try { RCR = await run("getReceipts", KEY, TOK); drawReview(); }
-  catch (e) { if (isAuth(e)) { $("rvbox").innerHTML = `<p class="lead">Only the Finance team sees this, with their PIN. A Hub admin adds Finance to someone's Teams in Admin.</p>`; } else $("rvbox").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
+/* Approvals live on the Finance screen (More, Finance). Everything that used to open them in a sheet goes there now. */
+function openReview() { if (sheet.open) sheet.close(); go("finance"); }
+async function loadFinance() {
+  const box = $("finbox"); if (!box) return;
+  if (!$("rvbox")) box.innerHTML = `<div id="rvbox"><p class="lead">Loading...</p></div>`;
+  try {
+    RCR = await run("getReceipts", KEY, TOK); drawReview();
+    const b = $("finbook"); if (RCR.books && /^https:\/\/docs\.google\.com\//.test(RCR.books)) { b.href = RCR.books; b.hidden = false; }
+  } catch (e) { $("rvbox").innerHTML = isAuth(e) ? `<p class="lead">Only the Finance team sees this, with their PIN. A Hub admin adds Finance to someone's Teams in Admin.</p>` : `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
 }
 function drawReview() {
   const box = $("rvbox"); if (!box || !RCR) return;
@@ -5009,8 +5020,7 @@ function drawRcCard() {
 /* The fresh sign-in check can bring a newer approvals count than the copy this phone opened with. */
 window.__rcRefresh = () => {
   drawRcCard();
-  const ops = $("ops");
-  if (ops && ops.querySelector(".opsqa") && !ops.querySelector("[data-openreview]") && (+BOOT.rc) >= 0) { try { drawOps(); } catch (e) {} }
+  if ((+BOOT.rc) >= 0 && !TABS.some(t => t[0] === "finance")) { TABS.push(["finance", "Finance"]); drawTabs(); }
 };
 
 
@@ -5312,7 +5322,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104050000";
+  var BUILD = "20261104053000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

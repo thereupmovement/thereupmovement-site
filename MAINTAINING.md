@@ -207,7 +207,10 @@ people typed is never stored. Hub admins see the last two weeks at the top of Mo
 ## Who approves receipts
 
 Anyone with **Finance** in their Teams on the Access tab (a Hub admin sets it in Admin, People) approves receipts and
-trips, with their PIN (`RC_TEAM` and `rcReviewer_` in Code.gs). No names are written in the code. On 3 Nov 2026 Finance
+trips, with their PIN (`RC_TEAM` and `rcReviewer_` in Code.gs). No names are written in the code. They do it on the **Finance**
+screen (More, Leadership and money; `loadFinance` and `drawReview` in hub/index.html), which also has a button to the
+budget workbook (the link comes from the server, `rcAll_` `books`, so it is never in this public repository). Approvals
+are no longer under Operations. On 3 Nov 2026 Finance
 was added for Dasia and Janay, who approved receipts before.
 
 ## More, and server calls in the background
