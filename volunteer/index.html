@@ -82,7 +82,8 @@ label.f input[readonly]{background:var(--bg);color:var(--muted)}
 .booked .kicker{color:var(--rose)}.booked .big{font-size:20px;font-weight:700}.booked p{margin:0;font-size:14px;line-height:1.45;color:var(--darkink)}
 .booked a{margin-top:8px;min-height:46px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;text-decoration:none}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#fff;border-top:1px solid var(--line);padding:4px 6px max(8px,env(safe-area-inset-bottom))}
-nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.askc{padding:0}.askc summary{cursor:pointer;padding:14px 16px;font-weight:700;min-height:44px}.aska{padding:0 16px 14px;line-height:1.5;font-size:15px}
+nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
 nav button{min-height:58px;border:0;border-top:3px solid transparent;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700}
 nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)}
 .toast{position:fixed;left:16px;right:16px;bottom:92px;z-index:6;max-width:528px;margin:0 auto;background:var(--dark);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600;line-height:1.4}
@@ -115,6 +116,7 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
   <button type="button" data-tab="signup"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>Sign up</button>
   <button type="button" data-tab="training"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 9L12 4 2 9l10 5 10-5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg>Training</button>
   <button type="button" data-tab="needs"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>Needs</button>
+  <button type="button" data-tab="ask"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></svg>Questions</button>
 </div></nav>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <script>
@@ -387,6 +389,29 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
       '<button type="button" class="btn" id="signout" style="margin-top:6px">Sign out on this phone</button>';
   }
 
+  /* Questions: answers from the team's ReUp Answers doc (the part for volunteers). It only shows what the doc says. */
+  var ANS = null, askQ = "";
+  var STOP = /^(a|an|the|i|we|you|do|does|did|is|are|am|to|for|of|in|on|at|my|me|can|could|how|what|when|where|who|why|and|or|it|be|with|if|our|your|there|this|that|get|go)$/;
+  function findAns(q) {
+    var words = (String(q).toLowerCase().match(/[a-z0-9']+/g) || []).filter(function (w) { return w.length > 1 && !STOP.test(w); }).map(function (w) { return w.replace(/(ing|ed|es|s)$/, "") || w; });
+    if (!words.length) return null;
+    return ANS.map(function (x) { var hq = x.q.toLowerCase(), ha = x.a.toLowerCase(), sc = 0; words.forEach(function (w) { if (hq.indexOf(w) >= 0) sc += 3; else if (ha.indexOf(w) >= 0) sc += 1; }); return { x: x, sc: sc }; })
+      .filter(function (r) { return r.sc > 0; }).sort(function (a, b) { return b.sc - a.sc; }).slice(0, 5).map(function (r) { return r.x; });
+  }
+  function askList() {
+    if (!ANS) return '<p class="small">Loading answers...</p>';
+    var found = findAns(askQ), list = found || ANS;
+    var card = function (x, open) { return '<details class="card askc"' + (open ? " open" : "") + '><summary>' + esc(x.q) + '</summary><div class="aska">' + esc(x.a).replace(/\n/g, "<br>") + '</div></details>'; };
+    return (found && !found.length ? '<p class="small">No answer for that yet.</p>' : (found ? "" : '<div class="kicker">All questions</div>') + list.map(function (x, i) { return card(x, !!found && i === 0); }).join("")) +
+      '<div class="card"><div class="name" style="font-size:16px">Didn\'t find it?</div><p class="small" style="margin:0">Reply to any ReUp email and it reaches the volunteer team.</p></div>';
+  }
+  function ask() {
+    if (!ANS) api("vpAnswers", [code]).then(function (r) { ANS = (r && r.items) || []; if (tab === "ask") { var b = $("#askres"); if (b) b.innerHTML = askList(); } }, function () { var b = $("#askres"); if (b) b.innerHTML = '<p class="small">Couldn\'t load the answers. Try again in a moment.</p>'; });
+    return '<div><h1>Questions</h1><p class="lede">Type a few words, like orientation, photos or hours.</p></div>' +
+      '<label class="f">Your question<input id="askq" type="search" autocomplete="off" value="' + esc(askQ) + '"></label><div id="askres" aria-live="polite">' + askList() + '</div>';
+  }
+  function askBind() { var q = $("#askq"); if (q) q.oninput = function () { askQ = q.value; $("#askres").innerHTML = askList(); }; }
+
   function draw() {
     if (!V) return;
     try { localStorage.setItem(VK, JSON.stringify({ code: code, v: V })); } catch (e) {}
@@ -395,7 +420,8 @@ nav button[aria-current="page"]{color:var(--brand);border-top-color:var(--brand)
     b.textContent = String(V.me.name || "").trim().split(/\s+/).map(function (w) { return w[0] || ""; }).join("").slice(0, 2).toUpperCase() || "Me";
     [].forEach.call(document.querySelectorAll("nav button"), function (n) { if (n.dataset.tab === tab) n.setAttribute("aria-current", "page"); else n.removeAttribute("aria-current"); });
     var main = $("#main");
-    main.innerHTML = tab === "signup" ? signup() : tab === "training" ? training() : tab === "needs" ? needs() : tab === "me" ? me() : home();
+    main.innerHTML = tab === "signup" ? signup() : tab === "training" ? training() : tab === "needs" ? needs() : tab === "ask" ? ask() : tab === "me" ? me() : home();
+    if (tab === "ask") askBind();
     var ph = V.me.photos;
     [].forEach.call(main.querySelectorAll("[data-ph]"), function (x) { x.onclick = function () { ph = x.dataset.ph; [].forEach.call(main.querySelectorAll("[data-ph]"), function (y) { y.setAttribute("aria-pressed", String(y === x)); }); }; });
     var so = $("#signout"); if (so) so.onclick = function () {
