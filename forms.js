@@ -191,7 +191,7 @@
       }, function (e) {
         sending = false; b.disabled = false; b.textContent = "Send";
         var m = String((e && e.message) || "");
-        err.textContent = /^(Answer|Add|Check|That|Lots of|The photo)/.test(m) ? m : "That didn't send. Check your connection and try again. Your answers are still here.";
+        err.textContent = /^(Answer|Add|Check|That|Lots of|The photo|Pick|Tell|Team roles|We already)/.test(m) ? m : "That didn't send. Check your connection and try again. Your answers are still here.";
       });
     }
   }
