@@ -121,6 +121,26 @@ before committing with `node .github/check-pages.js`.
   is deleted.
 - Data: each Sheet's File, Version history.
 
+## Ask a question (server version 61, 3 Nov 2026)
+
+**Answers:** the "ReUp Answers" Google Doc (ReUp Drive folder). Each question is a Heading 2 with its answer under it;
+a Heading 1 containing "Team only" starts the part volunteers do not see. `answers_` in Code.gs reads it (cached 10
+minutes). The Hub's Ask screen and the volunteer page's Questions tab search it on the phone. To change an answer,
+edit the doc.
+
+**AI answers (team only):** `askTeam_` in Code.gs sends the question, plus the text of the docs in `AI_DOCS` (ReUp
+Answers, Message Guide, Admin Guide, Event Lead Guide, Fix-It Guide), to Google's free Gemini, and answers only from
+them. Current Status is left out on purpose. The key is the Script Property `GEMINI_KEY`, never in code. On the free
+tier Google may read what is sent, so the box tells the team never to type a community guest's details. Limit: 40
+questions per person per hour.
+- Model: picked once into the Script Property `GEMINI_MODEL`; delete it to pick again.
+- When Google says the model is busy (503) or it takes over a minute, `aiAlts_` tries up to three other free "flash"
+  models. The one that answers is remembered for 6 hours (cache `aigood`), and a busy main model is skipped for 10
+  minutes (`aibusy`), so most answers take seconds.
+- Answers use short thinking (`thinkingLevel: 'low'`), dropped automatically if a model refuses it.
+- Test from the editor with `checkAI`: it logs each doc's size, the models, and one test answer.
+- If the docs disagree, the AI says so. That is a sign to fix the docs, not the code.
+
 ## Writing past the end of a tab
 
 Tabs fed by a Google Form (the Item Log, the volunteer Responses tab) end exactly at their last entry, and writing one
