@@ -912,6 +912,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 .civrow.on{background:#1d3b1d;border-color:#2d5a2d}
 .civstate{font-size:13px;opacity:.75}
 .formgrid{display:grid;gap:10px;margin:10px 0}
+.cihl{display:block;font-weight:700;margin-bottom:6px}.cihh{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.cihh .chip{min-height:48px;font-size:18px;font-weight:800;justify-content:center}.cinudge{margin:8px 0 0;font-weight:700;color:var(--ink)}
 .formgrid label{display:block;font-size:13px;opacity:.85}
 .formgrid input{display:block;width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#1c1918;color:#f1edea;min-height:44px;margin-top:4px}
 
@@ -4079,15 +4080,23 @@ async function ciLoadCount() {
 }
 function ciOpenGuestSheet() {
   openSheet(`<div class="k">Check-in</div><h3 id="sheetTitle">New guest</h3>
-    <p class="lead">Name, household size and ZIP are optional. Nobody is turned away for skipping these \u2014 tap Check in any time.</p>
+    <p class="lead">Ask how many live in their home. Everything is optional, and nobody is turned away.</p>
     <form id="ciForm" class="formgrid">
+      <div><span class="cihl" id="ciHHl">How many live in their home?</span><div class="cihh" role="group" aria-labelledby="ciHHl">${["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"].map(n => `<button type="button" class="chip" data-hh="${n === "10+" ? 10 : n}" aria-pressed="false">${n}</button>`).join("")}</div>
+        <input id="ciHH" type="hidden"><p class="small cinudge" id="ciNudge" hidden>Ask how many live in their home, then tap the number. To check them in without it, tap Check in again.</p></div>
       <label>First name (optional)<input id="ciFirst" type="text" autocomplete="off"></label>
-      <label>Household size (optional)<input id="ciHH" type="number" inputmode="numeric" min="1" max="20"></label>
       <label>ZIP (optional)<input id="ciZip" type="text" inputmode="numeric" maxlength="5"></label>
       <button class="btn" type="submit">Check in</button>
     </form>`);
+  let asked = false;
+  $("ciForm").querySelectorAll("[data-hh]").forEach(b => b.addEventListener("click", () => {
+    $("ciForm").querySelectorAll("[data-hh]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("ciHH").value = b.dataset.hh; $("ciNudge").hidden = true;
+  }));
   $("ciForm").addEventListener("submit", e => {
     e.preventDefault();
+    // One reminder to ask the household size; a second tap checks them in anyway (nobody is turned away).
+    if (!$("ciHH").value && !asked) { asked = true; $("ciNudge").hidden = false; return; }
     const payload = { event: CI_EVENT, firstName: $("ciFirst").value.trim(), householdSize: $("ciHH").value.trim(), zip: $("ciZip").value.trim(), clientId: ciNewId() };
     sheet.close();
     if (CI_COUNT != null) { CI_COUNT++; const el = $("ciCountNum"); if (el) el.textContent = CI_COUNT; }
@@ -4941,7 +4950,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104011500";
+  var BUILD = "20261104012500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
