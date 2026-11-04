@@ -1117,6 +1117,11 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
       <div id="askai" aria-live="polite"></div>
       <div id="askres" aria-live="polite"></div>
     </section>
+    <section class="view" id="v-apps" hidden>
+      <h2>Applications</h2>
+      <p class="lead">People who applied to join the core team on the community page. The roles come from the ReUp Team Roles doc. Reach out, then set where each one stands.</p>
+      <div id="apps"><p class="small">Loading...</p></div>
+    </section>
     <section class="view" id="v-events" hidden>
       <div class="banner" data-cover="events"><div><h2>Events</h2><p>Every distribution and event coming up: what's ready, what's missing, and how past ones went.</p></div></div>
       <div id="events"></div>
@@ -1496,6 +1501,53 @@ function openEvent(e) {
   const su = $("toSignup"); if (su) su.addEventListener("click", () => openSignup({ date: e.date, name: e.name }));
 }
 
+function openNF(name, f) {
+  const pub = window.ReUpForms.isPublic(name), link = "https://thereupmovement.org/" + name;
+  openSheet(`<div class="k">${esc(f.group || "Forms")}${f.time ? " &middot; " + esc(f.time) : ""}</div>
+    <h3 id="sheetTitle">${esc(f.title)}</h3>
+    ${pub ? `<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" id="copyLink">Copy the link to send</button></div><p class="small" id="copyNote" style="overflow-wrap:anywhere;margin:0">${esc(link)}</p>` : ""}
+    <div id="nfbox" style="margin-top:12px"></div>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  window.ReUpForms.mount($("nfbox"), { team: true, hideTitle: true, fallback: f.url, load: () => run("formDefTeam", KEY, name), send: (a, photo) => run("formSendTeam", KEY, name, a, photo) });
+  const c = $("copyLink");
+  if (c) c.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(link); c.textContent = "Copied"; }
+    catch (err) { const r = document.createRange(); r.selectNodeContents($("copyNote")); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); c.textContent = "Link selected below"; }
+  });
+}
+/* ================= APPLICATIONS: people who applied to join the core team (leaders and Hub admins) ================= */
+let APPS = null, appsF = "New";
+function loadApps() {
+  const box = $("apps"); if (!APPS) box.innerHTML = `<p class="small">Loading...</p>`;
+  run("appsList", KEY).then(r => { APPS = r; drawApps(); }, e => { if (isAuth(e)) { box.innerHTML = `<p class="small">Only leaders and Hub admins can see applications.</p>`; return; } box.innerHTML = `<p class="small">Applications could not load. Check your connection and try again.</p>`; });
+}
+function drawApps() {
+  const box = $("apps"); if (!box || !APPS) return;
+  const st = ["New"].concat(APPS.statuses.filter(x => x !== "New")).concat(["All"]);
+  const list = APPS.items.filter(x => appsF === "All" || x.status === appsF);
+  box.innerHTML = `<div class="filters" role="group" aria-label="Show" style="margin:4px 0 10px">${st.map(k => { const n = k === "All" ? APPS.items.length : APPS.items.filter(x => x.status === k).length; return `<button class="chip" type="button" data-apf="${esc(k)}" aria-pressed="${appsF === k}">${esc(k)}${n ? " " + n : ""}</button>`; }).join("")}</div>
+    <div class="wrows">${list.map(x => `<button type="button" class="wrow" data-apr="${x.row}"><span class="wrname">${esc(x.name)}<span class="idmlast">${esc(x.roles)}</span></span><span class="wrmeta"><span>${esc(x.status)} &middot; ${esc(String(x.at).slice(0, 10))}</span></span></button>`).join("") ||
+      `<p class="small">${APPS.items.length ? "None here." : "No applications yet. They show up here as soon as someone applies at thereupmovement.org/apply."}</p>`}</div>`;
+  box.querySelectorAll("[data-apf]").forEach(b => b.addEventListener("click", () => { appsF = b.dataset.apf; drawApps(); }));
+  box.querySelectorAll("[data-apr]").forEach(b => b.addEventListener("click", () => openApp(+b.dataset.apr)));
+}
+function openApp(row) {
+  const x = APPS.items.find(a => a.row === row); if (!x) return;
+  const kv = (l, v) => v ? `<div class="tsec"><div class="tl">${l}</div><p style="margin:0;white-space:pre-wrap">${esc(v)}</p></div>` : "";
+  const dig = String(x.phone || "").replace(/\D/g, "");
+  openSheet(`<div class="k">Application &middot; ${esc(String(x.at).slice(0, 10))}</div><h3 id="sheetTitle">${esc(x.name)}</h3>
+    <p class="small" style="margin:0 0 10px">${esc(x.roles)}${x.houston ? " &middot; In person in Houston: " + esc(x.houston) : ""}</p>
+    <div class="abtns" style="margin:0 0 10px">${dig ? `<a class="tbtn" href="tel:${dig}">Call ${esc(x.phone)}</a><a class="tbtn ghost" href="sms:${dig}" target="_top">Text</a>` : ""}${x.email ? `<a class="tbtn ghost" href="mailto:${esc(x.email)}">Email</a>` : ""}</div>
+    ${kv("Why they want it", x.why)}${kv("Experience", x.experience)}${kv("When they are free", x.when)}${kv("Heard about ReUp from", x.heard)}
+    <div class="tsec"><div class="tl">Where it stands</div><div class="wchips">${APPS.statuses.map(k => `<button type="button" data-ast="${esc(k)}" aria-pressed="${x.status === k}">${esc(k)}</button>`).join("")}</div></div>
+    <div class="tsec"><div class="tl">Notes for the team</div><textarea class="tarea" id="apnote" rows="3" maxlength="2000">${esc(x.notes || "")}</textarea>
+      <button class="tbtn" type="button" id="apsave" style="margin-top:8px">Save note</button>${x.by ? `<p class="small" style="margin:6px 0 0">Last changed by ${esc(x.by)}, ${esc(x.updated)}</p>` : ""}</div>
+    <p class="tmsg" id="apmsg" role="status" aria-live="polite"></p>
+    <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  const save = patch => run("appsSave", KEY, row, patch).then(r => { APPS = r; drawApps(); openApp(row); toast("Saved."); }, e => { $("apmsg").textContent = saveErr(e); });
+  document.querySelectorAll("[data-ast]").forEach(b => b.addEventListener("click", () => save({ status: b.dataset.ast })));
+  $("apsave").addEventListener("click", () => save({ notes: $("apnote").value }));
+}
 function openSignup(preset, f) {
   openSheet(`<div class="k">Volunteers</div>
     <h3 id="sheetTitle">Sign up for an event</h3>
@@ -1511,6 +1563,11 @@ function openSignup(preset, f) {
 }
 function openForm(f) {
   if (f.native === "volunteer") return openSignup(null, f);
+  // Check-in has its own screen in the Hub (it keeps saving with no signal).
+  if (/1Ds7bGpFsxFxh5e6o8N5gW7vp_YfzX0E1Wam47cE-2Fw/.test(f.url || "") && BOOT.work) { if (sheet.open) sheet.close(); return go("checkin"); }
+  // Every other Google Form ReUp uses opens as the app's own screen (forms.js); answers still go through that Google Form.
+  const nf = window.ReUpForms && window.ReUpForms.nameOf(f.url);
+  if (nf) return openNF(nf, f);
   if (f.native === "receipt" || f.native === "trip") return openMoney(f.native, f);
   openSheet(`<div class="k">${esc(f.group)}${f.time ? " &middot; " + esc(f.time) : ""}</div>
     <h3 id="sheetTitle">${esc(f.title)}</h3>
@@ -1684,6 +1741,7 @@ function wireForms(root) { root.querySelectorAll("[data-form]").forEach(b => b.a
 
 /* ============ TABS ============ */
 const ICONS = {
+  apps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M19 8v6M16 11h6"/></svg>',
   ask: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></svg>',
   events: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
@@ -1722,7 +1780,7 @@ drawTabs();
 function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (!TABS.some(([k]) => k === tab) && !(tab === "checkin" && BOOT.work)) tab = "home";
-  ["home", "work", "inbox", "schedule", "events", "ask", "eventday", "forms", "ops", "goals", "admin", "vol", "checkin"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "events", "ask", "eventday", "forms", "ops", "goals", "admin", "vol", "checkin", "apps"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
   window.scrollTo(0, 0);
@@ -1732,6 +1790,7 @@ function go(tab) {
   if (tab === "checkin") drawCheckin();
   if (tab === "events") drawEvents();
   if (tab === "ask") drawAsk();
+  if (tab === "apps") loadApps();
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -3592,11 +3651,11 @@ function drawStorage(d) {
 }
 function opsActions() {
   const sortF = FORMS.find(f => f.title === "Sort an item"), pickF = FORMS.find(f => f.title === "Pallet pickup");
-  const tile = (inner, attrs) => attrs.href ? `<a class="qab" href="${esc(attrs.href)}" target="_blank" rel="noopener">${inner}</a>` : `<button class="qab" type="button" data-openmoney="${attrs.money}">${inner}</button>`;
+  const tile = (inner, attrs) => attrs.form ? `<button class="qab" type="button" data-openform="${esc(attrs.form)}">${inner}</button>` : `<button class="qab" type="button" data-openmoney="${attrs.money}">${inner}</button>`;
   const t = (icon, title, sub) => `<i aria-hidden="true">${icon}</i><span><b>${title}</b><small>${sub}</small></span>`;
   return `<div class="hsec opshead"><h3>Quick actions</h3></div><div class="qa opsqa">
-    ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { href: sortF.url }) : ""}
-    ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { href: pickF.url }) : ""}
+    ${sortF ? tile(t(QICON["Sort an item"] || "", "Sort an item", "Photo and details"), { form: "Sort an item" }) : ""}
+    ${pickF ? tile(t(qi('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'), "Log a pickup", "Pallets from a partner"), { form: "Pallet pickup" }) : ""}
     ${tile(t(QICON["Snap a receipt"] || "", "Snap a receipt", "Gas, storage, supplies"), { money: "receipt" })}
     ${tile(t(QICON["Log a trip"] || "", "Log a trip", "Miles you drove"), { money: "trip" })}
     ${(+BOOT.rc) >= 0 ? `<button class="qab wide" type="button" data-openreview><i aria-hidden="true">${qi('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>')}</i><span><b>Approvals</b><small id="opsapprn">${(+BOOT.rc) > 0 ? BOOT.rc + " waiting" : "Nothing waiting"}</small></span></button>` : ""}</div>`;
@@ -4187,6 +4246,7 @@ if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
   if (BOOT.leader) TABS.push(["goals", "Leaders"]);
   if (BOOT.coordinator) TABS.push(["admin", "Admin"]);
+  if (BOOT.leader || BOOT.coordinator) TABS.push(["apps", "Applications"]);
   drawTabs();
   const want = start === "leaders" ? "goals" : (start || BOOT.start || "");
   go(TABS.some(([k]) => k === want) ? want : "home");
@@ -4958,7 +5018,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104013500";
+  var BUILD = "20261104014500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
@@ -4990,5 +5050,6 @@ function vWireOrient(box) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
 })();
 </script>
+<script src="../forms.js?v=1"></script>
 </body>
 </html>

@@ -141,6 +141,39 @@ questions per person per hour.
 - Test from the editor with `checkAI`: it logs each doc's size, the models, and one test answer.
 - If the docs disagree, the AI says so. That is a sign to fix the docs, not the code.
 
+## Forms inside the app (3 Nov 2026)
+
+Every Google Form ReUp uses opens as the app's own screen (`forms.js` at the repository root, used by the community
+page and the Hub). The questions are read from the Google Form itself (`nfDef_` in Code.gs, cached 10 minutes), and
+answers are submitted through that same Google Form with FormApp (`nfSubmit_`). So the response sheets, their columns,
+the budget formulas and any form-submit triggers work exactly as before, and editing a Google Form changes the screen.
+- The list of forms is `NFORMS` in Code.gs (short name and Google Form id; `open: true` means anyone can use it from
+  the community page). The page side has the same ids in `IDS` in forms.js. Add a form in both places.
+- Public: `formDef` / `formSend` (volunteer.gs, on `TP_OPEN`, 300 sends per form per hour, hidden robot box).
+  Team: `formDefTeam` / `formSendTeam` (Code.gs, PIN-checked). The Hub opens a form when its Forms entry links to one
+  of these Google Forms; "Check someone in" opens the Hub's own check-in screen instead.
+- Direct links: thereupmovement.org/needs, /give and /story (folders that forward to `/?f=needs` and so on).
+- Photo questions (Sort an item) cannot be filled by a script: the photo goes into the form's own photo folder
+  ("Item photo (File responses)", id remembered in the Script Property `NF_PHOTO_sort`) and its link is written into
+  the new row (`nfPhotoCell_`).
+- If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
+  Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
+
+## Team applications (3 Nov 2026)
+
+thereupmovement.org/apply (or `/?f=apply`) lists the open roles and takes applications. The roles are read from the
+**ReUp Team Roles** Google Doc (`roles_` in Code.gs: Heading 2 = team, Heading 3 = role, then the "Openings" line and
+one summary line); edit the doc to change them. `applySend_` writes to the Hub sheet tab **Applications**, emails the
+Hub leaders and admins, and sends the applicant a thank-you. Leaders and Hub admins work the list in the Hub under
+More, Applications (`appsList` / `appsSave`; statuses in `APP_STATUS`). Phone numbers and emails never go to anyone else.
+
+## When saves fail (3 Nov 2026)
+
+`doPost` records every unexpected error (`errLog_` in Code.gs) on the Hub sheet tab **App errors**: when, which
+request, who, and the error. Plain messages people are meant to see ("Add your name.") are not recorded, and what
+people typed is never stored. Hub admins see the last two weeks at the top of More, Admin (the Problems card), and
+`appErrorDigest` (run each morning by `dailyVolunteers`) emails them only when there is something new.
+
 ## Writing past the end of a tab
 
 Tabs fed by a Google Form (the Item Log, the volunteer Responses tab) end exactly at their last entry, and writing one

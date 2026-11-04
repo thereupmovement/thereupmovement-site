@@ -323,6 +323,12 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
   .prog{min-height:420px}
 }
 @media (prefers-reduced-motion: reduce){.rot img{transition:none}}
+.nfdlg{border:0;padding:0;margin:auto;width:100%;max-width:680px;max-height:100dvh;height:100dvh;background:var(--bg);color:var(--ink)}
+.nfdlg::backdrop{background:rgba(0,0,0,.6)}
+.nfbar{position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+#nfBox{padding:18px 16px 40px}
+#nfBox .vs-opt,#nfBox .vs-field input,#nfBox .vs-field textarea,#nfBox .nf-sel{background:var(--surface)}
+@media (min-width:720px){.nfdlg{height:auto;max-height:92vh;border-radius:16px;margin-top:4vh}}
 .signupbox{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 16px}
 .signupbox .vs-opt,.signupbox .vs-date,.signupbox .vs-std,.signupbox .vs-card,.signupbox .vs-field input,.signupbox .vs-field textarea{background:var(--bg)}
 .vs{display:grid;gap:18px}
@@ -502,6 +508,11 @@ form.vs>.vs-btn{width:100%}
             <button class="vbtn" id="volSign" type="button" aria-expanded="false" aria-controls="signup">Sign up to volunteer</button></div></div>
         </div>
         <div class="signupbox" id="signup" hidden></div>
+      </div>
+      <div class="vcard" id="joinTeam">
+        <b>Join the core team</b>
+        <p>ReUp is building the team that runs every event: operations, events, media, grants and more. Every role is volunteer and unpaid, for people 18 or older.</p>
+        <div><a class="vs-btn" id="applyGo" href="?f=apply">See the open roles</a></div>
       </div>
       <div class="vcard" id="mylink">
         <b>Already volunteering with us?</b>
@@ -826,6 +837,8 @@ form.vs>.vs-btn{width:100%}
   window.ReUpSignup = { mount: mount, join: join };
 })();
 </script>
+<dialog class="nfdlg" id="nfDlg" aria-label="Form"><div class="nfbar"><button type="button" class="vs-btn ghost" id="nfCopy">Copy link</button><button type="button" class="vs-btn ghost" id="nfClose">Close</button></div><div id="nfBox"></div></dialog>
+<script src="forms.js?v=1"></script>
 <script>
 /* ====== DATA: edit these ====== */
 
@@ -926,7 +939,7 @@ const GRID = [
 ];
 $("grid").innerHTML = GRID.map(g => `<a class="tile ${g.main ? "main" : ""} ${g.wide ? "wide" : ""}" href="${g.href}">
   ${g.icon}<div><b>${g.title}</b><span>${g.sub}</span></div></a>`).join("");
-$("helpGo").href = FORMS.needs; $("giveGo").href = FORMS.give;
+$("helpGo").href = "?f=needs"; $("giveGo").href = "?f=give";
 
 // Dates
 const pad = n => String(n).padStart(2, "0");
@@ -1130,7 +1143,58 @@ if (STORE_URL) {
   window.addEventListener("hashchange", () => { if (location.hash === "#signup") open(true); });
 })();
 
-$("story").href = FORMS.story;
+$("story").href = "?f=story";
+
+// Forms open right here (forms.js). Each has its own link to send people: thereupmovement.org/?f=needs, ?f=give, ?f=story
+// (or the short ones: thereupmovement.org/needs, /give, /story). If forms.js cannot load, the links fall back to the Google Forms.
+(() => {
+  const dlg = $("nfDlg"), box = $("nfBox"), GF = { needs: FORMS.needs, give: FORMS.give, story: FORMS.story, apply: "" };
+  const api = (fn, args) => fetch(HUB_API, { method: "POST", credentials: "omit", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn, args }) })
+    .then(r => { if (!r.ok) throw new Error("network"); return r.json(); }).then(r => { if (r && r.error) throw new Error(r.error); return r.result; });
+  const setF = n => { const u = new URL(location.href); if (n) u.searchParams.set("f", n); else u.searchParams.delete("f"); history.replaceState(null, "", u.pathname + u.search + u.hash); };
+  const open = n => {
+    if (!(n in GF)) return;
+    if (!window.ReUpForms) { if (GF[n]) window.open(GF[n], "_blank", "noopener"); return; }
+    setF(n);
+    if (n === "apply") openApply(); else window.ReUpForms.mount(box, { fallback: GF[n], load: () => api("formDef", [n]), send: (a, photo, web) => api("formSend", [n, a, web]) });
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+    box.scrollTop = 0;
+  };
+  $("nfClose").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("close", () => setF(""));
+  $("nfCopy").addEventListener("click", async e => {
+    const n = new URL(location.href).searchParams.get("f"), link = "https://thereupmovement.org/" + n;
+    try { await navigator.clipboard.writeText(link); e.target.textContent = "Copied"; } catch (x) { window.prompt("Copy this link:", link); }
+    setTimeout(() => { e.target.textContent = "Copy link"; }, 2500);
+  });
+  // Join the team: the roles come from the "ReUp Team Roles" doc; the form is built here and read by forms.js.
+  function openApply() {
+    box.innerHTML = '<div class="vs"><p class="vs-lead">Loading the open roles...</p></div>';
+    api("applyDef", []).then(r => {
+      const D = r.departments || [], esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      box.innerHTML = '<div class="vs"><h3 class="vs-h">Join the ReUp team</h3><p class="vs-note">Every role is a volunteer role and unpaid. You must be 18 or older. Everyone joins a 30-minute orientation call and works one event alongside the team first. Tap a team to read its roles, then apply below. You can pick up to two roles.</p>' +
+        D.map(d => '<details class="vs-std"><summary>' + esc(d.name) + " (" + d.roles.length + (d.roles.length === 1 ? " role" : " roles") + ")</summary>" + (d.intro ? "<p>" + esc(d.intro) + "</p>" : "") +
+          d.roles.map(x => "<p><b>" + esc(x.title) + "</b><br><small>" + esc(x.meta) + "</small><br>" + esc(x.summary) + "</p>").join("") + "</details>").join("") + '</div><div id="aplForm" style="margin-top:18px"></div>';
+      const titles = []; D.forEach(d => d.roles.forEach(x => titles.push(x.title)));
+      const def = { title: "Apply", help: "", done: "", sections: [{ title: "", help: "", after: null, items: [
+        { id: "roles", type: "check", title: "Which role? Pick up to two.", req: true, choices: titles.map(v => ({ v })) },
+        { id: "name", type: "text", title: "First and last name", req: true }, { id: "phone", type: "text", title: "Phone number", req: true }, { id: "email", type: "text", title: "Email", req: true },
+        { id: "adult", type: "radio", title: "Are you 18 or older?", req: true, choices: [{ v: "Yes" }, { v: "No" }] },
+        { id: "houston", type: "radio", title: "Can you work in person in Houston?", req: false, choices: [{ v: "Yes" }, { v: "Remote only" }] },
+        { id: "why", type: "para", title: "Why do you want this role?", req: true },
+        { id: "experience", type: "para", title: "Any experience that helps? Work, volunteering or school all count.", req: false },
+        { id: "when", type: "para", title: "When are you usually free?", req: false },
+        { id: "heard", type: "radio", title: "How did you hear about this?", req: false, other: true, choices: [{ v: "Instagram" }, { v: "A friend or family member" }, { v: "A ReUp event" }] }] }] };
+      window.ReUpForms.mount($("aplForm"), { hideTitle: true, load: () => Promise.resolve(def), send: (a, photo, web) => {
+        if ((a.roles || []).length > 2) return Promise.reject(new Error("Pick up to two roles."));
+        return api("applySend", [a, web]);
+      } });
+    }, () => { box.innerHTML = '<div class="vs"><p class="vs-lead">The roles could not load right now. Check your connection and try again, or email info@thereupmovement.org.</p></div>'; });
+  }
+  [["helpGo", "needs"], ["giveGo", "give"], ["story", "story"], ["applyGo", "apply"]].forEach(([id, n]) => { const a = $(id); a.removeAttribute("target"); a.addEventListener("click", e => { e.preventDefault(); open(n); }); });
+  const start = new URLSearchParams(location.search).get("f");
+  if (start && start in GF) open(start);
+})();
 </script>
 
 </body>
