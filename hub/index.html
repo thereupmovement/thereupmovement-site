@@ -1594,7 +1594,7 @@ function evTeamHTML(e, n) {
    The pages are hub/guide/p01.webp to p15.webp, made from event-lead-guide.pdf; remake them when the PDF changes. */
 function openGuide() {
   if (sheet.open) sheet.close();
-  const pages = Array.from({ length: 15 }, (_, i) => `<img src="guide/p${String(i + 1).padStart(2, "0")}.webp" alt="Event Lead Guide, page ${i + 1}" loading="lazy" width="935" height="1210">`).join("");
+  const pages = Array.from({ length: 15 }, (_, i) => `<img src="guide/p${String(i + 1).padStart(2, "0")}.webp?v=2" alt="Event Lead Guide, page ${i + 1}" loading="lazy" width="935" height="1210">`).join("");
   openSheet(`<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" data-close>Back to the Hub</button></div>
     <h3 id="sheetTitle">Event Lead Guide</h3><div class="gpages">${pages}</div>
     <div class="btns"><button class="btn" type="button" data-gclose>Back to the Hub</button></div>`);
@@ -5182,7 +5182,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104034500";
+  var BUILD = "20261104040000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
