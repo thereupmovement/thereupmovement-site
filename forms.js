@@ -121,7 +121,7 @@
         return;
       }
       var p = path(D, A, true);
-      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle ? "" : '<h3 class="vs-h">' + esc(D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") +
+      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle || !(opts.title || D.title) ? "" : '<h3 class="vs-h">' + esc(opts.title || D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") +
         '<input class="vs-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
         p.map(function (si) {
           var s = D.sections[si];
