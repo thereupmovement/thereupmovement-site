@@ -1677,11 +1677,19 @@ function drawApps() {
   const box = $("apps"); if (!box || !APPS) return;
   const st = ["New"].concat(APPS.statuses.filter(x => x !== "New")).concat(["All"]);
   const list = APPS.items.filter(x => appsF === "All" || x.status === appsF);
+  const nWait = APPS.items.filter(x => appWait(x) >= 5).length;
   box.innerHTML = `<div class="filters" role="group" aria-label="Show" style="margin:4px 0 10px">${st.map(k => { const n = k === "All" ? APPS.items.length : APPS.items.filter(x => x.status === k).length; return `<button class="chip" type="button" data-apf="${esc(k)}" aria-pressed="${appsF === k}">${esc(k)}${n ? " " + n : ""}</button>`; }).join("")}</div>
-    <div class="wrows">${list.map(x => `<button type="button" class="wrow" data-apr="${x.row}"><span class="wrname">${esc(x.name)}<span class="idmlast">${esc(x.roles)}</span></span><span class="wrmeta"><span>${esc(x.status)} &middot; ${esc(String(x.at).slice(0, 10))}</span></span></button>`).join("") ||
+    ${nWait ? `<p class="small late" style="margin:0 0 10px">${nWait} ${nWait === 1 ? "person has" : "people have"} waited 5 days or more for a first reply.</p>` : ""}
+    <div class="wrows">${list.map(x => { const w = appWait(x); return `<button type="button" class="wrow" data-apr="${x.row}"><span class="wrname">${esc(x.name)}<span class="idmlast">${esc(x.roles)}</span></span><span class="wrmeta"><span${w >= 5 ? ' class="late"' : ""}>${w >= 5 ? `Waiting ${w} days` : esc(x.status)} &middot; ${esc(String(x.at).slice(0, 10))}</span></span></button>`; }).join("") ||
       `<p class="small">${APPS.items.length ? "None here." : "No applications yet. They show up here as soon as someone applies at thereupmovement.org/apply."}</p>`}</div>`;
   box.querySelectorAll("[data-apf]").forEach(b => b.addEventListener("click", () => { appsF = b.dataset.apf; drawApps(); }));
   box.querySelectorAll("[data-apr]").forEach(b => b.addEventListener("click", () => openApp(+b.dataset.apr)));
+}
+// Days a New application has waited for a first reply ("When" is written as yyyy-MM-dd HH:mm, Central time).
+function appWait(x) {
+  if (x.status !== "New") return 0;
+  const t = Date.parse(String(x.at || "").replace(" ", "T"));
+  return isNaN(t) ? 0 : Math.floor((Date.now() - t) / 864e5);
 }
 function openApp(row) {
   const x = APPS.items.find(a => a.row === row); if (!x) return;
@@ -1692,13 +1700,15 @@ function openApp(row) {
     <div class="abtns" style="margin:0 0 10px">${dig ? `<a class="tbtn" href="tel:${dig}">Call ${esc(x.phone)}</a><a class="tbtn ghost" href="sms:${dig}" target="_top">Text</a>` : ""}${x.email ? `<a class="tbtn ghost" href="mailto:${esc(x.email)}">Email</a>` : ""}</div>
     ${kv("Why they want it", x.why)}${kv("Experience", x.experience)}${kv("When they are free", x.when)}${kv("Heard about ReUp from", x.heard)}
     <div class="tsec"><div class="tl">Where it stands</div><div class="wchips">${APPS.statuses.map(k => `<button type="button" data-ast="${esc(k)}" aria-pressed="${x.status === k}">${esc(k)}</button>`).join("")}</div></div>
-    <div class="tsec"><div class="tl">Notes for the team</div><textarea class="tarea" id="apnote" rows="3" maxlength="2000">${esc(x.notes || "")}</textarea>
-      <button class="tbtn" type="button" id="apsave" style="margin-top:8px">Save note</button>${x.by ? `<p class="small" style="margin:6px 0 0">Last changed by ${esc(x.by)}, ${esc(x.updated)}</p>` : ""}</div>
+    <div class="tsec"><div class="tl">Notes for the team</div>${x.notes ? `<p class="small" style="margin:0 0 8px;white-space:pre-wrap;color:var(--ink)">${esc(x.notes)}</p>` : ""}
+      <textarea class="tarea" id="apnote" rows="3" maxlength="2000" placeholder="What happened, and what is next"></textarea>
+      <button class="tbtn" type="button" id="apsave" style="margin-top:8px">Add note</button>${x.by ? `<p class="small" style="margin:6px 0 0">Last changed by ${esc(x.by)}, ${esc(x.updated)}</p>` : ""}</div>
     <p class="tmsg" id="apmsg" role="status" aria-live="polite"></p>
     <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
   const save = patch => run("appsSave", KEY, row, patch).then(r => { APPS = r; drawApps(); openApp(row); toast("Saved."); }, e => { $("apmsg").textContent = saveErr(e); });
   document.querySelectorAll("[data-ast]").forEach(b => b.addEventListener("click", () => save({ status: b.dataset.ast })));
-  $("apsave").addEventListener("click", () => save({ notes: $("apnote").value }));
+  // The server adds each note under the earlier ones with the date and who wrote it (appsSave in Code.gs).
+  $("apsave").addEventListener("click", () => { const v = $("apnote").value.trim(); if (v) save({ notes: v }); });
 }
 function openSignup(preset, f) {
   openSheet(`<div class="k">Volunteers</div>
@@ -5182,7 +5192,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104040000";
+  var BUILD = "20261104041000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

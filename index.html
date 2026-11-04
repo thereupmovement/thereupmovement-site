@@ -1176,18 +1176,24 @@ $("story").href = "?f=story";
       box.innerHTML = '<div class="vs"><h3 class="vs-h">Join the ReUp team</h3><p class="vs-note">Every role is a volunteer role and unpaid. You must be 18 or older. Everyone joins a 30-minute orientation call and works one event alongside the team first. Tap a team to read its roles, then apply below. You can pick up to two roles.</p>' +
         D.map(d => '<details class="vs-std"><summary>' + esc(d.name) + " (" + d.roles.length + (d.roles.length === 1 ? " role" : " roles") + ")</summary>" + (d.intro ? "<p>" + esc(d.intro) + "</p>" : "") +
           d.roles.map(x => "<p><b>" + esc(x.title) + "</b><br><small>" + esc(x.meta) + "</small><br>" + esc(x.summary) + "</p>").join("") + "</details>").join("") + '</div><div id="aplForm" style="margin-top:18px"></div>';
-      const titles = []; D.forEach(d => d.roles.forEach(x => titles.push(x.title)));
+      // A role whose description starts "Opening soon" in the Team Roles doc is shown but cannot be picked yet.
+      const soon = x => /^opening soon/i.test(String(x.summary || "").trim());
+      const titles = []; D.forEach(d => d.roles.forEach(x => { if (!soon(x)) titles.push(x.title); }));
       const def = { title: "Apply", help: "", done: "", sections: [{ title: "", help: "", after: null, items: [
         { id: "roles", type: "check", title: "Which role? Pick up to two.", req: true, choices: titles.map(v => ({ v })) },
         { id: "name", type: "text", title: "First and last name", req: true }, { id: "phone", type: "text", title: "Phone number", req: true }, { id: "email", type: "text", title: "Email", req: true },
         { id: "adult", type: "radio", title: "Are you 18 or older?", req: true, choices: [{ v: "Yes" }, { v: "No" }] },
         { id: "houston", type: "radio", title: "Can you work in person in Houston?", req: false, choices: [{ v: "Yes" }, { v: "Remote only" }] },
+        { id: "vehicle", type: "radio", title: "Applying for Logistics Coordinator? Do you have a truck or van you could use for pickups?", req: false, choices: [{ v: "Truck" }, { v: "Van" }, { v: "No" }] },
         { id: "why", type: "para", title: "Why do you want this role?", req: true },
         { id: "experience", type: "para", title: "Any experience that helps? Work, volunteering or school all count.", req: false },
         { id: "when", type: "para", title: "When are you usually free?", req: false },
         { id: "heard", type: "radio", title: "How did you hear about this?", req: false, other: true, choices: [{ v: "Instagram" }, { v: "A friend or family member" }, { v: "A ReUp event" }] }] }] };
       window.ReUpForms.mount($("aplForm"), { hideTitle: true, load: () => Promise.resolve(def), send: (a, photo, web) => {
         if ((a.roles || []).length > 2) return Promise.reject(new Error("Pick up to two roles."));
+        if ((a.roles || []).indexOf("Logistics Coordinator") >= 0 && !a.vehicle) return Promise.reject(new Error("Answer the truck or van question. It helps for Logistics Coordinator."));
+        // The truck or van answer rides along in Experience, so the team sees it with no new sheet column.
+        if (a.vehicle) a = Object.assign({}, a, { experience: ("Truck or van: " + a.vehicle + "\n" + (a.experience || "")).trim() });
         return api("applySend", [a, web]);
       } });
     }, () => { box.innerHTML = '<div class="vs"><p class="vs-lead">The roles could not load right now. Check your connection and try again, or email info@thereupmovement.org.</p></div>'; });

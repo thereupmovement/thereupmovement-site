@@ -178,6 +178,16 @@ one summary line); edit the doc to change them. `applySend_` writes to the Hub s
 Hub leaders and admins, and sends the applicant a thank-you. Leaders and Hub admins work the list in the Hub under
 More, Applications (`appsList` / `appsSave`; statuses in `APP_STATUS`). Phone numbers and emails never go to anyone else.
 
+Added later on 3 Nov 2026 (server version after 61):
+- A role whose summary line in the doc starts "Opening soon" is listed but cannot be picked (the page leaves it out of
+  the choices; `applySend_` refuses it too). Delete those two words in the doc when the role opens.
+- The form asks Logistics Coordinator applicants whether they have a truck or van. The answer is saved at the top of
+  Experience ("Truck or van: ..."), so there is no extra sheet column.
+- Steps (`APP_STATUS`): New, Reached out, Orientation booked, Shadow event, On the team, Not a fit.
+- Notes add up: each note is saved under the earlier ones with the date and who wrote it (`appsSave`). The cell keeps
+  the newest 1,900 characters.
+- An application still at New after 5 days shows "Waiting N days" in red in the Hub (`appWait` in hub/index.html).
+
 ## When saves fail (3 Nov 2026)
 
 `doPost` records every unexpected error (`errLog_` in Code.gs) on the Hub sheet tab **App errors**: when, which
