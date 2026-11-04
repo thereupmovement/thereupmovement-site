@@ -1336,7 +1336,7 @@ document.addEventListener("input", e => { if (e.target && e.target.id === "askq"
 /* AI answer: the server sends the question and the docs to Google's free Gemini and returns its answer.
    The last few questions go along, so a follow-up ("and on Sunday?") makes sense. */
 let askHist = [], askBusy = false;
-const aiHtml = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n/g, "<br>");
+const aiHtml = t => esc(t).replace(/^\s*-{3,}\s*$/gm, "").replace(/^\s*#{1,6}\s*(.+)$/gm, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[*-]\s+/gm, "&bull; ").replace(/\n{3,}/g, "\n\n").replace(/\n/g, "<br>");
 function drawAskAi(pending) {
   const box = $("askai"); if (!box) return;
   box.innerHTML = askHist.slice().reverse().map((h, i) => `<div class="card askans${i ? " old" : ""}"><p class="askyou">${esc(h.q)}</p><div class="aska">${h.a ? aiHtml(h.a) : `<span class="small">${esc(h.msg || "")}</span>`}</div></div>`).join("")
@@ -4941,7 +4941,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104010500";
+  var BUILD = "20261104011000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
