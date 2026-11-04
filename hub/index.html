@@ -862,8 +862,23 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 /* That display:block beat the hidden attribute, so Overview stayed on screen under Goals and Team activity. */
 #leadover[hidden],#leaders[hidden],#activity[hidden]{display:none!important}
 .lo-grid{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:12px}
-#workseg{grid-template-columns:repeat(3,1fr)}
-#workseg button{font-size:14px;padding:10px 6px}
+#workseg{grid-template-columns:repeat(4,1fr)}
+#workseg button{font-size:14px;padding:10px 4px}
+/* Recap: what someone did, in their own words (Work, Recap) */
+.rcpick{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.rcsum{margin:4px 0 12px;font-size:15px}
+.rcgrp{margin:14px 0 6px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rcgrp.warn{color:var(--red)}
+.rcitem{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 8px;cursor:pointer}
+.rcitem b{display:block;font-size:15.5px;line-height:1.3}
+.rcitem .rcmeta{display:block;font-size:12.5px;color:var(--muted);font-weight:700;margin:3px 0 0}
+.rcitem q{display:block;quotes:none;margin:8px 0 0;padding:0 0 0 10px;border-left:3px solid var(--line);font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+.rcwho{margin:18px 0 4px;font-family:var(--display);font-size:22px;font-weight:400;text-transform:uppercase}
+/* Task history: people's own words stand out; automatic lines (status, owners, dates) are small and grey */
+.tlog li.tsys{padding:5px 0;font-size:12.5px;color:var(--muted)}
+.tlog li.tsys span{display:inline;margin:0 6px 0 0}
+/* How did it end? (when marking a task done) */
+.wend{margin:10px 0 8px}
 /* Overview rows for a finished task or an open decision open the task itself (title, who did it, and any files they attached), the same sheet the Work tab uses. */
 #leadover .rule[data-openwork]{cursor:pointer}
 #leadover .rule[data-openwork]:hover{background:var(--surface2,rgba(0,0,0,.03))}
@@ -1346,11 +1361,12 @@ function drawAskAi(pending) {
 function askIdeas() {
   const out = [];
   if (BOOT.vol) out.push("Where are we with volunteer sign-ups for the next event?");
+  if (BOOT.work) out.push("What did the team get done today?");
   if (BOOT.work) out.push("What's overdue on Work, and who has it?");
   if (BOOT.ops) out.push("What do we have the most of in storage?");
   out.push("What do I do at the check-in table?");
   if (!BOOT.vol) out.push("When is volunteer orientation?");
-  return out.slice(0, 4);
+  return out.slice(0, 5);
 }
 /* What the Hub shows this person right now, as plain lines for the AI. Built only from what this page already loaded for
    them (so it never shows the AI more than they can see), and never with phone numbers, emails, addresses or anything
@@ -1378,6 +1394,10 @@ function hubContext() {
     open.slice().sort((a, b) => String(a.due || "9").localeCompare(String(b.due || "9"))).slice(0, 60)
       .forEach(t => L.push(`- [task ${t.id}] ${t.title} [${t.team || "No team"}] ${t.status}${t.due ? ", due " + t.due : ""}. Owner: ${t.owners.join(", ") || "nobody yet"}${t.helpers && t.helpers.length ? ". Helping: " + t.helpers.join(", ") : ""}`));
     done.slice(0, 15).forEach(t => L.push(`- Done ${String(t.doneAt).slice(0, 10)}: ${t.title} (${t.owners.join(", ")})`));
+    // What each person did in the last 7 days, in their own words (the same list as Work, Recap).
+    const [f7, t7] = recapRange("week"), KL = { changed: "plan changed or still waiting", stuck: "stuck", done: "finished", worked: "worked on", added: "added" }, rc = [];
+    (WORK.people || []).forEach(p => recapItems(p.name, f7, t7).forEach(x => rc.push(`- ${d(localDay(x.at))}, ${p.name}, [task ${x.t.id}] ${x.t.title}: ${KL[x.kind]}${x.notes.length ? ". Their words: " + x.notes.join(" / ").slice(0, 300) : ""}`)));
+    if (rc.length) { L.push("", `WHAT PEOPLE DID ON WORK, last 7 days (today is ${d(t7)}):`); rc.slice(0, 80).forEach(x => L.push(x)); }
   }
   if (WORK && Array.isArray(WORK.people)) L.push("", "TEAM (for direct messages): " + WORK.people.map(p => p.name).join(", ") + ". Work team boards: " + (WORK.teams || []).join(", ") + ".");
   if (FORMS.length) L.push("FORMS: " + FORMS.map(f => f.title).join("; ") + ".");
@@ -2233,7 +2253,7 @@ function fillTask(keep) {
 let wMoreOpen = false;
 let wNextOpen = false;
 let WORK = null, workAt = 0, workView = "mine", workTeam = "", workPerson = null, workBusy = false, openWorkId = null, loadingWork = false, workStuckOpen = false, workDecideOpen = false;
-try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team") workView = wv0; } catch (e) {}
+try { const wv0 = localStorage.getItem("reupHubWorkView"); if (wv0 === "overview" || wv0 === "team" || wv0 === "recap") workView = wv0; } catch (e) {}
 const WSTAT = [["todo", "To do"], ["doing", "In progress"], ["stuck", "Stuck"], ["review", "Turned in"], ["done", "Done"]];
 const WLABEL = Object.fromEntries(WSTAT);
 const LBL = x => x === "Ops" ? "Operations" : x;
@@ -2374,7 +2394,84 @@ function linkify(text) {
   return out.join("");
 }
 const wShortDate = s => dt(String(s).slice(0, 10)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-const wNotYet = t => !!t.opens && daysAway(t.opens) > 0;
+/* How did it end? Asked when someone marks their own task done, so "done" never hides a changed plan. */
+const WEND = [["planned", "Done as planned", "Good. A note is optional."], ["moved", "Moved to a new date", "Pick the new date. The task stays open with that due date."],
+  ["changed", "Plan changed", "Say what changed in the note box. If someone has a next step, add it below."], ["notneeded", "Not needed", "It closes. A note on why helps the team."]];
+let wEnd = null;
+/* Not on the board yet: a "Shows up on" date still ahead, or (no such date) a task not started that is due more than
+   3 weeks away. Those fold into "Coming later" and show up by themselves 3 weeks before they are due. */
+const wNotYet = t => t.opens ? daysAway(t.opens) > 0 : (t.status === "todo" && !!t.due && daysAway(t.due) > 21);
+const wShowsOn = t => t.opens || new Date(dt(t.due).getTime() - 21 * 864e5).toISOString().slice(0, 10);
+/* Lines the Hub writes by itself on a task (status, owners, dates). Everything else in Updates is someone's own words. */
+const WSYS = /^(Status: |Assigned to |Unassigned$|Due |Due date removed|Edited the (details|notes)$|Helpers|.+ is helping$|.+ stopped helping$|Made leaders only|Opened to the whole team|Marked as a quick one|No longer marked quick|Shows up (now|on )|Team( removed|: )|Renamed to: |Took it back|New task from |Turned in for review$|Approved$)/;
+const wSys = u => WSYS.test(String((u && u.text) || ""));
+/* Updates, newest first: people's words as before; automatic lines in a row fold into one small grey line. */
+function wHistory(ups) {
+  const out = []; let run = [];
+  const flush = () => { if (run.length) out.push(`<li class="tsys"><span>${esc(stamp(run[0].at))}</span>${esc(run.map(u => (u.who && u.who !== "Hub" ? u.who + ": " : "") + u.text).join(" \u00b7 "))}</li>`); run = []; };
+  ups.forEach(u => { if (wSys(u)) run.push(u); else { flush(); out.push(`<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${linkify(u.text)}</li>`); } });
+  flush(); return out.join("");
+}
+/* ---- Recap: what each person did on a day or a week, from the same tasks and updates Work shows ---- */
+let recapWho = "Everyone", recapWhen = "today";
+const localDay = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-CA"); };
+function recapRange(k) {
+  const day = n => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
+  return k === "yesterday" ? [day(1), day(1)] : k === "week" ? [day(6), day(0)] : [day(0), day(0)];
+}
+/* Each task someone touched in the range, with their own words and how it ended. */
+function recapItems(who, from, to) {
+  const inR = iso => { const d = localDay(iso); return d && d >= from && d <= to; };
+  const out = [];
+  (WORK.tasks || []).forEach(t => {
+    const mine = (t.updates || []).filter(u => u.who === who && inR(u.at));
+    const added = t.createdBy === who && inR(t.createdAt);
+    if (!mine.length && !added) return;
+    const notes = mine.filter(u => !wSys(u) && !/^Added a file: /.test(u.text)).map(u => String(u.text)).reverse();
+    const files = mine.filter(u => /^Added a file: /.test(u.text)).length;
+    const closed = mine.some(u => /^Status: (Done|done)|^Approved/.test(u.text)) || (t.status === "done" && inR(t.doneAt) && onTask(t, who));
+    const txt = notes.join(" ");
+    let kind = "worked";
+    if (notes.some(n => /^Moved to /.test(n))) kind = "changed";
+    else if (closed && (notes.some(n => /^(Plan changed|Not needed)/.test(n)) || /\b(moved|postpone|reschedul|instead|decided|keep|kept|can.?t|cannot|until|waiting|not yet|still need|back up)/i.test(txt))) kind = "changed";
+    else if (closed) kind = "done";
+    else if (t.status === "stuck") kind = "stuck";
+    else if (!mine.length && added) kind = "added";
+    out.push({ t, kind, notes, files, at: (mine[0] || {}).at || t.createdAt });
+  });
+  return out;
+}
+const RC_GROUPS = [["changed", "Plan changed or still waiting: read these", true], ["stuck", "Stuck", true], ["done", "Finished", false], ["worked", "Worked on", false], ["added", "New tasks they added", false]];
+function recapText(who, items) {
+  return `${who}:\n` + RC_GROUPS.map(([k, h]) => { const l = items.filter(x => x.kind === k); return l.length ? `${h}\n` + l.map(x => `- ${x.t.title}${x.notes.length ? ": " + x.notes.join(" / ") : ""}`).join("\n") : ""; }).filter(Boolean).join("\n");
+}
+function drawRecap() {
+  const box = $("work"), W = WORK, [from, to] = recapRange(recapWhen);
+  const people = (W.people || []).map(p => p.name), who = recapWho === "Everyone" ? people : [recapWho];
+  const chip = (attr, v, l, on) => `<button class="chip" type="button" ${attr}="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`;
+  let html = box.querySelector("#workseg").outerHTML + `<div class="whello"><h2>Recap</h2><p>What each person finished, changed or worked on, in their own words. Tap one to open it.</p></div>
+    <div class="rcpick" role="group" aria-label="When">${[["today", "Today"], ["yesterday", "Yesterday"], ["week", "Last 7 days"]].map(([k, l]) => chip("data-rcwhen", k, l, recapWhen === k)).join("")}</div>
+    <div class="rcpick" role="group" aria-label="Who">${["Everyone"].concat(people).map(n => chip("data-rcwho", n, n, recapWho === n)).join("")}</div>`;
+  let any = false, copy = [];
+  who.forEach(n => {
+    const items = recapItems(n, from, to); if (!items.length) return;
+    any = true; copy.push(recapText(n, items));
+    const cnt = k => items.filter(x => x.kind === k).length;
+    html += `${who.length > 1 ? `<h3 class="rcwho">${esc(n)}</h3>` : ""}<p class="rcsum">${[cnt("done") && cnt("done") + " finished", cnt("changed") && cnt("changed") + " changed or waiting", cnt("stuck") && cnt("stuck") + " stuck", cnt("worked") && cnt("worked") + " worked on", cnt("added") && cnt("added") + " added"].filter(Boolean).join(", ")}.</p>`;
+    RC_GROUPS.forEach(([k, h, warn]) => {
+      const l = items.filter(x => x.kind === k); if (!l.length) return;
+      html += `<div class="rcgrp${warn ? " warn" : ""}">${esc(h)}</div>` + l.map(x => `<button type="button" class="rcitem" data-work="${esc(x.t.id)}"><b>${esc(x.t.title)}</b><span class="rcmeta">${esc(LBL(x.t.team) || "No team")} &middot; now ${esc(WLABEL[x.t.status] || "To do")}${x.files ? " &middot; " + plural(x.files, "file") + " added" : ""}</span>${x.notes.map(n => `<q>${linkify(n)}</q>`).join("")}</button>`).join("");
+    });
+  });
+  if (!any) html += `<p class="lead">${recapWho === "Everyone" ? "Nobody" : esc(recapWho)} changed anything on Work ${recapWhen === "week" ? "in the last 7 days" : recapWhen}.</p>`;
+  else html += `<div class="btns"><button class="btn ghost" type="button" id="rccopy">Copy this recap</button></div>`;
+  box.innerHTML = html;
+  box.querySelectorAll("[data-wv]").forEach(b => b.addEventListener("click", () => { workView = b.dataset.wv; try { localStorage.setItem("reupHubWorkView", workView); } catch (e) {} drawWork(); }));
+  box.querySelectorAll("[data-rcwhen]").forEach(b => b.addEventListener("click", () => { recapWhen = b.dataset.rcwhen; drawRecap(); }));
+  box.querySelectorAll("[data-rcwho]").forEach(b => b.addEventListener("click", () => { recapWho = b.dataset.rcwho; drawRecap(); }));
+  box.querySelectorAll("[data-work]").forEach(b => b.addEventListener("click", () => openWork(b.dataset.work)));
+  const c = $("rccopy"); if (c) c.addEventListener("click", () => { copyText(copy.join("\n\n")); toast("Copied. Paste it in a message or an email."); });
+}
 function wrow(t, sub) {
   const [dw, dc] = dueWords(t.due, false);
   return `<button type="button" class="wrow ${TEAMCLS[t.team] || "t-none"}" data-work="${esc(t.id)}"><span class="wrname">${esc(t.title)}</span>
@@ -2405,12 +2502,15 @@ function drawWork() {
   let html = `<div class="seg" id="workseg" role="group" aria-label="Work view">
       <button type="button" data-wv="mine" aria-pressed="${workView === "mine"}">My work</button>
       <button type="button" data-wv="overview" aria-pressed="${workView === "overview"}">Overview</button>
-      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button></div>`;
+      <button type="button" data-wv="team" aria-pressed="${workView === "team"}">Teams</button>
+      <button type="button" data-wv="recap" aria-pressed="${workView === "recap"}">Recap</button></div>`;
   if (W.canManage && !W.unlocked && !W.stale) html += `<div class="wlockbar"><span>Leaders-only tasks are hidden until you enter your PIN.</span><button type="button" class="btn" data-wunlock>Enter PIN</button></div>`;
   if (workView === "overview") {
     /* The same overview leaders see, for everyone: what's stuck, late, finished (and whether anything was turned in), and what's coming. */
     html += `<div class="whello"><h2>Team overview</h2></div>${overviewTop()}
       <div class="lo-grid">${overviewCards()}</div>`;
+  } else if (workView === "recap") {
+    box.innerHTML = html; return drawRecap();
   } else if (workView === "mine") {
     /* My work: only what matters now, as plain cards. Everything else folds away. Tap a card to open the task. */
     const d = t => t.due ? daysAway(t.due) : 9999;
@@ -2431,7 +2531,7 @@ function drawWork() {
     html += wfoldPlain("Later", later);
     html += wfoldPlain("Turned in, waiting on review", turnedIn);
     html += wfoldPlain("You're helping", helping);
-    if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own when it's time</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(t.opens))).join("")}</div></details>`;
+    if (notYet.length) html += `<details class="dhist"><summary>Coming later (${notYet.length}): these show up on their own 3 weeks before they are due</summary><div class="wrows">${notYet.map(t => wrow(t, "Shows up " + wShortDate(wShowsOn(t)))).join("")}</div></details>`;
     const done = mine.filter(t => wRecentDone(t, 14));
     if (done.length) html += wfoldPlain("Finished in the last 2 weeks", done);
     html += `<button class="btn" type="button" id="wnew" style="margin-top:14px">Add a task</button>`;
@@ -2612,6 +2712,7 @@ function openWork(id) {
   fillWork();
 }
 function fillWork(keep) {
+  wEnd = null;   // the "How did it end?" pick starts fresh each time the task redraws
   const W = WORK, box = $("wbody");
   if (!W || !box) return;
   const isNew = !openWorkId;
@@ -2642,6 +2743,9 @@ function fillWork(keep) {
     : t.status === "review" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0 0 6px">Turned in. ${esc(by && by !== me ? by + " reviews it" : "A leader reviews it")}, and you'll see the answer here.</p>${by === me || amLeader ? "" : `<button type="button" class="linkish" id="wtakeback">Take it back to change something</button>`}</div>`
     : `<div class="tsec ttin"><div class="tl">2. Turn it in</div>${filesHtml}
       <div class="tdue"><label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
+      ${selfDone ? `<div class="tl wend">How did it end?</div><div class="wchips" id="wendc">${WEND.map(([k, l]) => `<button type="button" data-wend="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
+        <div id="wmovebox" hidden><div class="tdue" style="margin-top:8px"><input type="date" id="wmovedate" aria-label="The new date"></div></div>
+        <p class="small" id="wendhint" style="margin:6px 0 10px">Pick one, so the team can tell finished work from plans that changed.</p>` : ""}
       <textarea id="wtin" class="tarea" placeholder="${esc(selfDone ? "A note about what you did (optional). Paste a link here if the work lives somewhere else." : "A note for " + by + " (optional). Paste a link here if the work lives somewhere else.")}"></textarea>
       <details class="wnextbox"${t.title && wNextOpen ? " open" : ""}><summary>What's next, and who does it? (optional)</summary>
         <input class="ainput" id="wnext" type="text" maxlength="200" placeholder="For example: Post the merch drop">
@@ -2676,7 +2780,7 @@ function fillWork(keep) {
     ${showTurnIn || reviewHtml ? "" : `<div class="tsec"><div class="tl">Files</div>${filesHtml}${mine ? `<label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label>` : ""}</div>`}
     <div class="tsec"><div class="tl">${showTurnIn ? "3. Updates" : "Updates"}</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
       <div class="wtag"><span>Tag someone:</span>${others.map(n => `<button type="button" data-wtag="${esc(n)}">@${esc(n)}</button>`).join("")}</div>
-      ${(t.updates || []).length ? `<ul class="tlog">${t.updates.map(u => `<li><span>${esc(u.who)} &middot; ${stamp(u.at)}</span>${linkify(u.text)}</li>`).join("")}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
+      ${(t.updates || []).length ? `<ul class="tlog">${wHistory(t.updates)}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
   if (keep) {
     if (keep.upd && $("wupd")) $("wupd").value = keep.upd;
@@ -2753,9 +2857,32 @@ function fillWork(keep) {
       wQueue("saveWork", ["", { title: next, owners: [nextPick], team: t.team, details: `Follows on from "${t.title}", from ${me}.` + (note ? "\n" + note : "") + (fl ? "\nFiles:\n" + fl : "") }], "Next step sent to " + nextPick + ".");
       wNextOpen = false;
     }
-    if (selfDone) { if (note) wQueue("workUpdate", [t.id, note], "Note posted."); save("saveWork", [t.id, { status: "done" }], "Nice work. Marked done."); }
+    if (selfDone) {
+      if (!wEnd) { msg("Pick how it ended first."); return; }
+      if (wEnd === "moved") {
+        const nd = ($("wmovedate") || {}).value || "";
+        if (!nd) { msg("Pick the new date."); return; }
+        wQueue("workUpdate", [t.id, "Moved to " + wShortDate(nd) + (note ? ": " + note : "")], "Note posted.");
+        wEnd = null; save("saveWork", [t.id, { due: nd }], "Moved to " + wShortDate(nd) + ". It stays on your list.");
+        return;
+      }
+      if (wEnd === "changed" && !note) { msg("Say what changed in the note box, so the team knows."); $("wtin").focus(); return; }
+      const line = wEnd === "changed" ? "Plan changed: " + note : wEnd === "notneeded" ? "Not needed" + (note ? ": " + note : "") : note;
+      if (line) wQueue("workUpdate", [t.id, line], "Note posted.");
+      wEnd = null; save("saveWork", [t.id, { status: "done" }], "Nice work. Marked done.");
+    }
     else save("saveWork", [t.id, { status: "review", note: note }], "Turned in. " + by + " will review it.");
   });
+  box.querySelectorAll("[data-wend]").forEach(b => b.addEventListener("click", () => {
+    wEnd = b.dataset.wend;
+    box.querySelectorAll("[data-wend]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $("wmovebox").hidden = wEnd !== "moved";
+    const h = $("wendhint"), tb2 = $("wturnin");
+    h.textContent = WEND.find(x => x[0] === wEnd)[2];
+    tb2.textContent = wEnd === "moved" ? "Move it" : "Mark it done";
+    if (wEnd === "changed") { const nb = box.querySelector(".wnextbox"); if (nb) nb.open = true; $("wtin").focus(); }
+    if (wEnd === "moved") $("wmovedate").focus();
+  }));
   const stb = $("wstart"); if (stb) stb.addEventListener("click", () => save("saveWork", [t.id, { status: "doing" }], "Marked as started."));
   const skb = $("wstuckbtn"); if (skb) skb.addEventListener("click", () => { $("wstuck").hidden = false; $("wwhy").focus(); });
   const tkb = $("wtakeback"); if (tkb) tkb.addEventListener("click", () => save("saveWork", [t.id, { status: "doing", takeBack: true }], "Taken back. Turn it in again when it's ready."));

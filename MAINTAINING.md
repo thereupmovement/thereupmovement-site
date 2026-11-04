@@ -295,6 +295,22 @@ and Past only. It opens on On the day when a distribution is today. Hub admins c
 Change this date (on the date's page), both through `schedEdit`. Past results come from `liveStats_().recent`,
 passed on as `impact.recent`.
 
+## Recap, "How did it end?", and the Later fold (3 Nov 2026)
+
+All on the page (hub/index.html), from the same Work data; no server change.
+- **Work, Recap** (`drawRecap`, `recapItems`): pick Today, Yesterday or Last 7 days and a person (or Everyone). Each task
+  they touched shows with their own words, grouped: Plan changed or still waiting, Stuck, Finished, Worked on, New tasks.
+  A finished task counts as "plan changed or still waiting" when its note starts with "Moved to", "Plan changed" or
+  "Not needed", or uses words like moved, decided, keep, instead, until, waiting. "Copy this recap" copies it as text.
+  Ask reads the same list (the "WHAT PEOPLE DID ON WORK" part of `hubContext`), so "What did Walter do today?" works.
+- **How did it end?** (`WEND`): when someone marks their own task done they pick Done as planned, Moved to a new date
+  (the task stays open with the new due date and a "Moved to ..." update), Plan changed (a note is required; the
+  "What's next" box opens) or Not needed. Turning work in for review is unchanged.
+- **Task history** (`wHistory`): the automatic lines (`WSYS`: status, owners, due dates, team) fold into one small grey
+  line; people's own words show as before.
+- **Later fold** (`wNotYet`, `wShowsOn`): a task not started and due more than 3 weeks away sits in "Coming later" on My
+  work and shows up by itself 3 weeks before it is due. A "Shows up on" date set by a leader still wins.
+
 ## Group sign-up (server version 59, 3 Nov 2026)
 
 The volunteer form asks "Who is coming?". A group leader adds the group's name and how many people in all. They do
