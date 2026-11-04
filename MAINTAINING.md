@@ -240,6 +240,16 @@ row past a tab's end fails. `room_(sheet, rows)` in Code.gs adds the missing row
 `getRange(sheet.getLastRow() + 1, ...)` write on a tab that could be full. (This is what broke "We got more of this"
 on 3 Nov 2026.) When a save fails, the Hub now shows the server's reason after "That didn't save:".
 
+## Lessons learned
+
+Add one line whenever something goes wrong, so it does not happen twice.
+- 3 Nov 2026: a server change passed every page test but broke every Work save ("next is not defined": a variable
+  declared inside the lock's try block and used after it). The page tests use a stand-in server. After any server change,
+  save one real task in the Hub before calling it done.
+- 3 Nov 2026: two people (or two AI sessions) editing the Apps Script project at once overwrite each other; whoever saves
+  last wins. One editor at a time, and reload the editor before changing anything.
+- 3 Nov 2026: Deploy ships whatever is saved at that moment. Check what is saved before clicking it.
+
 ## Things that break the app if changed by hand
 
 - Sheet tab names and column order on the Hub and volunteer sheets: the server finds data by tab name
