@@ -877,6 +877,7 @@ body:not(.ready) main, body:not(.ready) .tabs{visibility:hidden}
 /* Task history: people's own words stand out; automatic lines (status, owners, dates) are small and grey */
 .tlog li.tsys{padding:5px 0;font-size:12.5px;color:var(--muted)}
 .tlog li.tsys span{display:inline;margin:0 6px 0 0}
+.wdonewhen{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--red-soft);font-size:14.5px}
 .wstep{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:3px 0 0}
 .wproj .wrows{margin:4px 0 6px}
 /* How did it end? (when marking a task done) */
@@ -2776,6 +2777,7 @@ function fillWork(keep) {
   } else if (steps.length || addStep) {
     projHtml = `<div class="tsec wproj">${steps.length ? `<div class="tl">Steps (${wProgress(t.id)})</div><div class="wrows">${steps.map(sRow).join("")}</div>` : ""}${addStep}</div>`;
   }
+  const doneWhen = ((t.details || "").match(/^\s*Done when:\s*(.+)$/im) || [])[1] || "";   // a "Done when:" line in the details shows where the task is closed
   /* Turning in: the people on a task turn it in; whoever assigned it (or a leader) approves it or sends it back. */
   const by = t.createdBy || "", meP = (W.people || []).find(p => p.name === me), amLeader = !!(meP && meP.leader);
   const iDo = !isNew && !G && onTask(t, me), selfDone = !by || by === me || manage;
@@ -2791,7 +2793,7 @@ function fillWork(keep) {
     : t.status === "review" ? `<div class="tsec"><div class="tl">Status</div><p style="margin:0 0 6px">Turned in. ${esc(by && by !== me ? by + " reviews it" : "A leader reviews it")}, and you'll see the answer here.</p>${by === me || amLeader ? "" : `<button type="button" class="linkish" id="wtakeback">Take it back to change something</button>`}</div>`
     : `<div class="tsec ttin"><div class="tl">2. Turn it in</div>${filesHtml}
       <div class="tdue"><label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label></div>
-      ${selfDone ? `<div class="tl wend">How did it end?</div><div class="wchips" id="wendc">${WEND.map(([k, l]) => `<button type="button" data-wend="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
+      ${doneWhen ? `<p class="wdonewhen"><b>Done when:</b> ${linkify(doneWhen)}</p>` : ""}${selfDone ? `<div class="tl wend">How did it end?</div><div class="wchips" id="wendc">${WEND.map(([k, l]) => `<button type="button" data-wend="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
         <div id="wmovebox" hidden><div class="tdue" style="margin-top:8px"><input type="date" id="wmovedate" aria-label="The new date"></div></div>
         <p class="small" id="wendhint" style="margin:6px 0 10px">Pick one, so the team can tell finished work from plans that changed.</p>` : ""}
       <textarea id="wtin" class="tarea" placeholder="${esc(selfDone ? "A note about what you did (optional). Paste a link here if the work lives somewhere else." : "A note for " + by + " (optional). Paste a link here if the work lives somewhere else.")}"></textarea>
@@ -2809,9 +2811,9 @@ function fillWork(keep) {
   box.innerHTML = `<p class="tmsg wsticky" id="wmsg" role="status" aria-live="polite"></p><div class="k">${isNew ? "New task" : esc(LBL(t.team) || "Task")}${!isNew && t.updatedBy ? ` &middot; changed by ${esc(t.updatedBy)}, ${stamp(t.updatedAt)}` : ""}</div>
     ${(isNew || manage) && !G ? `<input class="wtitle" id="wtitle" type="text" maxlength="200" placeholder="What needs to get done?" value="${esc(t.title)}" aria-label="Task title">` : `<h3 id="sheetTitle">${esc(t.title)}</h3>`}
     ${G ? `<p class="small" style="margin:4px 0 0">${GD ? "Leadership decision" : "Grant readiness" + (t.gate ? ": " + esc(t.gate) : "")}. Only leaders see this. It is the same item as on the Goals tab, so a change here shows there too.</p>` : ""}
-    ${projHtml}${reviewHtml}${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">${isNew ? "Details" : showTurnIn ? "1. What to do" : "What to do"}</div>${!isNew && by && by !== me ? `<p class="small" style="margin:0 0 6px">From ${esc(by)}.</p>` : ""}${isNew ? `<textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea>`
+    ${projHtml}${reviewHtml}${goalDetHtml}<div class="tsec"${G ? " hidden" : ""}><div class="tl">${isNew ? "Details" : showTurnIn ? "1. What to do" : "What to do"}</div>${!isNew && by && by !== me ? `<p class="small" style="margin:0 0 6px">From ${esc(by)}.</p>` : ""}${isNew ? `<textarea id="wdet" class="tarea" placeholder="What to do, links, who to call. End with a line like: Done when: the flyer is posted.">${esc(t.details || "")}</textarea>`
       : `<p class="wtext" id="wdetview">${t.details ? linkify(t.details) : "None yet."}</p>${mine && !G ? `<button type="button" class="linkish" id="wdetedit">Edit details</button>
-      <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What done looks like, links, sizes, who to call.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
+      <div id="wdetbox" hidden><textarea id="wdet" class="tarea" placeholder="What to do, links, who to call. End with a line like: Done when: the flyer is posted.">${esc(t.details || "")}</textarea><button type="button" class="tbtn" id="wdetsave">Save details</button></div>` : ""}`}</div>
     ${GD ? decisionHtml : isNew || G || reviewHtml ? "" : turnHtml}
     <details class="tmore" id="wmore"${isNew || wMoreOpen ? " open" : ""}><summary><span>Owner, due date and more</span><em>${esc([t.due ? dueWords(t.due, t.status === "done")[0] : "No due date", t.owners.join(", ")].filter(Boolean).join(" \u00b7 "))}</em></summary>
     ${manage && !isNew && !G ? `<div class="tsec"><div class="tl">Status (leaders)</div><div class="tseg">${WSTAT.filter(([k]) => k !== "review").map(([k, l]) => `<button type="button" class="ws-${k}" data-ws="${k}" aria-pressed="${t.status === k}">${l}</button>`).join("")}</div></div>` : ""}
@@ -5373,7 +5375,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104060000";
+  var BUILD = "20261104061500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
