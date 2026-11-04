@@ -1984,7 +1984,7 @@ async function loadWork(quiet) {
     if (gen !== wGen || wqRunning || wq.length) { loadingWork = false; return; }
     WORK = r; workAt = Date.now();
     /* Keep a copy on this phone so the list shows instantly next time. Leaders-only tasks are never stored. */
-    try { localStorage.setItem("reupHubWork_" + KEY, JSON.stringify(Object.assign({}, r, { stale: true, tasks: (r.tasks || []).filter(t => !t.private) }))); } catch (e) {}
+    wCache(r);
     if (!workTeam) { const me = (WORK.people || []).find(p => p.name === WORK.me); workTeam = WORK.canManage ? "Everyone" : ((me && me.teams && me.teams[0]) || "Everyone"); }
     if (!(openWorkId !== null && quiet)) drawWork();
   } catch (e) { if (!WORK) $("work").innerHTML = `<p class="lead">Couldn't load this right now. Try again in a minute.</p>`; }
@@ -2027,7 +2027,7 @@ async function wRun() {
     const j = wq.shift();
     try {
       const r = await run(j.fn, KEY, ...j.args, TOK);
-      if (r && !wq.length) { WORK = r; workAt = Date.now(); }
+      if (r && !wq.length) { WORK = r; workAt = Date.now(); wCache(r); }
       if (r && r.savedId && openWorkId === "") openWorkId = r.savedId;
       if (!wq.length) wNote(j.ok);
       if (j.after) j.after(r);
@@ -2046,6 +2046,9 @@ function wKeep() {
   const sb = $("wstuck");
   return { upd: v("wupd") || "", det: v("wdet"), notes: v("wnotes"), decide: v("wdecide"), why: v("wwhy"), stuckOpen: !!(sb && !sb.hidden) };
 }
+/* The copy of Work this phone opens with. Saved after every load and every save, so reopening the Hub
+   never shows a list from before your last change. */
+function wCache(r) { try { localStorage.setItem("reupHubWork_" + KEY, JSON.stringify(Object.assign({}, r, { stale: true, tasks: (r.tasks || []).filter(t => !t.private) }))); } catch (e) {} }
 function wRefresh(keep) {
   if (sheet.open && openWorkId !== null && $("wbody")) fillWork(keep || wKeep()); else drawWork();
 }
@@ -2456,7 +2459,7 @@ function fillWork(keep) {
   const nb = box.querySelector(".wnextbox"); if (nb) nb.addEventListener("toggle", () => { wNextOpen = nb.open; });
   box.querySelectorAll("[data-wtag]").forEach(b => b.addEventListener("click", () => { const u = $("wupd"); u.value = (u.value ? u.value.replace(/\s*$/, " ") : "") + "@" + b.dataset.wtag + " "; u.focus(); }));
   const pb = $("wpassbtn"); if (pb) pb.addEventListener("click", () => { $("wpass").hidden = false; });
-  const ps = $("wpasssave"); if (ps) ps.addEventListener("click", () => { if (!passPick) { msg("Pick who to pass it to."); return; } save("saveWork", [t.id, { handTo: passPick, note: ($("wpassnote").value || "").trim() }], "Passed to " + passPick + ". They got a message."); });
+  const ps = $("wpasssave"); if (ps) ps.addEventListener("click", () => { if (!passPick) { msg("Pick who to pass it to."); return; } save("saveWork", [t.id, { handTo: passPick, note: ($("wpassnote").value || "").trim() }], "Passed to " + passPick + ". It's off your list, and they got a message."); sheet.close(); });
   const tb = $("wturnin"); if (tb) tb.addEventListener("click", () => {
     const note = ($("wtin").value || "").trim();
     const next = (($("wnext") || {}).value || "").trim();
@@ -4858,7 +4861,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103220000";
+  var BUILD = "20261103230000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
