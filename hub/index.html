@@ -1283,7 +1283,7 @@ function wireRsvp(e) {
    Same numbers as each event's own page; volunteers and storage load on their own once (they need the PIN). */
 function evStats(e) {
   const ve = VOL && VOL.events ? VOL.events.find(x => x.date === e.date) : null;
-  const vgo = ve ? vOn(e.date).filter(p => vStatus(p, e.date) !== "cancelled").length : null;
+  const vgo = ve ? vCount(e.date) : null;
   const items = OPS && OPS.inventory && OPS.inventory.onHand && Array.isArray(OPS.inventory.onHand.items) ? OPS.inventory.onHand.items : null;
   const set = items ? items.filter(i => i.ev && String(i.ev).toLowerCase().includes(String(e.name).toLowerCase())) : null;
   return { need: ve ? +ve.needed || 0 : 0, vgo, team: goingList(e).filter(x => x.a === "yes").length, units: set ? set.reduce((a, i) => a + (+i.units || 0), 0) : null, val: set ? set.reduce((a, i) => a + (+i.val || 0), 0) : 0 };
@@ -1354,11 +1354,11 @@ function evTeamHTML(e, n) {
   const set = items ? items.filter(i => i.ev && String(i.ev).toLowerCase().includes(String(e.name).toLowerCase())) : null;
   const units = set ? set.reduce((a, i) => a + (+i.units || 0), 0) : 0, val = set ? set.reduce((a, i) => a + (+i.val || 0), 0) : 0;
   const tile = (v, l, bad) => `<div${bad ? ' class="bad"' : ""}><b>${esc(String(v))}</b><span>${esc(l)}</span></div>`;
-  const need = ve ? +ve.needed || 0 : 0, short = need > vgo.length;
+  const need = ve ? +ve.needed || 0 : 0, vn = vHeads(vgo), short = need > vn;
   const sec = (t, body) => `<div class="tsec"><div class="tl">${t}</div>${body}</div>`;
   const loading = `<p class="small" style="margin:0">Loading...</p>`;
-  return `<div class="lo-mine ev-nums" style="margin-top:12px">${ve ? tile(vgo.length + (need ? " of " + need : ""), "volunteers signed up", short) : ""}${tile(team, "from the team going")}${set ? tile(units.toLocaleString(), "units set aside") : ""}</div>
-    ${BOOT.vol ? sec("Volunteers", ve ? `<p style="margin:0">${vgo.length} coming${need ? ` of ${need} needed` : ""}.${short ? ` <b>${need - vgo.length} more needed.</b>` : ""}</p>${vRemindNote(e.date, vgo)}<div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="evVol">Who's coming, reminders and recruiting</button></div>` : VOL ? `<p class="small" style="margin:0">This date isn't on the volunteer sign-up sheet yet.</p>` : TOK ? loading : `<p class="small" style="margin:0">Open Volunteers under More to see who's signed up.</p>`) : ""}
+  return `<div class="lo-mine ev-nums" style="margin-top:12px">${ve ? tile(vn + (need ? " of " + need : ""), "volunteers signed up", short) : ""}${tile(team, "from the team going")}${set ? tile(units.toLocaleString(), "units set aside") : ""}</div>
+    ${BOOT.vol ? sec("Volunteers", ve ? `<p style="margin:0">${vn} coming${need ? ` of ${need} needed` : ""}.${short ? ` <b>${need - vn} more needed.</b>` : ""}</p>${vRemindNote(e.date, vgo)}<div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="evVol">Who's coming, reminders and recruiting</button></div>` : VOL ? `<p class="small" style="margin:0">This date isn't on the volunteer sign-up sheet yet.</p>` : TOK ? loading : `<p class="small" style="margin:0">Open Volunteers under More to see who's signed up.</p>`) : ""}
     ${BOOT.ops ? sec("Set aside for this event", set ? (set.length ? `<div class="list">${set.slice(0, 8).map(i => `<div class="irow"><div><b>${esc(i.desc || i.sub || "Item")}</b></div><em>${(+i.units || 0).toLocaleString()}</em></div>`).join("")}</div><p class="small" style="margin:6px 0 0">${set.length > 8 ? `And ${set.length - 8} more. ` : ""}About $${Math.round(val).toLocaleString()} in goods.</p>` : `<p class="small" style="margin:0">Nothing set aside yet. In Ops, Inventory, tap an item and pick this event.</p>`) + `<div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="evStock">Open storage</button></div>` : TOK ? loading : `<p class="small" style="margin:0">Open Ops under More to see what's in storage.</p>`) : ""}
     ${sec("On the day", `<p class="small" style="margin:0 0 8px">${n === 0 ? "Check-in is open today." : "Check-in opens here on the day of the event."}</p><div class="btns" style="margin-top:0"><button class="btn ghost" type="button" data-guide>Event Lead Guide</button></div>`)}
     ${sec("After", `<p class="small" style="margin:0">Households, people and volunteer hours fill in from check-ins, and the website updates on its own.</p>`)}`;
@@ -2912,7 +2912,10 @@ const vPeople = () => (VOL ? VOL.people : []).filter(p => !p.hidden);
 const vPerson = id => (VOL ? VOL.people : []).find(p => p.id === id);
 const vOn = date => vPeople().filter(p => p.dates.includes(date));
 const vStatus = (p, date) => (p.shifts[date] && p.shifts[date].status) || "signed";
-const vCount = date => vOn(date).filter(p => vStatus(p, date) !== "cancelled").length;
+// A group leader's row stands for the whole group (group.size people, counting the leader).
+const vHeads = list => list.reduce((a, p) => a + (p.group ? Math.max(1, +p.group.size || 1) : 1), 0);
+const vCount = date => vHeads(vOn(date).filter(p => vStatus(p, date) !== "cancelled"));
+const vGroupNeed = g => Math.max(0, (+g.size || 1) - 1 - g.joined.length);
 const vTeam = date => { const names = new Set(); Object.keys(typeof GOING !== "undefined" ? GOING : {}).forEach(k => { if (k.slice(0, 10) === date) GOING[k].forEach(x => { if (x.a === "yes") names.add(x.who); }); }); return [...names]; };
 const vIsNew = p => /new/i.test(p.returning || "");
 const vNeedsOrient = p => !p.oriented && vIsNew(p);
@@ -2924,6 +2927,7 @@ function vBadges(p) {
   else if (vIsNew(p)) b.push(`<em class="vb vwarn">${p.orientation && !/none of these/i.test(p.orientation) ? "Orientation " + esc(p.orientation.replace(/ at .*/, "")) : "Needs orientation"}</em>`);
   if (vNoPhotos(p)) b.push(`<em class="vb vno">No photos</em>`);
   if (/^no/i.test(p.adult || "")) b.push(`<em class="vb vwarn">Under 18</em>`);
+  if (p.group) b.push(`<em class="vb vok">Group of ${esc(p.group.size)}</em>`, vGroupNeed(p.group) ? `<em class="vb vwarn">Release needed: ${vGroupNeed(p.group)}</em>` : "");
   return b.join("");
 }
 function vTally(p) {
@@ -2990,11 +2994,11 @@ function volEvent(date) {
       <div class="k">${esc(vShort(date))}${/tentative/i.test(e.status) ? " &middot; tentative" : ""}</div><h3 id="sheetTitle">${esc(e.name)}</h3>
       <p class="small" style="margin:0 0 10px">${[e.time, e.place].filter(Boolean).map(esc).join(" &middot; ")}</p>
       <div class="tsec"><div class="tl">Volunteers needed</div><div class="vneed"><input class="ainput" id="vneed" type="number" min="0" max="500" inputmode="numeric" value="${esc(e.needed || "")}" placeholder="How many"><button type="button" class="tbtn" id="vneedsave">Save</button></div>
-        <p class="small" style="margin:6px 0 0">${going.length} volunteer${going.length === 1 ? "" : "s"} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}. This number also goes on the volunteer sign-up sheet.</p>
+        <p class="small" style="margin:6px 0 0">${vHeads(going)} volunteer${vHeads(going) === 1 ? "" : "s"} coming${e.needed ? " of " + esc(e.needed) + " needed" : ""}${going.some(p => p.group) ? ", counting everyone in each group" : ""}. This number also goes on the volunteer sign-up sheet.</p>
         <p class="small" style="margin:6px 0 0">${vTeam(date).length ? "From the team: " + esc(vTeam(date).join(", ")) : "Nobody from the team has said they are going yet."}</p></div>
       ${nums.length && !isPast ? `<div class="tsec"><div class="tl">Reminder text</div><div class="abtns"><button type="button" class="tbtn" id="vnums">Copy ${nums.length} phone number${nums.length === 1 ? "" : "s"}</button><button type="button" class="tbtn ghost" id="vtext">Copy the reminder message</button></div>
         <p class="small" style="margin:6px 0 0">Paste the numbers into a new group text, then paste the message.</p>${vRemindNote(date, going)}</div>` : ""}
-      ${!isPast && +e.needed > going.length ? `<div class="tsec"><div class="tl">${+e.needed - going.length} more needed</div><button type="button" class="tbtn" id="vrecone">Copy a recruiting post</button></div>` : ""}
+      ${!isPast && +e.needed > vHeads(going) ? `<div class="tsec"><div class="tl">${+e.needed - vHeads(going)} more needed</div><button type="button" class="tbtn" id="vrecone">Copy a recruiting post</button></div>` : ""}
       <div class="tsec"><div class="tl">${isPast ? "Who came" : "Who's coming"}</div>
         ${on.map(p => { const s = p.shifts[date] || {}, st = s.status || "signed"; return `<div class="vcard">
           <div class="vtop"><button type="button" class="vname" data-vpo="${esc(p.id)}">${esc(p.name || "No name")}</button>${p.phone ? `<a class="vcall" href="tel:${vDigits(p.phone)}">${esc(p.phone)}</a>` : ""}</div>
@@ -3027,6 +3031,10 @@ function volPerson(id) {
     vOpen(`<div class="atop"><button class="btn" type="button" id="vpsave">Save note</button><button class="btn ghost" type="button" id="vclose">Close</button></div><p class="tmsg" id="vmsg" role="status" aria-live="polite"></p>
       <div class="k">Volunteer</div><h3 id="sheetTitle">${esc(p.name || "No name")}</h3><div class="vbs">${vBadges(p)}</div>
       <div class="abtns" style="margin:10px 0">${p.phone ? `<a class="tbtn" href="tel:${vDigits(p.phone)}">Call ${esc(p.phone)}</a><a class="tbtn ghost" href="sms:${vDigits(p.phone)}" target="_top">Text</a>` : ""}${p.email ? `<a class="tbtn ghost" href="mailto:${esc(p.email)}">Email</a>` : ""}</div>
+      ${p.group ? `<div class="tsec"><div class="tl">Group: ${esc(p.group.name)}</div><p style="margin:0">${esc(p.group.size)} people in all, counting ${esc(String(p.name).split(" ")[0])}, who leads the group and does orientation for it. Everyone else gets a short briefing when they arrive.</p>
+        <p style="margin:8px 0 0"><b>Liability release:</b> ${p.group.joined.length} of ${Math.max(0, p.group.size - 1)} others agreed.${vGroupNeed(p.group) ? ` Release needed for ${vGroupNeed(p.group)} more. Each person agrees through the group's link.` : ""}</p>
+        ${p.group.joined.length ? `<p class="small" style="margin:6px 0 0">Agreed: ${p.group.joined.map(j => esc(j.name) + (/^no/i.test(j.adult) ? " (under 18, parent agreed)" : "")).join(", ")}</p>` : ""}
+        <button type="button" class="tbtn ghost" id="vglink" style="margin-top:8px">Copy the group's link</button></div>` : ""}
       <div class="tsec"><div class="tl">So far</div><p style="margin:0">${p.dates.length} date${p.dates.length === 1 ? "" : "s"} signed up, came ${t.came} time${t.came === 1 ? "" : "s"}, ${t.hrs} hours.</p>
         ${p.dates.length ? `<div class="vdates">${p.dates.map(d => { const e = evs.find(x => x.date === d); const st = vStatus(p, d); return `<div class="vkv"><span>${esc(vShort(d))}</span><b>${esc(e ? e.name : (p.shifts[d] && p.shifts[d].event) || "")} &middot; ${vLabel(st)}${p.shifts[d] && p.shifts[d].hours ? ", " + p.shifts[d].hours + " hrs" : ""}</b></div>`; }).join("")}</div>` : ""}</div>
       <div class="tsec"><div class="tl">From their sign-up</div>
@@ -3034,6 +3042,7 @@ function volPerson(id) {
       <div class="tsec"><div class="tl">Team note</div><textarea class="tarea" id="vpnote" placeholder="Anything the next person should know: great with kids, has a truck, prefers check-in">${esc(p.note || "")}</textarea></div>
       <div class="tsec"><div class="abtns"><button type="button" class="tbtn ghost" id="vpor">${p.oriented ? "Orientation not done" : "Orientation done"}</button><button type="button" class="tbtn ghost" id="vphide">${p.hidden ? "Show in the lists again" : "Hide (a test or a duplicate)"}</button></div></div>`);
     $("vclose").addEventListener("click", () => sheet.close());
+    const gl = $("vglink"); if (gl) gl.addEventListener("click", () => { copyText(`Join ${p.group.name} at The ReUp Movement. Before the event, open this link and agree to the volunteer release (about a minute): ${p.group.link}`); toast("Copied. Send it to the group."); });
     $("vpsave").addEventListener("click", () => volCall("saveVolunteer", [id, { note: $("vpnote").value, name: p.name }], "Note saved."));
     $("vpor").addEventListener("click", () => volCall("saveVolunteer", [id, { oriented: !p.oriented, name: p.name }], "Saved."));
     $("vphide").addEventListener("click", () => volCall("saveVolunteer", [id, { hidden: !p.hidden, name: p.name }], p.hidden ? "Back in the lists." : "Hidden.").then(r => { if (r && !p.hidden) sheet.close(); }));
@@ -4861,7 +4870,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261103230000";
+  var BUILD = "20261103235500";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

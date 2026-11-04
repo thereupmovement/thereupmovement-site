@@ -328,12 +328,14 @@ button.vbtn{font:inherit;font-weight:700;font-size:16px;cursor:pointer}
 .vs{display:grid;gap:18px}
 .vs-lead{margin:0;color:var(--muted)}
 .vs-sec{border:0;margin:0;padding:0;display:grid;gap:14px}
+.vs [hidden]{display:none!important}
 .vs-sec legend{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:10px}
 .vs-field{display:grid;gap:6px}
 .vs-field>span{font-weight:700}
 .vs-field small,.vs-date small{display:block;color:var(--muted);font-size:14px;font-weight:400}
-.vs-field input[type=text],.vs-field input[type=tel],.vs-field input[type=email],.vs-field textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}
+.vs-field input[type=text],.vs-field input[type=tel],.vs-field input[type=email],.vs-field input[type=number],.vs-field textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}
 .vs-field textarea{min-height:88px;resize:vertical}
+.vs-link{word-break:break-all;font-size:14px;margin:0}
 .vs-field input:focus-visible,.vs-field textarea:focus-visible{outline:3px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
 .vs-opts{display:grid;gap:8px}
 .vs-two{grid-template-columns:1fr 1fr}
@@ -619,7 +621,7 @@ form.vs>.vs-btn{width:100%}
 
   function mount(root, opts) {
     opts = opts || {};
-    var id = "vs" + (++uid), F = null, sending = false;
+    var id = "vs" + (++uid), F = null, sending = false, askedGroup = false;
     root.innerHTML = '<div class="vs"><p class="vs-lead">Loading the dates...</p></div>';
     opts.api("volForm", []).then(function (f) { F = f; draw(); }, function () {
       root.innerHTML = '<div class="vs"><p class="vs-lead">The sign-up could not load right now. Check your connection and try again.</p><button type="button" class="vs-btn" data-vs-retry>Try again</button></div>';
@@ -651,7 +653,13 @@ form.vs>.vs-btn{width:100%}
         '<label class="vs-field"><span>First and last name</span><input type="text" name="name" autocomplete="name" maxlength="60" required></label>' +
         '<label class="vs-field"><span>Phone number</span><small>So we can reach you on event day.</small><input type="tel" name="phone" autocomplete="tel" inputmode="tel" maxlength="20" required></label>' +
         '<label class="vs-field"><span>Email</span><small>Your confirmation and reminders come here.</small><input type="email" name="email" autocomplete="email" inputmode="email" maxlength="120" required></label>' +
-        '<div class="vs-field"><span id="' + id + 'stl">Have you volunteered with ReUp before?</span>' + radios("status", [F.returning, F.isNew], "vs-two") + "</div></fieldset>" +
+        '<div class="vs-field"><span id="' + id + 'stl">Have you volunteered with ReUp before?</span>' + radios("status", [F.returning, F.isNew], "vs-two") + "</div>" +
+        '<div class="vs-field"><span>Who is coming?</span>' + radios("who", ["Just me", "I'm bringing a group"], "vs-two") + "</div></fieldset>" +
+        '<fieldset class="vs-sec" data-vs-grp hidden><legend>Your group</legend>' +
+        '<label class="vs-field"><span>Group name</span><small>For example: your company, church, school, team or family.</small><input type="text" name="groupName" maxlength="80"></label>' +
+        '<label class="vs-field"><span>How many people in all, counting you?</span><input type="number" name="groupSize" min="2" max="1000" inputmode="numeric"></label>' +
+        '<p class="vs-note">You lead the group. Only you do orientation; everyone else gets a short briefing when you arrive. You answer the standards and photo questions for the whole group. ' +
+        'The liability release is different: each person agrees to it for themselves. After you sign up, we give you a link to send them.</p></fieldset>' +
         '<fieldset class="vs-sec" data-vs-new hidden><legend>Orientation</legend>' +
         '<p class="vs-note">Every new volunteer joins one short orientation call on Google Meet before their first event. ' + escH(o.length) + " minutes, Central time.</p>" +
         '<div class="vs-field"><span>Pick your orientation session</span>' + radios("session", o.sessions.map(function (s) { return s.label; }).concat([F.noSession])) + "</div>" +
@@ -675,6 +683,7 @@ form.vs>.vs-btn{width:100%}
       var val = function (n) { var x = form.querySelector('[name="' + id + n + '"]:checked'); return x ? x.value : ""; };
       form.addEventListener("change", function (ev) {
         if (ev.target.name === id + "status") form.querySelector("[data-vs-new]").hidden = val("status") !== F.isNew;
+        if (ev.target.name === id + "who") form.querySelector("[data-vs-grp]").hidden = val("who") !== "I'm bringing a group";
         if (ev.target.name === id + "heard") { var h = form.querySelector('[name="heardOther"]'); h.hidden = val("heard") !== "Other"; if (!h.hidden) h.focus(); }
       });
       form.addEventListener("submit", function (ev) {
@@ -689,11 +698,15 @@ form.vs>.vs-btn{width:100%}
           help: [].map.call(form.querySelectorAll('[name="' + id + 'help"]:checked'), function (x) { return x.value; }),
           photo: val("photo"), updates: val("updates"), heard: heard, release: form.elements["release"] ? form.elements["release"].checked : undefined
         };
+        if (val("who") === "I'm bringing a group") { a.group = true; a.groupName = form.elements["groupName"].value; a.groupSize = form.elements["groupSize"].value; }
         var miss = null;
         if (a.name.trim().split(/\s+/).length < 2) miss = ["name", "Add your first and last name."];
         else if (a.phone.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "").length !== 10) miss = ["phone", "Add a 10-digit phone number."];
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim())) miss = ["email", "Add an email address we can reach you at."];
         else if (!a.status) miss = [id + "status", "Say whether you have volunteered with ReUp before."];
+        else if (!val("who")) miss = [id + "who", "Say whether you are coming alone or bringing a group."];
+        else if (a.group && a.groupName.trim().length < 2) miss = ["groupName", "Add your group's name."];
+        else if (a.group && !(+a.groupSize >= 2)) miss = ["groupSize", "Say how many people are coming in all, counting you."];
         else if (a.status === F.isNew && !a.session) miss = [id + "session", "Pick an orientation time."];
         else if (a.status === F.isNew && !a.agree) miss = ["agree", "Read the volunteer standards and tick the box to agree."];
         else if (a.status === F.isNew && !a.adult) miss = [id + "adult", "Say whether you are 18 or older."];
@@ -710,6 +723,7 @@ form.vs>.vs-btn{width:100%}
         err.textContent = "";
         sending = true;
         var b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Signing you up...";
+        askedGroup = !!a.group;
         opts.api("volSignup", [a]).then(done, function (e) {
           sending = false; b.disabled = false; b.textContent = "Sign me up";
           var m = String((e && e.message) || "");
@@ -734,15 +748,82 @@ form.vs>.vs-btn{width:100%}
             '<a class="vs-btn ghost" target="_blank" rel="noopener" href="' + escH(calLink("ReUp: " + d.name, d.date, d.time, 180, "Volunteering with The ReUp Movement.", d.address || d.place)) + '">Add to my calendar</a></div>';
         }).join("") + "</div>";
       }
+      if (r.group && r.group.link) {
+        html += '<div class="vs-card"><b>Your group: ' + escH(r.group.name) + " (" + escH(r.group.size) + ' people)</b><p>Send this link to everyone in your group. Each person opens it and agrees to the volunteer release before the event. It takes about a minute.</p>' +
+          '<p class="vs-link">' + escH(r.group.link) + '</p><div class="vs-row"><button type="button" class="vs-btn" data-vs-gcopy>Copy the link</button>' +
+          (navigator.share ? '<button type="button" class="vs-btn ghost" data-vs-gshare>Share it</button>' : "") + "</div></div>";
+      } else if (r.group === undefined && askedGroup) {
+        html += '<div class="vs-card"><b>Your group</b><p>We could not make your group\'s link just now. Email info@thereupmovement.org and we will send it.</p></div>';
+      }
       html += '<p class="vs-note">A confirmation email is on its way and should arrive within a few minutes. It has the link to your own volunteer page, where you can change a date, tell us you can\'t make it or move your orientation.</p>' +
         '<button type="button" class="vs-btn ghost" data-vs-again>Sign up someone else</button></div>';
       root.innerHTML = html;
       root.querySelector("[data-vs-again]").onclick = function () { draw(); };
+      if (r.group && r.group.link) {
+        var gmsg = "Join " + r.group.name + " volunteering with The ReUp Movement. Before the event, open this link and agree to the volunteer release (about a minute): " + r.group.link;
+        root.querySelector("[data-vs-gcopy]").onclick = function () { var b = this; (navigator.clipboard ? navigator.clipboard.writeText(gmsg) : Promise.reject()).then(function () { b.textContent = "Copied"; }, function () { window.prompt("Copy this:", gmsg); }); };
+        var sh = root.querySelector("[data-vs-gshare]"); if (sh) sh.onclick = function () { navigator.share({ text: gmsg }).catch(function () {}); };
+      }
       var h = root.querySelector(".vs-h"); if (h) { h.focus(); h.scrollIntoView({ block: "start" }); }
       if (opts.onDone) opts.onDone(r);
     }
   }
-  window.ReUpSignup = { mount: mount };
+  /* Someone in a group opens the group's link (?group=CODE) and agrees to the liability release for themselves. */
+  function join(root, code, opts) {
+    var id = "vj" + (++uid), G = null, sending = false;
+    root.innerHTML = '<div class="vs"><p class="vs-lead">Loading your group...</p></div>';
+    opts.api("grpGet", [code]).then(function (g) { G = g; draw(); }, function (e) {
+      var m = String((e && e.message) || "");
+      root.innerHTML = '<div class="vs"><p class="vs-lead">' + escH(/^This group/.test(m) ? m : "This page could not load right now. Check your connection and try again.") + "</p></div>";
+    });
+    function draw() {
+      var R = G.release;
+      root.innerHTML = '<form class="vs" novalidate><h3 class="vs-h">Join ' + escH(G.name) + "</h3>" +
+        '<p class="vs-note">' + escH(G.leader) + " signed your group up to volunteer with The ReUp Movement" + (G.dates.length ? " for:" : ".") + "</p>" +
+        (G.dates.length ? '<div class="vs-card">' + G.dates.map(function (d) { return "<p><b>" + escH(d.label) + "</b><br>" + escH([d.time, d.place].filter(Boolean).join(" · ") || "Time and place coming soon") + "</p>"; }).join("") + "</div>" : "") +
+        '<p class="vs-note">You do not need to do orientation. You get a short briefing when you arrive. Before the event, each person agrees to the release below for themselves.</p>' +
+        '<input class="vs-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+        '<fieldset class="vs-sec"><legend>About you</legend>' +
+        '<label class="vs-field"><span>First and last name</span><input type="text" name="name" autocomplete="name" maxlength="60" required></label>' +
+        '<label class="vs-field"><span>Phone number</span><small>So we can reach you on event day.</small><input type="tel" name="phone" autocomplete="tel" inputmode="tel" maxlength="20" required></label>' +
+        '<label class="vs-field"><span>Email (optional)</span><input type="email" name="email" autocomplete="email" inputmode="email" maxlength="120"></label>' +
+        '<div class="vs-field"><span>Are you 18 or older?</span>' + '<div class="vs-opts vs-two" role="radiogroup"><label class="vs-opt"><input type="radio" name="' + id + 'adult" value="Yes"><span>Yes</span></label><label class="vs-opt"><input type="radio" name="' + id + 'adult" value="No"><span>No</span></label></div></div>' +
+        '<label class="vs-field" data-vj-parent hidden><span>Parent or guardian\'s first and last name</span><small>A parent or legal guardian reads the release and ticks the box for you.</small><input type="text" name="parent" maxlength="60"></label></fieldset>' +
+        '<fieldset class="vs-sec vs-rel"><legend>' + escH(R.title) + "</legend><p>" + escH(R.intro) + "</p><ul>" + R.points.map(function (x) { return "<li>" + escH(x).replace(/\*(.+?)\*/g, "<b>$1</b>") + "</li>"; }).join("") + "</ul>" +
+        '<label class="vs-opt"><input type="checkbox" name="release"><span>' + escH(R.agree) + "</span></label></fieldset>" +
+        '<p class="vs-err" role="alert" aria-live="assertive"></p><button type="submit" class="vs-btn">I agree. Count me in</button></form>';
+      var form = root.querySelector("form");
+      var adult = function () { var x = form.querySelector('[name="' + id + 'adult"]:checked'); return x ? x.value : ""; };
+      form.addEventListener("change", function () { form.querySelector("[data-vj-parent]").hidden = adult() !== "No"; });
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        if (sending) return;
+        var err = form.querySelector(".vs-err"), E = form.elements;
+        var m = { website: E["website"].value, name: E["name"].value, phone: E["phone"].value, email: E["email"].value, adult: adult(), parent: E["parent"].value, release: E["release"].checked };
+        var miss = null;
+        if (m.name.trim().split(/\s+/).length < 2) miss = ["name", "Add your first and last name."];
+        else if (m.phone.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "").length !== 10) miss = ["phone", "Add a 10-digit phone number."];
+        else if (m.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.email.trim())) miss = ["email", "Check the email address, or leave it blank."];
+        else if (!m.adult) miss = [id + "adult", "Say whether you are 18 or older."];
+        else if (m.adult === "No" && m.parent.trim().split(/\s+/).length < 2) miss = ["parent", "Add the first and last name of the parent or guardian agreeing for you."];
+        else if (!m.release) miss = ["release", "Read the liability release and tick the box to agree."];
+        if (miss) { err.textContent = miss[1]; var el = form.querySelector('[name="' + miss[0] + '"]'); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); try { el.focus({ preventScroll: true }); } catch (e) {} } return; }
+        err.textContent = ""; sending = true;
+        var b = form.querySelector(".vs-btn"); b.disabled = true; b.textContent = "Saving...";
+        opts.api("grpJoin", [code, m]).then(function (r) {
+          root.innerHTML = '<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Thank you' + (r && r.first ? ", " + escH(r.first) : "") + ".</h3><p>You are set for " + escH(G.name) + ". Your group leader has the details for the day.</p>" +
+            '<button type="button" class="vs-btn ghost" data-vj-again>Add someone else in my group</button></div>';
+          root.querySelector("[data-vj-again]").onclick = function () { draw(); };
+          var h = root.querySelector(".vs-h"); if (h) { h.focus(); h.scrollIntoView({ block: "start" }); }
+        }, function (e) {
+          sending = false; b.disabled = false; b.textContent = "I agree. Count me in";
+          var t = String((e && e.message) || "");
+          err.textContent = /^(Add|Say|Check|Read|We already|Lots of|This group)/.test(t) ? t : "That didn't go through. Check your connection and try again.";
+        });
+      });
+    }
+  }
+  window.ReUpSignup = { mount: mount, join: join };
 })();
 </script>
 <script>
@@ -1026,6 +1107,13 @@ if (STORE_URL) {
     if (scroll) box.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   btn.addEventListener("click", () => open(true));
+  // A group's join link: thereupmovement.org/?group=CODE
+  const gcode = new URLSearchParams(location.search).get("group");
+  if (gcode) {
+    mounted = true; box.hidden = false; btn.hidden = true; btn.setAttribute("aria-expanded", "true");
+    window.ReUpSignup.join(box, gcode, { api });
+    setTimeout(() => box.scrollIntoView({ block: "start" }), 300);
+  }
   // "Email me my link": the server only emails an address that is already on the volunteer list, and always answers the same way.
   const ml = $("mlSend");
   ml.addEventListener("click", () => {
