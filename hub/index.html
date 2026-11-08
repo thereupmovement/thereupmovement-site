@@ -2847,7 +2847,8 @@ function fillWork(keep) {
     </details>
     ${isNew ? `<div class="btns"><button class="btn" type="button" id="wcreate">Create task</button><button class="btn ghost" type="button" id="wclose">Cancel</button></div>` : `
     ${showTurnIn || reviewHtml ? "" : `<div class="tsec"><div class="tl">Files</div>${filesHtml}${mine ? `<label class="tbtn ghost tup">Add a file<input type="file" id="wfile" hidden></label>` : ""}</div>`}
-    <div class="tsec"><div class="tl">${showTurnIn ? "3. Updates" : "Updates"}</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update" aria-label="Post an update" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
+    <div class="tsec"><div class="tl">${showTurnIn ? "3. Updates" : "Updates"}</div><div class="tadd"><input type="text" id="wupd" placeholder="Post an update or a question" aria-label="Post an update or a question" maxlength="2000"><button type="button" class="tbtn" id="wupdpost">Post</button></div>
+      ${(() => { const to = [...new Set(t.owners.concat(t.helpers || [], [by]))].filter(n => n && n !== me && n !== "Hub"); return to.length ? `<p class="small" style="margin:6px 0 0">${esc(to.join(", "))} ${to.length === 1 ? "gets" : "get"} what you post here as a message.</p>` : ""; })()}
       <div class="wtag"><span>Tag someone:</span>${others.map(n => `<button type="button" data-wtag="${esc(n)}">@${esc(n)}</button>`).join("")}</div>
       ${(t.updates || []).length ? `<ul class="tlog">${wHistory(t.updates)}</ul>` : `<p class="small" style="margin:8px 0 0">No updates yet.</p>`}</div>
     <div class="btns"><button class="btn ghost" type="button" id="wclose">Close</button></div>`}`;
@@ -5394,7 +5395,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261104100000";
+  var BUILD = "20261107190000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

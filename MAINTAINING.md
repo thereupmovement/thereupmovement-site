@@ -344,6 +344,10 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Notes on a task, from 7 Nov 2026: whatever someone posts under Updates goes as an Inbox message (and email) to
+  everyone else on the task, owners, helpers and whoever assigned it (`workUpdate`, `onIt`), not only to people
+  tagged with @. Before this, a question like "Where are the questions?" reached nobody unless it had an @name.
+  The task sheet says under the box who will get the note.
 - Turning in, from 3 Nov 2026 (build 20261104100000, server version after 71): everyone, leaders too, turns in a
   task someone else gave them ("Turn it in", status Turned in). Whoever assigned it gets an Inbox message and email,
   and approves it or sends it back. Any leader who is not on the task can approve it too; nobody approves their own.
