@@ -344,6 +344,13 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Families waiting (8 Nov 2026, server, `familyNudge` in Code.gs, run each morning from `workReminders`): for each
+  needs request still New or Reached out after 3 days, one email to whoever reached out (or the Ops team if nobody
+  has): how long the family has waited, what they asked for, and what in the Item Log could go to them, including
+  items set aside for an event (Dasia: families come first). No guest names or phones in the email. It stops when the
+  request is marked Filled or Closed. `NUDGE_MATCH_` maps each need to Item Log categories. To see what would go out
+  without sending anything, run `familyNudgePreview` in the editor and read the log. Time-driven triggers run the
+  saved code, so this needs no deployment.
 - Volunteers list speed (8 Nov 2026, server): building it (`volBuild_`) reads two spreadsheets and took about 7 seconds.
   `volData_` now builds it and keeps a copy in the script cache for 2 minutes ('vold1'); `getVolunteers` uses the copy
   (`volCached_`) unless the event sync just ran. Every save that returns the list builds it fresh, so the Hub never shows
