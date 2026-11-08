@@ -344,6 +344,10 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Event checklist (7 Nov 2026): the Hub has no event templates on purpose. Tasks whose ID starts with "w-auto-" are
+  written to the Work tab by a scheduled helper that runs outside this repository and Apps Script (ask Dasia where it
+  lives). From the Schedule it makes the event lead, host, volunteers, pre-event meeting, pickup booking, hours,
+  announcement, storage count and recap tasks. To change the checklist, change that helper's rules, not the Hub.
 - Families waiting (8 Nov 2026, server, `familyNudge` in Code.gs, run each morning from `workReminders`): for each
   needs request still New or Reached out after 3 days, one email to whoever reached out (or the Ops team if nobody
   has): how long the family has waited, what they asked for, and what in the Item Log could go to them, including
