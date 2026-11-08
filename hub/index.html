@@ -2876,9 +2876,11 @@ function fillWork(keep) {
     box.querySelectorAll("[data-wvis]").forEach(b => b.addEventListener("click", () => { pickPrivate = b.dataset.wvis === "1"; box.querySelectorAll("[data-wvis]").forEach(x => x.setAttribute("aria-pressed", (x.dataset.wvis === "1") === pickPrivate)); }));
     box.querySelectorAll("[data-wteam]").forEach(b => b.addEventListener("click", () => { pickTeam = pickTeam === b.dataset.wteam ? "" : b.dataset.wteam; box.querySelectorAll("[data-wteam]").forEach(x => x.setAttribute("aria-pressed", x.dataset.wteam === pickTeam)); }));
     box.querySelectorAll("[data-wown]").forEach(b => b.addEventListener("click", () => { const n = b.dataset.wown; pickOwners = pickOwners.includes(n) ? pickOwners.filter(x => x !== n) : pickOwners.concat(n); b.setAttribute("aria-pressed", pickOwners.includes(n)); }));
-    $("wcreate").addEventListener("click", () => {
+    $("wcreate").addEventListener("click", e => {
       const title = $("wtitle").value.trim();
       if (!title) { msg("Give the task a title first."); $("wtitle").focus(); return; }
+      // One tap makes one task: the button locks until the Hub opens the new task (Kyana's tap-tap made six copies, 5 Nov 2026).
+      e.currentTarget.disabled = true; e.currentTarget.textContent = "Creating the task...";
       save("saveWork", ["", { title, team: pickTeam, owners: pickOwners, due: $("wdue").value, details: $("wdet").value, private: pickPrivate }], "Task created.");
     });
     setTimeout(() => $("wtitle").focus(), 60);
@@ -5395,7 +5397,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261107190000";
+  var BUILD = "20261107200000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
