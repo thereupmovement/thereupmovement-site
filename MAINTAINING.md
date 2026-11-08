@@ -344,6 +344,10 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   (`wBar`). Anyone on a task can snooze it with "Not until" (the Opens on column; leaders could already set it).
 - Reminders: `workReminders` in Code.gs, run every morning by `dailyVolunteers`, emails each person once about their
   tasks due in 2 days (steps still waiting on an earlier step are left out).
+- Volunteers list speed (8 Nov 2026, server): building it (`volBuild_`) reads two spreadsheets and took about 7 seconds.
+  `volData_` now builds it and keeps a copy in the script cache for 2 minutes ('vold1'); `getVolunteers` uses the copy
+  (`volCached_`) unless the event sync just ran. Every save that returns the list builds it fresh, so the Hub never shows
+  its own save as missing. A sign-up from the public page can take up to 2 minutes to show in the Hub.
 - Who reviews turn-ins is the task's "Created by" (Work sheet, column I). On 7 Nov 2026 Dasia split the open tasks
   she had set up for others: Media, merch, volunteer handbook and orientation slides, the old-volunteers email and
   the quiz review stay with Dasia; Kyana's volunteer recruiting goes to Charles; Charles's and Janay's work goes to
