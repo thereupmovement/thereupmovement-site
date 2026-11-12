@@ -416,6 +416,14 @@ the leader's row counts as the whole group toward volunteers needed (`vHeads` in
 "Release needed" until everyone has agreed, with a button to copy the group's link again.
 Not built yet: a group asking for its own service day, and the group on the leader's volunteer page.
 
+## Removed: Events.gs (12 Nov 2026)
+
+An unfinished server file, Events.gs (volunteer goals per role, three sign-up reminder emails, a short-handed scan),
+was in the Apps Script project but never switched on and had no screens. Everything it did already works another way:
+volunteer goals per date on the Volunteers screen, the short-handed alert, and reminder emails from the volunteer
+sheet's own Reminders script. Turning it on would have sent volunteers double reminders, so it was deleted. If the
+per-role goals idea comes back, its code is still in server versions 75 and 76 (Project History in the editor).
+
 ## Open handoff work
 
 - Move ownership of the Sheets, uploads folder and Apps Script project to ReUp's own Google account
