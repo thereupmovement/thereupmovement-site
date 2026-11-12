@@ -451,6 +451,10 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .trq{border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}.trq legend{font-weight:700;padding:0 4px;line-height:1.4}
 .trch{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border-radius:10px;cursor:pointer;line-height:1.4}.trch input{margin-top:3px;width:20px;height:20px;flex:none}
 .trch:has(input:checked){background:var(--surface)}
+.trmod{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 2px;border-top:1px solid var(--line)}
+.trmod span{display:flex;flex-direction:column;gap:2px;min-width:0}.trmod em{font-style:normal;color:var(--muted);font-size:15px}
+.trmod.done em{color:#2e7d32;font-weight:700}.trmod.next em{color:var(--ink);font-weight:700}.trmod .btn{flex:none;padding:10px 16px;min-width:96px}
+.trread{border-top:0}.trch.ok{outline:2px solid #2e7d32}.trch.no{outline:2px solid var(--red)}.trch em{margin-left:auto;font-style:normal;font-weight:700;font-size:14px;white-space:nowrap}
 .trrow{display:flex;justify-content:space-between;gap:10px;padding:10px 2px;border-top:1px solid var(--line)}.trrow span{color:var(--muted);text-align:right}
 .dhist{margin-top:10px}
 .dhist summary{cursor:pointer;font-weight:700;color:var(--muted);padding:8px 2px}
@@ -1116,7 +1120,7 @@ body.hasfab{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}   /* t
     </section>
     <section class="view" id="v-training" hidden>
       <h2>Training</h2>
-      <p class="lead">Read the Team Study Guide, then take this quarter's quiz. 30 questions. You pass at 80%.</p>
+      <p class="lead">The Team Study Guide, one module at a time, with a short check after each. Then a final quiz. Every quarter.</p>
       <div id="trbox"><p class="small">Loading...</p></div>
     </section>
     <section class="view" id="v-apps" hidden>
@@ -3183,7 +3187,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && BO
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
 /* More is grouped so it stays easy to scan as the Hub grows. Ask is not here: the Ask button is on every screen. */
-const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", finance: "Receipts and trips to approve, and the budget.", training: "The Team Study Guide and the quarterly quiz.", goals: "Goals, grant readiness and team activity." };
+const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", finance: "Receipts and trips to approve, and the budget.", training: "The study guide in modules, and the quarterly quiz.", goals: "Goals, grant readiness and team activity." };
 const MORE_GROUPS = [["Events and people", ["events", "vol", "apps", "training"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership and money", ["goals", "finance", "admin"]]];
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k) && k !== "ask"), item = ([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`;
@@ -4990,8 +4994,9 @@ function drawTrip(info) {
 let rcView = "receipts";
 /* Approvals live on the Finance screen (More, Finance). Everything that used to open them in a sheet goes there now. */
 function openReview() { if (sheet.open) sheet.close(); go("finance"); }
-/* Training: the Team Study Guide and the quarterly quiz. The server picks the questions and grades them,
-   so the answer key never reaches this page (this repository is public). */
+/* Training: the Team Study Guide as modules, with a short check after each, then the quarterly final quiz.
+   Each numbered section of the guide ("1. Who we are") is a module; they open in order. The server picks the
+   questions and grades them, so the answer key never reaches this page (this repository is public). */
 let TRN = null, trHold = false;
 async function loadTraining() {
   const box = $("trbox"); if (!box || trHold) return;
@@ -5000,45 +5005,101 @@ async function loadTraining() {
   catch (e) { if (!trHold) box.innerHTML = `<p class="lead">${isAuth(e) ? "Open the Hub from your own link to see Training." : "Couldn't load Training right now. Try again in a minute."}</p>`; }
 }
 function trWhen(x) { try { return fmtDay(String(x.when).slice(0, 10)); } catch (e) { return ""; } }
+function trMods() { return (TRN.guide || []).map(s => ({ s, n: +((String(s.h).match(/^(\d+)\.\s/) || [])[1] || 0) })).filter(x => x.n); }
+function trSec(s) {
+  let h = "", ul = false, tb = false;
+  s.lines.forEach(l => {
+    if (l.row) { if (ul) { h += "</ul>"; ul = false; } if (!tb) { h += `<table class="trtab">`; tb = true; } h += `<tr${l.head ? ' class="h"' : ""}>${l.row.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`; return; }
+    if (tb) { h += "</table>"; tb = false; }
+    if (l.li && !ul) { h += "<ul>"; ul = true; } if (!l.li && ul) { h += "</ul>"; ul = false; }
+    h += l.li ? `<li>${esc(l.t)}</li>` : `<p>${esc(l.t)}</p>`;
+  });
+  return h + (ul ? "</ul>" : "") + (tb ? "</table>" : "");
+}
 function drawTraining() {
   const box = $("trbox"), T = TRN; if (!box || !T) return;
+  trHold = false;
+  const mods = trMods(), done = T.modsDone || [], isDone = n => done.includes(n), next = mods.find(m => !isDone(m.n)), all = !next;
   const mine = T.mine || [], best = mine.find(x => x.passed), last = mine[mine.length - 1];
-  const stat = best ? `<div class="trstat ok">You passed this quarter: ${best.score} of ${best.of}.<span>${esc(trWhen(best))}. You can take it again any time to practice.</span></div>`
-    : last ? `<div class="trstat bad">Not passed yet. Last try: ${last.score} of ${last.of}. You need ${T.pass}.<span>${last.reread ? "Reread: " + esc(last.reread) + "." : ""} Your next try opens the day after a try that didn't pass.</span></div>`
-    : `<div class="trstat">You haven't taken this quarter's quiz yet.<span>It takes about 15 minutes. Read the guide below first.</span></div>`;
-  const line = l => l.row ? null : l.li ? `<li>${esc(l.t)}</li>` : `<p>${esc(l.t)}</p>`;
-  const sec = s => { let h = "", ul = false, tb = false;
-    s.lines.forEach(l => {
-      if (l.row) { if (ul) { h += "</ul>"; ul = false; } if (!tb) { h += `<table class="trtab">`; tb = true; } h += `<tr${l.head ? ' class="h"' : ""}>${l.row.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`; return; }
-      if (tb) { h += "</table>"; tb = false; }
-      if (l.li && !ul) { h += "<ul>"; ul = true; } if (!l.li && ul) { h += "</ul>"; ul = false; }
-      h += line(l);
-    });
-    if (ul) h += "</ul>"; if (tb) h += "</table>";
-    return `<details><summary>${esc(s.h || "Start here")}</summary>${h}</details>`; };
-  const team = T.team ? `<h3>Where the team stands (${esc(T.quarter)})</h3><div>${T.team.map(p => `<div class="trrow"><b>${esc(p.name)}</b><span>${!p.tries ? "Not taken yet" : (p.passed ? "Passed" : "Not passed yet") + `, ${p.score} of ${p.of}, ${p.tries} ${p.tries === 1 ? "try" : "tries"}`}</span></div>`).join("")}</div>` : "";
-  box.innerHTML = stat + `<div class="btns" style="margin:0 0 16px"><button class="btn" type="button" id="trgo">${best ? "Practice again" : last ? "Try again" : "Take the quiz"}</button></div>`
-    + `<h3>Team Study Guide</h3><div class="trguide">${(T.guide || []).map(sec).join("") || `<p class="small">The guide couldn't be read just now.</p>`}</div>` + team;
-  $("trgo").addEventListener("click", trStart);
+  const nDone = mods.filter(m => isDone(m.n)).length;
+  const stat = best ? `<div class="trstat ok">You passed this quarter's training: ${best.score} of ${best.of} on the final.<span>${esc(trWhen(best))}. Everything starts fresh next quarter.</span></div>`
+    : last ? `<div class="trstat bad">Final not passed yet. Last try: ${last.score} of ${last.of}. You need ${T.pass}.<span>${last.reread ? "Reread: " + esc(last.reread) + "." : ""} Your next try opens the day after a try that didn't pass.</span></div>`
+    : all ? `<div class="trstat">Every module is done. Take the final quiz.<span>${T.n} questions from all the modules. You need ${T.pass} right.</span></div>`
+    : `<div class="trstat">${nDone} of ${mods.length} modules done this quarter.<span>Read each module, then answer ${T.modN || 3} questions on it. The final quiz opens when all ${mods.length} are done.</span></div>`;
+  const intro = (T.guide || []).filter(s => !/^\d+\.\s/.test(String(s.h)));
+  const row = m => { const d = isDone(m.n), up = next && next.n === m.n;
+    return `<div class="trmod${d ? " done" : up ? " next" : ""}"><span><b>${esc(m.s.h)}</b><em>${d ? "Done" : up ? "Up next" : "Opens after module " + esc(String(mods[mods.indexOf(m) - 1].n))}</em></span>${d || up ? `<button class="btn${up ? "" : " ghost"}" type="button" data-trm="${m.n}">${up ? "Start" : "Review"}</button>` : ""}</div>`; };
+  const team = T.team ? `<h3>Where the team stands (${esc(T.quarter)})</h3><div>${T.team.map(p => `<div class="trrow"><b>${esc(p.name)}</b><span>${p.passed ? `Passed, ${p.score} of ${p.of}` : `${p.mods || 0} of ${mods.length} modules` + (p.tries ? `, final not passed yet (${p.tries} ${p.tries === 1 ? "try" : "tries"})` : "")}</span></div>`).join("")}</div>` : "";
+  box.innerHTML = stat
+    + (all ? `<div class="btns" style="margin:0 0 16px"><button class="btn" type="button" id="trgo">${best ? "Practice the final again" : last ? "Try the final again" : "Take the final quiz"}</button></div>` : "")
+    + (intro.length ? `<div class="trguide">${intro.map(s => `<details><summary>${esc(s.h || "Start here")}</summary>${trSec(s)}</details>`).join("")}</div>` : "")
+    + `<h3>Modules</h3><div class="trmods">${mods.map(row).join("") || `<p class="small">The guide couldn't be read just now.</p>`}</div>` + team;
+  if ($("trgo")) $("trgo").addEventListener("click", trStart);
+  box.querySelectorAll("[data-trm]").forEach(b => b.addEventListener("click", () => drawModule(+b.dataset.trm)));
+}
+function trQs(qs) { return qs.map((q, i) => `<fieldset class="trq"><legend>${i + 1}. ${esc(q.q)}</legend>${q.a.map((a, j) => `<label class="trch" data-q="${i}" data-c="${j}"><input type="radio" name="q${i}" value="${j}"><span>${esc(a)}</span></label>`).join("")}</fieldset>`).join(""); }
+function trPicks(qs) { return qs.map((q, i) => { const c = document.querySelector(`#trbox input[name="q${i}"]:checked`); return c ? +c.value : -1; }); }
+function trLeft(picks) { const left = picks.map((p, i) => p < 0 ? i + 1 : 0).filter(Boolean); return left.length ? `Answer every question first. Still open: ${left.slice(0, 10).join(", ")}${left.length > 10 ? " and " + (left.length - 10) + " more" : ""}.` : ""; }
+function trBack() { trHold = false; drawTraining(); window.scrollTo(0, 0); }
+function drawModule(n) {
+  const m = trMods().find(x => x.n === n); if (!m) return trBack();
+  trHold = true;
+  const done = (TRN.modsDone || []).includes(n);
+  $("trbox").innerHTML = `<p class="small">Module ${n} of ${trMods().length}</p><h3>${esc(m.s.h)}</h3><div class="trguide trread">${trSec(m.s)}</div>`
+    + `<div class="btns"><button class="btn" type="button" id="trchk">${done ? "Check what you know again" : "I read it. Check what I know"}</button><button class="btn ghost" type="button" id="trbk">Back to Training</button></div>`;
+  window.scrollTo(0, 0);
+  $("trbk").addEventListener("click", trBack);
+  $("trchk").addEventListener("click", async () => {
+    const b = $("trchk"); b.disabled = true; b.textContent = "Getting your questions...";
+    try { drawCheck(m, await run("modStart", KEY, n, TOK)); }
+    catch (e) { b.disabled = false; b.textContent = "Check what you know"; const p = document.createElement("p"); p.className = "trstat bad"; p.textContent = String((e && e.message) || "").indexOf("could not") >= 0 ? e.message : "Couldn't get the questions right now. Try again in a minute."; b.parentNode.before(p); }
+  });
+}
+function drawCheck(m, Q) {
+  const box = $("trbox");
+  box.innerHTML = `<p class="small">Module ${m.n}: ${esc(m.s.h)}</p><p class="lead">${Q.questions.length} questions. Get ${Q.pass} right to finish this module.</p><form id="trform">${trQs(Q.questions)}`
+    + `<p class="small" id="trleft" aria-live="polite"></p><div class="btns"><button class="btn" type="submit" id="trsend">Check my answers</button><button class="btn ghost" type="button" id="trre">Read the module again</button></div></form>`;
+  window.scrollTo(0, 0);
+  $("trre").addEventListener("click", () => drawModule(m.n));
+  $("trform").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const picks = trPicks(Q.questions), left = trLeft(picks);
+    if (left) { $("trleft").textContent = left; return; }
+    const b = $("trsend"); b.disabled = true; b.textContent = "Checking...";
+    try {
+      const R = await run("modSubmit", KEY, picks, TOK);
+      if (R.passed && !(TRN.modsDone || []).includes(m.n)) TRN.modsDone = (TRN.modsDone || []).concat(m.n);
+      box.querySelectorAll("input").forEach(i => i.disabled = true);
+      box.querySelectorAll(".trch").forEach(l => { const q = +l.dataset.q, c = +l.dataset.c;
+        if (R.right[q] === c) { l.classList.add("ok"); l.insertAdjacentHTML("beforeend", `<em>Right answer</em>`); }
+        else if (picks[q] === c) { l.classList.add("no"); l.insertAdjacentHTML("beforeend", `<em>Your answer</em>`); } });
+      const mods = trMods(), nx = mods.find(x => !(TRN.modsDone || []).includes(x.n));
+      box.querySelector(".btns").outerHTML = `<div class="trstat ${R.passed ? "ok" : "bad"}">${R.passed ? "Module done" : "Not yet"}: ${R.score} of ${R.of} right.<span>${R.passed ? (nx ? "Next up: " + esc(nx.s.h) + "." : "Every module is done. The final quiz is open.") : "Look at the right answers above, read the module again, then try new questions."}</span></div>`
+        + `<div class="btns">${R.passed ? (nx ? `<button class="btn" type="button" id="trnx">Next module</button>` : `<button class="btn" type="button" id="trbk2">Go to the final quiz</button>`) : `<button class="btn" type="button" id="trre2">Read the module again</button>`}<button class="btn ghost" type="button" id="trbk3">Back to Training</button></div>`;
+      $("trleft").textContent = "";
+      if ($("trnx")) $("trnx").addEventListener("click", () => drawModule(nx.n));
+      if ($("trbk2")) $("trbk2").addEventListener("click", trBack);
+      if ($("trre2")) $("trre2").addEventListener("click", () => drawModule(m.n));
+      $("trbk3").addEventListener("click", trBack);
+      box.querySelector(".trstat").scrollIntoView({ block: "center" });
+    } catch (e) { b.disabled = false; b.textContent = "Check my answers"; $("trleft").textContent = String((e && e.message) || "").indexOf("timed out") >= 0 ? "That check timed out. Read the module again and start a new one." : "Couldn't check your answers. Check your connection and try again."; }
+  });
 }
 async function trStart() {
   const b = $("trgo"); b.disabled = true; b.textContent = "Getting your questions...";
   try { const Q = await run("quizStart", KEY, TOK); trHold = true; drawQuiz(Q); }
-  catch (e) { b.disabled = false; b.textContent = "Take the quiz"; const m = String((e && e.message) || e); alert0(m.indexOf("tomorrow") >= 0 ? m : "Couldn't start the quiz right now. Try again in a minute."); }
+  catch (e) { b.disabled = false; b.textContent = "Take the final quiz"; const m = String((e && e.message) || e), p = document.createElement("p"); p.className = "trstat bad"; p.textContent = /tomorrow|Finish every module/.test(m) ? m : "Couldn't start the quiz right now. Try again in a minute."; $("trbox").prepend(p); window.scrollTo(0, 0); }
 }
-function alert0(msg) { const box = $("trbox"), p = document.createElement("p"); p.className = "trstat bad"; p.textContent = msg; box.prepend(p); window.scrollTo(0, 0); }
 function drawQuiz(Q) {
   const box = $("trbox");
-  box.innerHTML = `<p class="lead">${Q.n} questions. Pick one answer for each. You need ${Q.pass} right to pass.</p><form id="trform">`
-    + Q.questions.map((q, i) => `<fieldset class="trq"><legend>${i + 1}. ${esc(q.q)}</legend>${q.a.map((a, j) => `<label class="trch"><input type="radio" name="q${i}" value="${j}"><span>${esc(a)}</span></label>`).join("")}</fieldset>`).join("")
+  box.innerHTML = `<p class="lead">Final quiz: ${Q.n} questions from all the modules. Pick one answer for each. You need ${Q.pass} right to pass.</p><form id="trform">${trQs(Q.questions)}`
     + `<p class="small" id="trleft" aria-live="polite"></p><div class="btns"><button class="btn" type="submit" id="trsend">Send my answers</button><button class="btn ghost" type="button" id="trstop">Stop for now</button></div></form>`;
   window.scrollTo(0, 0);
-  $("trstop").addEventListener("click", () => { trHold = false; drawTraining(); window.scrollTo(0, 0); });
+  $("trstop").addEventListener("click", trBack);
   $("trform").addEventListener("submit", async ev => {
     ev.preventDefault();
-    const picks = Q.questions.map((q, i) => { const c = document.querySelector(`input[name="q${i}"]:checked`); return c ? +c.value : -1; });
-    const left = picks.map((p, i) => p < 0 ? i + 1 : 0).filter(Boolean);
-    if (left.length) { $("trleft").textContent = `Answer every question first. Still open: ${left.slice(0, 10).join(", ")}${left.length > 10 ? " and " + (left.length - 10) + " more" : ""}.`; return; }
+    const picks = trPicks(Q.questions), left = trLeft(picks);
+    if (left) { $("trleft").textContent = left; return; }
     const b = $("trsend"); b.disabled = true; b.textContent = "Checking your answers...";
     try { drawResult(await run("quizSubmit", KEY, picks, TOK)); }
     catch (e) { b.disabled = false; b.textContent = "Send my answers"; $("trleft").textContent = String((e && e.message) || "").indexOf("timed out") >= 0 ? "That quiz timed out. Stop for now and start a new one." : "Couldn't send your answers. Check your connection and try again."; }
@@ -5475,7 +5536,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261112180000";
+  var BUILD = "20261112220000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
