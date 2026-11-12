@@ -377,7 +377,7 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   or have a step in it), never in a fold; and a Projects card on the Overview with every open project. On the
   Overview, every "Your numbers" tile that has somewhere to go can be tapped, even at 0.
 
-## Training: the Team Study Guide and the quarterly quiz (server version 75, 12 Nov 2026)
+## Training: the Team Study Guide modules and the quarterly quiz (server versions 75 and 76, 12 Nov 2026)
 
 Everyone with a Work link sees **Training** under More. It shows the Team Study Guide and a 30-question quiz; 24 right
 (80%) passes. Both come from private Google Docs in the ReUp app folder, never from this repository, because the guide is
@@ -394,6 +394,15 @@ internal and the quiz answers must stay hidden:
   reread, which questions). After a try that didn't pass, the next try opens the next day.
 - Leaders see where everyone stands this quarter (`getTraining`, best try per person).
 - To change the pass mark or the length, change `QUIZ_N` in Code.gs (the pass mark is 80% of it), save and deploy.
+- Modules (server version 76, 12 Nov 2026): each numbered section of the guide ("1. Who we are") is a module. They
+  open in order. After reading one, the person answers 3 questions on it (`modStart`, `modSubmit`; `MOD_N`, `MOD_PASS`)
+  and sees the right answers; 2 right finishes it and logs a "Module <n>" row on the Quiz tab. The final quiz
+  (`quizStart`) opens only once every module is done this quarter. Which questions go with which module is `MOD_Q`
+  in Code.gs: a Quiz Bank topic name, a list of question codes, or `vol` for the volunteer questions. If you add a
+  numbered section to the guide, add its number to `MOD_Q` too, or its check has no questions.
+- Quarterly task: the scheduled "ReUp Hub task maker" (rule R22) gives every active team member, Dasia and Walter
+  included, a "Do this quarter's training" task due 42 days into the quarter, and closes it when the Quiz tab shows
+  they passed the final.
 
 ## Group sign-up (server version 59, 3 Nov 2026)
 
