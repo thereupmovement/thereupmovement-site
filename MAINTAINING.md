@@ -377,6 +377,24 @@ Ideas taken from Basecamp (steps on a card), Asana ("waiting on" plus a message 
   or have a step in it), never in a fold; and a Projects card on the Overview with every open project. On the
   Overview, every "Your numbers" tile that has somewhere to go can be tapped, even at 0.
 
+## Training: the Team Study Guide and the quarterly quiz (server version 75, 12 Nov 2026)
+
+Everyone with a Work link sees **Training** under More. It shows the Team Study Guide and a 30-question quiz; 24 right
+(80%) passes. Both come from private Google Docs in the ReUp app folder, never from this repository, because the guide is
+internal and the quiz answers must stay hidden:
+
+- The guide is read from the "Team Study Guide" doc (`STUDY_DOC` in Code.gs, `studyGuide_`). Each heading becomes a
+  section that opens with a tap. Edit the doc and the Hub shows the change within 10 minutes.
+- The questions come from the "Quiz Bank" doc (`QUIZ_DOC`, `quizBank_`). Keep its pattern exactly or a question is
+  skipped: a line like `H01 (Topic) The question`, four lines `A.` to `D.`, then `Answer: B`. Letters H, M, L, P, N, E
+  and R are the core team quiz; V is the volunteer quiz (not used on this screen yet).
+- `quizStart` picks 30 questions spread across the topics, avoids the person's last set where it can, shuffles the
+  choices and remembers the right answers on the server for 2 hours. The page never receives the answers.
+  `quizSubmit` grades, and adds a row to the **Quiz** tab in the Hub sheet (who, quarter, score, passed, topics to
+  reread, which questions). After a try that didn't pass, the next try opens the next day.
+- Leaders see where everyone stands this quarter (`getTraining`, best try per person).
+- To change the pass mark or the length, change `QUIZ_N` in Code.gs (the pass mark is 80% of it), save and deploy.
+
 ## Group sign-up (server version 59, 3 Nov 2026)
 
 The volunteer form asks "Who is coming?". A group leader adds the group's name and how many people in all. They do
