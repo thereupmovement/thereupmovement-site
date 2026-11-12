@@ -442,6 +442,16 @@ button.irow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .trow:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
 .due.late{color:#B3261E;font-weight:700}
 .due.soon{color:var(--k-dead);font-weight:700}
+.trstat{padding:14px 16px;border-radius:14px;border:2px solid var(--line);margin:0 0 12px;font-weight:700}
+.trstat.ok{border-color:#2e7d32}.trstat.bad{border-color:var(--red,#c62828)}
+.trstat span{display:block;font-weight:400;color:var(--muted);margin-top:4px}
+.trguide details{border-top:1px solid var(--line)}.trguide summary{padding:12px 2px;font-weight:700;cursor:pointer}
+.trguide p,.trguide li{margin:0 0 8px;line-height:1.5}.trguide ul{padding-left:20px;margin:0 0 8px}
+.trtab{width:100%;border-collapse:collapse;margin:0 0 10px;font-size:15px}.trtab td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;overflow-wrap:anywhere}.trtab tr.h td{font-weight:700}
+.trq{border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}.trq legend{font-weight:700;padding:0 4px;line-height:1.4}
+.trch{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border-radius:10px;cursor:pointer;line-height:1.4}.trch input{margin-top:3px;width:20px;height:20px;flex:none}
+.trch:has(input:checked){background:var(--surface)}
+.trrow{display:flex;justify-content:space-between;gap:10px;padding:10px 2px;border-top:1px solid var(--line)}.trrow span{color:var(--muted);text-align:right}
 .dhist{margin-top:10px}
 .dhist summary{cursor:pointer;font-weight:700;color:var(--muted);padding:8px 2px}
 .tsec{margin-top:16px}
@@ -1103,6 +1113,11 @@ body.hasfab{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}   /* t
       <p class="lead">Receipts and trips waiting to approve, and what was approved. Approving adds it to the budget workbook; Undo takes it back out.</p>
       <div class="btns" style="margin:0 0 12px"><a class="btn ghost" id="finbook" href="#" target="_blank" rel="noopener" hidden>Open the budget workbook</a></div>
       <div id="finbox"></div>
+    </section>
+    <section class="view" id="v-training" hidden>
+      <h2>Training</h2>
+      <p class="lead">Read the Team Study Guide, then take this quarter's quiz. 30 questions. You pass at 80%.</p>
+      <div id="trbox"><p class="small">Loading...</p></div>
     </section>
     <section class="view" id="v-apps" hidden>
       <h2>Applications</h2>
@@ -1941,6 +1956,7 @@ const ICONS = {
   inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
   work: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M9 3h6v3H9zM8 11l2 2 4-4M8 17h8"/></svg>',
+  training: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l10-4 10 4-10 4z"/><path d="M6 9v5c0 2 3 4 6 4s6-2 6-4V9"/></svg>',
   goals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>',
 };
 const TABS = [["home", "Home"], ["schedule", "Schedule"], ["events", "Events"], ["forms", "Forms"]];
@@ -1968,7 +1984,7 @@ function go(tab) {
   if (tab === "leaders") tab = "goals";
   if (tab === "eventday") { tab = "events"; evView = "day"; }   // Event day is now the "On the day" part of Events
   if (!TABS.some(([k]) => k === tab) && !(tab === "checkin" && BOOT.work)) tab = "home";
-  ["home", "work", "inbox", "schedule", "events", "ask", "forms", "ops", "goals", "admin", "vol", "checkin", "apps", "finance"].forEach(k => { $("v-" + k).hidden = k !== tab; });
+  ["home", "work", "inbox", "schedule", "events", "ask", "forms", "ops", "goals", "admin", "vol", "checkin", "apps", "finance", "training"].forEach(k => { $("v-" + k).hidden = k !== tab; });
   document.body.classList.toggle("nofab", tab === "checkin");
   markNav(tab);
   try { if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab); } catch (e) {}
@@ -1982,6 +1998,7 @@ function go(tab) {
   if (tab === "ask") drawAsk();
   if (tab === "apps") loadApps();
   if (tab === "finance") loadFinance();
+  if (tab === "training") loadTraining();
   if (tab === "work" && typeof loadWork === "function" && (!WORK || Date.now() - workAt > 60e3 || (WORK.canManage && !WORK.unlocked && TOK))) loadWork();
 }
 
@@ -3166,8 +3183,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && BO
 
 /* ============ MORE: the less-used tabs, so the bottom bar stays at five ============ */
 /* More is grouped so it stays easy to scan as the Hub grows. Ask is not here: the Ask button is on every screen. */
-const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", finance: "Receipts and trips to approve, and the budget.", goals: "Goals, grant readiness and team activity." };
-const MORE_GROUPS = [["Events and people", ["events", "vol", "apps"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership and money", ["goals", "finance", "admin"]]];
+const MORE_SUB = { events: "What's coming up, what to do on the day, and past results.", vol: "Who is signed up, orientation, reminder texts and hours.", apps: "People who applied to join the core team.", admin: "People, the Schedule and the forms. Only Hub admins see this.", forms: "Sign-up, check-in, receipts and more.", ops: "Requests and what's in storage.", finance: "Receipts and trips to approve, and the budget.", training: "The Team Study Guide and the quarterly quiz.", goals: "Goals, grant readiness and team activity." };
+const MORE_GROUPS = [["Events and people", ["events", "vol", "apps", "training"]], ["Supplies and forms", ["ops", "forms"]], ["Leadership and money", ["goals", "finance", "admin"]]];
 function openMore() {
   const more = TABS.filter(([k]) => !PRIMARY_TABS.includes(k) && k !== "ask"), item = ([k, l]) => `<button type="button" class="moreitem" data-more="${k}">${ICONS[k] || ""}<span><b>${esc(l === "Leaders" ? "Leadership" : l)}</b><em>${esc(MORE_SUB[k] || "")}</em></span></button>`;
   const groups = MORE_GROUPS.map(([h, ks]) => [h, ks.map(k => more.find(t => t[0] === k)).filter(Boolean)]).filter(g => g[1].length);
@@ -4613,7 +4630,7 @@ setInterval(() => {
   if (CI_VIEW === "guests") ciLoadCount(); else loadCheckinVols();
 }, 20000);
 
-if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); TABS.push(["ask", "Ask a question"]); $("toAsk").hidden = false; $("toAsk").addEventListener("click", askOpen); $("askFab").hidden = false; document.body.classList.add("hasfab"); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
+if (BOOT.work) { TABS.push(["work", "Work"]); TABS.push(["inbox", "Inbox"]); TABS.push(["ask", "Ask a question"]); TABS.push(["training", "Training"]); $("toAsk").hidden = false; $("toAsk").addEventListener("click", askOpen); $("askFab").hidden = false; document.body.classList.add("hasfab"); drawTabs(); if (start === "work" || start === "inbox") go(start); if (start !== "work") loadWork(true); loadInbox(true); }
 if (BOOT.ops || BOOT.leader || BOOT.vol) {
   if (BOOT.ops) TABS.push(["ops", "Operations"]);
   if (BOOT.vol) TABS.push(["vol", "Volunteers"]);
@@ -4973,6 +4990,67 @@ function drawTrip(info) {
 let rcView = "receipts";
 /* Approvals live on the Finance screen (More, Finance). Everything that used to open them in a sheet goes there now. */
 function openReview() { if (sheet.open) sheet.close(); go("finance"); }
+/* Training: the Team Study Guide and the quarterly quiz. The server picks the questions and grades them,
+   so the answer key never reaches this page (this repository is public). */
+let TRN = null, trHold = false;
+async function loadTraining() {
+  const box = $("trbox"); if (!box || trHold) return;
+  if (!TRN) box.innerHTML = `<p class="small">Loading...</p>`;
+  try { TRN = await run("getTraining", KEY, TOK); if (!trHold) drawTraining(); }
+  catch (e) { if (!trHold) box.innerHTML = `<p class="lead">${isAuth(e) ? "Open the Hub from your own link to see Training." : "Couldn't load Training right now. Try again in a minute."}</p>`; }
+}
+function trWhen(x) { try { return fmtDay(String(x.when).slice(0, 10)); } catch (e) { return ""; } }
+function drawTraining() {
+  const box = $("trbox"), T = TRN; if (!box || !T) return;
+  const mine = T.mine || [], best = mine.find(x => x.passed), last = mine[mine.length - 1];
+  const stat = best ? `<div class="trstat ok">You passed this quarter: ${best.score} of ${best.of}.<span>${esc(trWhen(best))}. You can take it again any time to practice.</span></div>`
+    : last ? `<div class="trstat bad">Not passed yet. Last try: ${last.score} of ${last.of}. You need ${T.pass}.<span>${last.reread ? "Reread: " + esc(last.reread) + "." : ""} Your next try opens the day after a try that didn't pass.</span></div>`
+    : `<div class="trstat">You haven't taken this quarter's quiz yet.<span>It takes about 15 minutes. Read the guide below first.</span></div>`;
+  const line = l => l.row ? null : l.li ? `<li>${esc(l.t)}</li>` : `<p>${esc(l.t)}</p>`;
+  const sec = s => { let h = "", ul = false, tb = false;
+    s.lines.forEach(l => {
+      if (l.row) { if (ul) { h += "</ul>"; ul = false; } if (!tb) { h += `<table class="trtab">`; tb = true; } h += `<tr${l.head ? ' class="h"' : ""}>${l.row.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`; return; }
+      if (tb) { h += "</table>"; tb = false; }
+      if (l.li && !ul) { h += "<ul>"; ul = true; } if (!l.li && ul) { h += "</ul>"; ul = false; }
+      h += line(l);
+    });
+    if (ul) h += "</ul>"; if (tb) h += "</table>";
+    return `<details><summary>${esc(s.h || "Start here")}</summary>${h}</details>`; };
+  const team = T.team ? `<h3>Where the team stands (${esc(T.quarter)})</h3><div>${T.team.map(p => `<div class="trrow"><b>${esc(p.name)}</b><span>${!p.tries ? "Not taken yet" : (p.passed ? "Passed" : "Not passed yet") + `, ${p.score} of ${p.of}, ${p.tries} ${p.tries === 1 ? "try" : "tries"}`}</span></div>`).join("")}</div>` : "";
+  box.innerHTML = stat + `<div class="btns" style="margin:0 0 16px"><button class="btn" type="button" id="trgo">${best ? "Practice again" : last ? "Try again" : "Take the quiz"}</button></div>`
+    + `<h3>Team Study Guide</h3><div class="trguide">${(T.guide || []).map(sec).join("") || `<p class="small">The guide couldn't be read just now.</p>`}</div>` + team;
+  $("trgo").addEventListener("click", trStart);
+}
+async function trStart() {
+  const b = $("trgo"); b.disabled = true; b.textContent = "Getting your questions...";
+  try { const Q = await run("quizStart", KEY, TOK); trHold = true; drawQuiz(Q); }
+  catch (e) { b.disabled = false; b.textContent = "Take the quiz"; const m = String((e && e.message) || e); alert0(m.indexOf("tomorrow") >= 0 ? m : "Couldn't start the quiz right now. Try again in a minute."); }
+}
+function alert0(msg) { const box = $("trbox"), p = document.createElement("p"); p.className = "trstat bad"; p.textContent = msg; box.prepend(p); window.scrollTo(0, 0); }
+function drawQuiz(Q) {
+  const box = $("trbox");
+  box.innerHTML = `<p class="lead">${Q.n} questions. Pick one answer for each. You need ${Q.pass} right to pass.</p><form id="trform">`
+    + Q.questions.map((q, i) => `<fieldset class="trq"><legend>${i + 1}. ${esc(q.q)}</legend>${q.a.map((a, j) => `<label class="trch"><input type="radio" name="q${i}" value="${j}"><span>${esc(a)}</span></label>`).join("")}</fieldset>`).join("")
+    + `<p class="small" id="trleft" aria-live="polite"></p><div class="btns"><button class="btn" type="submit" id="trsend">Send my answers</button><button class="btn ghost" type="button" id="trstop">Stop for now</button></div></form>`;
+  window.scrollTo(0, 0);
+  $("trstop").addEventListener("click", () => { trHold = false; drawTraining(); window.scrollTo(0, 0); });
+  $("trform").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const picks = Q.questions.map((q, i) => { const c = document.querySelector(`input[name="q${i}"]:checked`); return c ? +c.value : -1; });
+    const left = picks.map((p, i) => p < 0 ? i + 1 : 0).filter(Boolean);
+    if (left.length) { $("trleft").textContent = `Answer every question first. Still open: ${left.slice(0, 10).join(", ")}${left.length > 10 ? " and " + (left.length - 10) + " more" : ""}.`; return; }
+    const b = $("trsend"); b.disabled = true; b.textContent = "Checking your answers...";
+    try { drawResult(await run("quizSubmit", KEY, picks, TOK)); }
+    catch (e) { b.disabled = false; b.textContent = "Send my answers"; $("trleft").textContent = String((e && e.message) || "").indexOf("timed out") >= 0 ? "That quiz timed out. Stop for now and start a new one." : "Couldn't send your answers. Check your connection and try again."; }
+  });
+}
+function drawResult(R) {
+  const box = $("trbox");
+  box.innerHTML = `<div class="trstat ${R.passed ? "ok" : "bad"}">${R.passed ? "You passed" : "Not passed this time"}: ${R.score} of ${R.of}.<span>${R.reread && R.reread.length ? "Reread these parts of the guide: " + esc(R.reread.join(", ")) + "." : "You got every question right."}${R.passed ? "" : " Your next try opens tomorrow."}</span></div>`
+    + `<div class="btns"><button class="btn" type="button" id="trback">Back to Training</button></div>`;
+  window.scrollTo(0, 0);
+  $("trback").addEventListener("click", () => { trHold = false; TRN = null; loadTraining(); });
+}
 async function loadFinance() {
   const box = $("finbox"); if (!box) return;
   if (!$("rvbox")) box.innerHTML = `<div id="rvbox"><p class="lead">Loading...</p></div>`;
@@ -5397,7 +5475,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261107200000";
+  var BUILD = "20261112180000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
