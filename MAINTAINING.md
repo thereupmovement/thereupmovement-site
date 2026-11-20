@@ -188,6 +188,11 @@ the budget formulas and any form-submit triggers work exactly as before, and edi
   waits: the item joins a line that sends in the background (one at a time, retried on a weak signal); an item the
   server turns down shows at the top with "Put it back in the form". Photos are held in the page's memory only until
   sent, never saved on the phone.
+- Price match in the Hub (paused 20 Nov 2026): Code.gs ends with `PM_RULES`, `pmAsk_`, `pmResult_`, `priceTest` and
+  `pmDiag`. Nothing calls them; they only run when someone picks them in the editor, and they never write to the Item
+  Log. They stopped because the free Google AI key cannot use Google Search (error 429), so it cannot find live prices.
+  Search needs billing on the key (5,000 searches a month free, then paid). Until someone decides, prices still come
+  from the price-match passes. The test results go to the Hub sheet tab "Price test" (empty for now).
 - If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
   Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
 
