@@ -14,7 +14,7 @@
   var css = ".nf-sel{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}" +
     ".nf-sec{display:grid;gap:14px;border:0;margin:0;padding:0}.nf-sec>legend{font-weight:800;font-size:18px;padding:0;margin-bottom:6px}" +
     ".nf-note{margin:0;font-size:15px}.nf-grid{display:grid;gap:10px}.nf-row{display:grid;gap:6px}.nf-row>b{font-weight:700;font-size:15px}" +
-    ".nf-other{margin-top:6px}.nf-photo img{display:block;width:100%;height:120px;object-fit:cover;border-radius:12px}.nf-pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}.nf-pic button{width:100%;margin-top:4px;padding:8px;border-radius:10px;border:1px solid currentColor;background:none;color:inherit;font:inherit;font-size:14px;cursor:pointer}" +
+    ".nf-other{margin-top:6px}.nf-photo img{display:block;width:100%;height:120px;object-fit:cover;border-radius:12px}.nf-pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}.nf-q{padding:10px 12px;border-radius:12px;border:1px solid currentColor;margin:0 0 14px;line-height:1.45}.nf-q:empty{display:none}.nf-q p{margin:6px 0 0}.nf-q button,.nf-same{margin-top:6px;padding:8px 12px;border-radius:10px;border:1px solid currentColor;background:none;color:inherit;font:inherit;font-size:15px;cursor:pointer}.nf-pic button{width:100%;margin-top:4px;padding:8px;border-radius:10px;border:1px solid currentColor;background:none;color:inherit;font:inherit;font-size:14px;cursor:pointer}" +
     ".nf-req{color:var(--muted);font-weight:400;font-size:14px}.vs-field input[type=date],.vs-field input[type=time],.vs-field input[type=number]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}";
   if (!document.getElementById("nf-css")) { var st = document.createElement("style"); st.id = "nf-css"; st.textContent = css; document.head.appendChild(st); }
 
@@ -65,7 +65,7 @@
   /* opts: load() -> Promise(def), send(answers, photos (a list), website, event) -> Promise({done}), team (bool), onDone(),
      keep (a name: pickup, sorted by, location and event stay for the next entry on this phone for 12 hours). */
   function mount(root, opts) {
-    var id = "nf" + (++uid), D = null, A = {}, photos = [], sending = false, MAXP = 10, EV = "", pkOther = false, kept = false;
+    var id = "nf" + (++uid), D = null, A = {}, photos = [], sending = false, MAXP = 10, EV = "", pkOther = false, kept = false, LAST = null, Q = [], qBusy = false, qFail = [], qDone = 0;
     root.innerHTML = '<div class="vs"><p class="vs-lead">Loading...</p></div>';
     opts.load().then(function (d) { D = d; prefill(); draw(); }, function () {
       root.innerHTML = '<div class="vs"><p class="vs-lead">This form could not load right now. Check your connection and try again.</p>' +
@@ -79,17 +79,23 @@
     function keepLoad() {
       if (!opts.keep) return;
       try { var k = JSON.parse(localStorage.getItem(opts.keep) || "null"); if (!k || Date.now() - k.at > 12 * 3600e3) return;
-        Object.keys(k.a || {}).forEach(function (q) { A[q] = k.a[q]; }); EV = k.ev || ""; kept = true; } catch (e) {}
+        Object.keys(k.a || {}).forEach(function (q) { A[q] = k.a[q]; }); EV = k.ev || ""; LAST = k.last || null; kept = true; } catch (e) {}
     }
     function keepSave() {
       if (!opts.keep) return {};
       var a = {}; D.sections.forEach(function (s) { s.items.forEach(function (q) { if (KEEP.test(q.title) && A[q.id]) a[q.id] = A[q.id]; }); });
-      try { localStorage.setItem(opts.keep, JSON.stringify({ at: Date.now(), a: a, ev: EV })); } catch (e) {}
+      LAST = JSON.parse(JSON.stringify(A));
+      try { localStorage.setItem(opts.keep, JSON.stringify({ at: Date.now(), a: a, ev: EV, last: LAST })); } catch (e) {}
       return a;
     }
-    function catId() { var c = null; D.sections.forEach(function (s) { s.items.forEach(function (q) { if (/^category$/i.test(q.title)) c = q.id; }); }); return c; }
+    function qid(re) { var c = null; D.sections.forEach(function (s) { s.items.forEach(function (q) { if (re.test(q.title)) c = q.id; }); }); return c; }
+    function catId() { return qid(/^category$/i); }
+    // Set an answer by question title, only to one of that question's own choices.
+    function setT(re, val) { D.sections.forEach(function (s) { s.items.forEach(function (q) { if (re.test(q.title) && val && (!q.choices || q.choices.some(function (c) { return c.v === val; }))) A[q.id] = val; }); }); }
     function prefill() {
       keepLoad();
+      // The usual Unit and Condition from the Item Log, picked already (they can be changed).
+      if (D.usual) Object.keys(D.usual).forEach(function (t) { var id2 = qid(new RegExp("^" + t + "$", "i")); if (id2 && !A[id2]) setT(new RegExp("^" + t + "$", "i"), D.usual[t]); });
       if (!opts.team || !D.me) return;
       D.sections.forEach(function (s) { s.items.forEach(function (q) { if (q.type === "text" && /sorted by|logged by|your name|who (drove|sorted|is filling)|driver/i.test(q.title) && !A[q.id]) A[q.id] = D.me; }); });
     }
@@ -110,6 +116,16 @@
               D.pickups.map(function (x) { var l = D.pickupLabels[x] || x; return '<option value="' + esc(x) + '"' + (!typing && v === x ? " selected" : "") + ">" + esc(seen[l] > 1 ? l + " (" + x + ")" : l) + "</option>"; }).join("") +
               '<option value="__other"' + (typing ? " selected" : "") + ">Not on the list: type the pickup ID</option></select>" +
               "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="60" placeholder="For example RMA-2026-11-19-01" aria-label="Pickup ID" value="' + esc(v || "") + '"' + (typing ? "" : " hidden") + "></div>" + ev;
+          }
+          if (/^location$/i.test(q.title) && D.locations && D.locations.length) {
+            // The storage locations used lately, as buttons; the box below still takes anything else.
+            return '<div class="vs-field" role="group" aria-label="' + esc(q.title) + '">' + lab + '<div class="vs-opts vs-chips" data-ql="' + q.id + '">' + D.locations.map(function (l) { return opt("radio", l, v === l); }).join("") + "</div>" +
+              "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="200" placeholder="Or type where it is" aria-label="' + esc(q.title) + '" value="' + esc(v || "") + '" style="margin-top:8px"></div>';
+          }
+          if (/^item description$/i.test(q.title) && D.past && D.past.length) {
+            // Names logged before; picking one fills in its category, subcategory and unit.
+            return '<label class="vs-field">' + lab.replace("</span>", "</span><small>Start typing. A name logged before fills in its category and unit.</small>") + "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="500" autocomplete="off" list="' + n + 'd" value="' + esc(v || "") + '">' +
+              '<datalist id="' + n + 'd">' + D.past.map(function (x) { return '<option value="' + esc(x[0]) + '">'; }).join("") + "</datalist></label>";
           }
           var list = /pickup id/i.test(q.title) && D.pickups && D.pickups.length ? ' list="' + n + 'l"' : "";
           return '<label class="vs-field">' + lab + "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="500" value="' + esc(v || "") + '"' + list + ">" +
@@ -158,7 +174,7 @@
         return;
       }
       var p = path(D, A, true);
-      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle || !(opts.title || D.title) ? "" : '<h3 class="vs-h">' + esc(opts.title || D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") + (kept ? '<p class="vs-note"><b>Kept from your last item:</b> the pickup, who sorted, the location and the event. Change any that are different for this one.</p>' : "") +
+      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle || !(opts.title || D.title) ? "" : '<h3 class="vs-h">' + esc(opts.title || D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") + (opts.keep ? '<div class="nf-q" aria-live="polite"></div>' : "") + (opts.keep && LAST && !A[qid(/^item description$/i)] ? '<button type="button" class="nf-same" data-same>Same as last item' + (LAST[qid(/^item description$/i)] ? ": " + esc(LAST[qid(/^item description$/i)]) : "") + "</button>" : "") + (kept ? '<p class="vs-note"><b>Kept from your last item:</b> the pickup, who sorted, the location and the event. Change any that are different for this one.</p>' : "") +
         '<input class="vs-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
         p.map(function (si) {
           var s = D.sections[si];
@@ -171,6 +187,17 @@
         read();
         var t = e.target;
         if (t.dataset && t.dataset.ev) { EV = t.value; return; }
+        var lb = t.closest && t.closest("[data-ql]");
+        if (lb) { root.querySelector('[data-q="' + lb.dataset.ql + '"]').value = t.value; read(); return; }
+        if (t.dataset && t.dataset.q && D.past && t.dataset.q === qid(/^item description$/i)) {
+          var hit = D.past.filter(function (x) { return x[0].toLowerCase() === t.value.trim().toLowerCase(); })[0];
+          if (hit) {
+            setT(/^category$/i, hit[1]); setT(/^subcategory$/i, hit[2]); setT(/^unit$/i, hit[3]);
+            // Redraw after the field lets go of focus, or the browser trips over the box being replaced.
+            setTimeout(function () { redraw(); var qn = root.querySelector('[data-q="' + qid(/^quantity$/i) + '"]'); if (qn) qn.focus(); }, 0);
+            return;
+          }
+        }
         if (t.dataset && t.dataset.pk) {
           var inp = root.querySelector('[data-q="' + t.dataset.pk + '"]');
           pkOther = t.value === "__other"; inp.value = pkOther ? "" : t.value; inp.hidden = !pkOther; read();
@@ -194,7 +221,22 @@
         if (t.type === "radio" || t.tagName === "SELECT") { if (path(D, A, true).join() !== p.join()) redraw(); }
       });
       form.addEventListener("submit", submit);
-      form.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("[data-pr]"); if (b) { photos.splice(+b.dataset.pr, 1); redraw(); } });
+      form.addEventListener("click", function (e) {
+        var b = e.target.closest && e.target.closest("[data-pr],[data-same],[data-qf]"); if (!b) return;
+        if (b.dataset.pr != null) { photos.splice(+b.dataset.pr, 1); redraw(); return; }
+        if (b.dataset.same != null) {
+          // Same as last item: everything but the count, the expiry date, notes and photos.
+          Object.keys(LAST || {}).forEach(function (k) { A[k] = LAST[k]; });
+          [/^quantity$/i, /^items per unit$/i, /expiry/i, /^notes$/i].forEach(function (re) { var k = qid(re); if (k) delete A[k]; });
+          photos = []; redraw();
+          var qn = root.querySelector('[data-q="' + qid(/^quantity$/i) + '"]'); if (qn) qn.focus();
+          return;
+        }
+        // A failed item goes back into the form to fix and send again.
+        var j = qFail.splice(+b.dataset.qf, 1)[0]; if (!j) return;
+        A = j.A; photos = j.photos; EV = j.ev; draw(); qShow(); root.scrollIntoView({ block: "start" });
+      });
+      qShow();
     }
     function redraw() { var y = window.scrollY; draw(); window.scrollTo(0, y); }
     function read() {
@@ -215,6 +257,42 @@
       Object.keys(grids).forEach(function (k) { A[k] = grids[k]; });
     }
     function empty(v) { return v == null || v === "" || (Array.isArray(v) && !v.some(function (x) { return Array.isArray(x) ? x.length : x; })); }
+    /* Sort an item (forms with opts.keep): Send does not wait. The item goes into a line that sends one at a time in the
+       background while the next item is logged; network problems are retried, and an item the server turns down can be
+       put back in the form to fix. Leaving the page while items are still sending asks first. (20 Nov 2026) */
+    function evObj(e) { return e ? { date: e.split("|")[0], name: e.split("|").slice(1).join("|") } : null; }
+    function queueSend(send) {
+      Q.push({ send: send, photos: photos.slice(), ev: EV, A: JSON.parse(JSON.stringify(A)), tries: 0, name: A[qid(/^item description$/i)] || "Item" });
+      keepSave();
+      A = {}; photos = []; pkOther = false; prefill(); draw();
+      root.scrollIntoView({ block: "start" });
+      qRun();
+    }
+    function qRun() {
+      qShow();
+      if (qBusy || !Q.length) return;
+      qBusy = true;
+      var j = Q[0];
+      opts.send(j.send, j.photos, "", evObj(j.ev)).then(function (r) {
+        Q.shift(); qBusy = false; qDone++;
+        if (opts.onDone) opts.onDone(r);
+        qRun();
+      }, function (e) {
+        qBusy = false;
+        var m = String((e && e.message) || ""), theirs = /^(Answer|Add|Check|That|Lots of|The photo|Pick|Tell)/.test(m);
+        if (!theirs && j.tries < 5) { j.tries++; qShow(); setTimeout(qRun, 3000 * j.tries); return; }
+        Q.shift(); j.err = theirs ? m : "It didn't send. Check your signal."; qFail.push(j); qRun();
+      });
+    }
+    function qShow() {
+      var box = root.querySelector(".nf-q"); if (!box) return;
+      var h = "";
+      if (Q.length) h += "<b>Sending " + Q.length + (Q.length === 1 ? " item" : " items") + "...</b> Keep logging. Keep this page open until it says saved." + (Q[0].tries ? " (Weak signal, trying again.)" : "");
+      else if (qDone && !qFail.length) h += "<b>All saved.</b> " + qDone + (qDone === 1 ? " item" : " items") + " logged.";
+      qFail.forEach(function (j, i) { h += '<p><b>' + esc(j.name) + "</b> did not save: " + esc(j.err) + ' <button type="button" data-qf="' + i + '">Put it back in the form</button></p>'; });
+      box.innerHTML = h;
+    }
+    window.addEventListener("beforeunload", function (e) { if (Q.length) { e.preventDefault(); e.returnValue = ""; } });
     function submit(ev) {
       ev.preventDefault();
       if (sending) return;
@@ -232,6 +310,7 @@
       }
       // Only the questions on the path go to the form.
       var send = {}; path(D, A).forEach(function (si) { D.sections[si].items.forEach(function (q) { if (!empty(A[q.id])) send[q.id] = A[q.id]; }); });
+      if (opts.keep) return queueSend(send);
       err.textContent = ""; sending = true;
       var b = form.querySelector('button[type="submit"]'); b.disabled = true; b.textContent = "Sending...";
       var ev = EV ? { date: EV.split("|")[0], name: EV.split("|").slice(1).join("|") } : null;

@@ -181,6 +181,13 @@ the budget formulas and any form-submit triggers work exactly as before, and edi
   pick into the Item Log's SET ASIDE FOR EVENT column on the new row, the same label setAside writes. Subcategory shows
   only the ones under the picked category. After sending, the pickup, sorted by, location and event stay for the next
   item (on that phone, 12 hours, localStorage key `nfKeep_sort`). Quantity opens the number keypad.
+- More speed (20 Nov 2026, next server version): `nfSortHelp_` reads the Item Log (cached 10 minutes) for the usual Unit
+  and Condition (picked by default), storage locations used in the last 30 days (shown as buttons above the Location
+  box) and the last 300 distinct item names (Item description suggests them; picking one fills its category,
+  subcategory and unit). "Same as last item" copies everything but the count, expiry, notes and photos. Send no longer
+  waits: the item joins a line that sends in the background (one at a time, retried on a weak signal); an item the
+  server turns down shows at the top with "Put it back in the form". Photos are held in the page's memory only until
+  sent, never saved on the phone.
 - If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
   Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
 
