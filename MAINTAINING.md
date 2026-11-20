@@ -171,7 +171,9 @@ the budget formulas and any form-submit triggers work exactly as before, and edi
 - Direct links: thereupmovement.org/needs, /give and /story (folders that forward to `/?f=needs` and so on).
 - Photo questions (Sort an item) cannot be filled by a script: the photo goes into the form's own photo folder
   ("Item photo (File responses)", id remembered in the Script Property `NF_PHOTO_sort`) and its link is written into
-  the new row (`nfPhotoCell_`).
+  the new row (`nfPhotoCell_`). Since 20 Nov 2026 a photo question takes up to 10 photos (as the Google Form did);
+  the links go in the cell separated by ", ", the same format Google Forms writes, so the Item Log's photo columns
+  read them unchanged.
 - If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
   Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
 
