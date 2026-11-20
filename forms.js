@@ -14,7 +14,7 @@
   var css = ".nf-sel{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}" +
     ".nf-sec{display:grid;gap:14px;border:0;margin:0;padding:0}.nf-sec>legend{font-weight:800;font-size:18px;padding:0;margin-bottom:6px}" +
     ".nf-note{margin:0;font-size:15px}.nf-grid{display:grid;gap:10px}.nf-row{display:grid;gap:6px}.nf-row>b{font-weight:700;font-size:15px}" +
-    ".nf-other{margin-top:6px}.nf-photo img{display:block;max-width:100%;max-height:260px;border-radius:12px;margin-top:8px}" +
+    ".nf-other{margin-top:6px}.nf-photo img{display:block;width:100%;height:120px;object-fit:cover;border-radius:12px}.nf-pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}.nf-pic button{width:100%;margin-top:4px;padding:8px;border-radius:10px;border:1px solid currentColor;background:none;color:inherit;font:inherit;font-size:14px;cursor:pointer}" +
     ".nf-req{color:var(--muted);font-weight:400;font-size:14px}.vs-field input[type=date],.vs-field input[type=time],.vs-field input[type=number]{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;min-height:48px;width:100%;box-sizing:border-box}";
   if (!document.getElementById("nf-css")) { var st = document.createElement("style"); st.id = "nf-css"; st.textContent = css; document.head.appendChild(st); }
 
@@ -61,9 +61,9 @@
     return ' type="text"';
   }
 
-  /* opts: load() -> Promise(def), send(answers, photo, website) -> Promise({done}), team (bool), onDone(). */
+  /* opts: load() -> Promise(def), send(answers, photos (a list), website) -> Promise({done}), team (bool), onDone(). */
   function mount(root, opts) {
-    var id = "nf" + (++uid), D = null, A = {}, photo = "", sending = false;
+    var id = "nf" + (++uid), D = null, A = {}, photos = [], sending = false, MAXP = 10;
     root.innerHTML = '<div class="vs"><p class="vs-lead">Loading...</p></div>';
     opts.load().then(function (d) { D = d; prefill(); draw(); }, function () {
       root.innerHTML = '<div class="vs"><p class="vs-lead">This form could not load right now. Check your connection and try again.</p>' +
@@ -110,8 +110,10 @@
               q.cols.map(function (c) { var on = multi ? (Array.isArray(g[ri]) && g[ri].indexOf(c) >= 0) : g[ri] === c; return '<label class="vs-opt"><input type="' + (multi ? "checkbox" : "radio") + '" name="' + n + "r" + ri + '" value="' + esc(c) + '"' + (on ? " checked" : "") + "><span>" + esc(c) + "</span></label>"; }).join("") + "</div></div>";
           }).join("") + "</div></div>";
         case "photo":
-          return '<div class="vs-field nf-photo">' + lab + '<label class="vs-btn ghost" style="text-align:center">' + (photo ? "Take a different photo" : "Take or choose a photo") +
-            '<input type="file" accept="image/*" capture="environment" data-qp="' + q.id + '" hidden></label>' + (photo ? '<img src="' + photo + '" alt="The photo you picked">' : "") + "</div>";
+          // Up to 10 photos, like the Google Form. Each can be taken out again.
+          return '<div class="vs-field nf-photo">' + lab + (photos.length ? '<div class="nf-pics">' + photos.map(function (ph, i) { return '<div class="nf-pic"><img src="' + ph + '" alt="Photo ' + (i + 1) + '"><button type="button" data-pr="' + i + '">Remove</button></div>'; }).join("") + "</div>" : "") +
+            (photos.length < MAXP ? '<label class="vs-btn ghost" style="text-align:center;margin-top:8px">' + (photos.length ? "Add another photo" : "Take or choose photos") +
+            '<input type="file" accept="image/*" multiple data-qp="' + q.id + '" hidden></label>' : '<small>That is the most photos one item can have (' + MAXP + ').</small>') + "</div>";
       }
       return "";
     }
@@ -133,8 +135,10 @@
       form.addEventListener("change", function (e) {
         read();
         var t = e.target;
-        if (t.dataset && t.dataset.qp && t.files && t.files[0]) {
-          shrink(t.files[0]).then(function (d) { photo = d; redraw(); }, function (err) { form.querySelector(".vs-err").textContent = err.message; });
+        if (t.dataset && t.dataset.qp && t.files && t.files.length) {
+          var fl = Array.prototype.slice.call(t.files, 0, MAXP - photos.length);
+          fl.reduce(function (pr, f) { return pr.then(function () { return shrink(f).then(function (d) { photos.push(d); }); }); }, Promise.resolve())
+            .then(redraw, function (err) { redraw(); form = root.querySelector("form"); form.querySelector(".vs-err").textContent = err.message; });
           return;
         }
         // A choice can change which sections come next, and "Other" shows its box.
@@ -143,6 +147,7 @@
         if (t.type === "radio" || t.tagName === "SELECT") { if (path(D, A, true).join() !== p.join()) redraw(); }
       });
       form.addEventListener("submit", submit);
+      form.addEventListener("click", function (e) { var b = e.target.closest && e.target.closest("[data-pr]"); if (b) { photos.splice(+b.dataset.pr, 1); redraw(); } });
     }
     function redraw() { var y = window.scrollY; draw(); window.scrollTo(0, y); }
     function read() {
@@ -170,7 +175,7 @@
       var form = root.querySelector("form"), err = form.querySelector(".vs-err"), miss = null;
       path(D, A).forEach(function (si) { D.sections[si].items.forEach(function (q) {
         if (miss || !q.req || q.type === "note") return;
-        if (q.type === "photo" ? !photo : empty(A[q.id])) miss = q;
+        if (q.type === "photo" ? !photos.length : empty(A[q.id])) miss = q;
       }); });
       if (miss) {
         err.textContent = miss.type === "photo" ? "Add a photo." : 'Answer "' + miss.title + '".';
@@ -182,10 +187,10 @@
       var send = {}; path(D, A).forEach(function (si) { D.sections[si].items.forEach(function (q) { if (!empty(A[q.id])) send[q.id] = A[q.id]; }); });
       err.textContent = ""; sending = true;
       var b = form.querySelector('button[type="submit"]'); b.disabled = true; b.textContent = "Sending...";
-      opts.send(send, photo, form.elements.website.value).then(function (r) {
+      opts.send(send, photos, form.elements.website.value).then(function (r) {
         sending = false;
         root.innerHTML = '<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Thank you.</h3><p>' + rich((r && r.done) || "It was sent.") + '</p><button type="button" class="vs-btn ghost" data-nf-again>Send another</button></div>';
-        root.querySelector("[data-nf-again]").onclick = function () { A = {}; photo = ""; prefill(); draw(); };
+        root.querySelector("[data-nf-again]").onclick = function () { A = {}; photos = []; prefill(); draw(); };
         var h = root.querySelector(".vs-h"); if (h) { h.focus(); h.scrollIntoView({ block: "start" }); }
         if (opts.onDone) opts.onDone(r);
       }, function (e) {

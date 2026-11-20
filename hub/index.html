@@ -5613,7 +5613,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261120152700";
+  var BUILD = "20261120210000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
@@ -5645,6 +5645,6 @@ function vWireOrient(box) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
 })();
 </script>
-<script src="../forms.js?v=2"></script>
+<script src="../forms.js?v=3"></script>
 </body>
 </html>
