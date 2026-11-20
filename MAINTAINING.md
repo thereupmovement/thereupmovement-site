@@ -174,6 +174,13 @@ the budget formulas and any form-submit triggers work exactly as before, and edi
   the new row (`nfPhotoCell_`). Since 20 Nov 2026 a photo question takes up to 10 photos (as the Google Form did);
   the links go in the cell separated by ", ", the same format Google Forms writes, so the Item Log's photo columns
   read them unchanged.
+- Sort an item is tuned for speed (20 Nov 2026, server version 79). Pickup ID is a dropdown, newest first, labeled by date
+  and donor (`nfPickups_`): the Pickup Log plus Schedule pickups from the last 60 days that are not logged yet, with the ID
+  made the usual way (RMA- for Role Models, BOL- for Bread of Life, the date, -01); "Not on the list" opens a box to
+  type one. "Set aside for an event?" lists upcoming distributions (general stock by default) and the server writes the
+  pick into the Item Log's SET ASIDE FOR EVENT column on the new row, the same label setAside writes. Subcategory shows
+  only the ones under the picked category. After sending, the pickup, sorted by, location and event stay for the next
+  item (on that phone, 12 hours, localStorage key `nfKeep_sort`). Quantity opens the number keypad.
 - If a form uses a question type the app cannot show, or the server cannot be reached, the screen offers the Google
   Form instead. `checkForms` in the editor lists every form and flags anything it cannot show.
 

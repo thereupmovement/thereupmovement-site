@@ -55,15 +55,17 @@
     var t = String(title).toLowerCase();
     if (/phone|cell/.test(t)) return ' type="tel" inputmode="tel" autocomplete="tel"';
     if (/e-?mail/.test(t)) return ' type="email" inputmode="email" autocomplete="email"';
+    if (/^(quantity|items per unit)$|how many/.test(t)) return ' type="text" inputmode="numeric"';
     if (/zip/.test(t)) return ' type="text" inputmode="numeric" autocomplete="postal-code"';
     if (/^(your )?(first and last )?name$|^your name/.test(t)) return ' type="text" autocomplete="name"';
     if (/address/.test(t)) return ' type="text" autocomplete="street-address"';
     return ' type="text"';
   }
 
-  /* opts: load() -> Promise(def), send(answers, photos (a list), website) -> Promise({done}), team (bool), onDone(). */
+  /* opts: load() -> Promise(def), send(answers, photos (a list), website, event) -> Promise({done}), team (bool), onDone(),
+     keep (a name: pickup, sorted by, location and event stay for the next entry on this phone for 12 hours). */
   function mount(root, opts) {
-    var id = "nf" + (++uid), D = null, A = {}, photos = [], sending = false, MAXP = 10;
+    var id = "nf" + (++uid), D = null, A = {}, photos = [], sending = false, MAXP = 10, EV = "", pkOther = false, kept = false;
     root.innerHTML = '<div class="vs"><p class="vs-lead">Loading...</p></div>';
     opts.load().then(function (d) { D = d; prefill(); draw(); }, function () {
       root.innerHTML = '<div class="vs"><p class="vs-lead">This form could not load right now. Check your connection and try again.</p>' +
@@ -71,17 +73,44 @@
         (opts.fallback ? '<a class="vs-btn ghost" href="' + esc(opts.fallback) + '" target="_blank" rel="noopener">Open the Google Form instead</a>' : "") + "</div></div>";
       root.querySelector("[data-nf-retry]").onclick = function () { mount(root, opts); };
     });
+    // Sort an item, to make logging fast (20 Nov 2026): the pickup, who sorted, the location and the event stay from the
+    // last item (on this phone, for 12 hours), because a whole box is usually logged in one go.
+    var KEEP = /pickup id|sorted by|^location$/i;
+    function keepLoad() {
+      if (!opts.keep) return;
+      try { var k = JSON.parse(localStorage.getItem(opts.keep) || "null"); if (!k || Date.now() - k.at > 12 * 3600e3) return;
+        Object.keys(k.a || {}).forEach(function (q) { A[q] = k.a[q]; }); EV = k.ev || ""; kept = true; } catch (e) {}
+    }
+    function keepSave() {
+      if (!opts.keep) return {};
+      var a = {}; D.sections.forEach(function (s) { s.items.forEach(function (q) { if (KEEP.test(q.title) && A[q.id]) a[q.id] = A[q.id]; }); });
+      try { localStorage.setItem(opts.keep, JSON.stringify({ at: Date.now(), a: a, ev: EV })); } catch (e) {}
+      return a;
+    }
+    function catId() { var c = null; D.sections.forEach(function (s) { s.items.forEach(function (q) { if (/^category$/i.test(q.title)) c = q.id; }); }); return c; }
     function prefill() {
+      keepLoad();
       if (!opts.team || !D.me) return;
       D.sections.forEach(function (s) { s.items.forEach(function (q) { if (q.type === "text" && /sorted by|logged by|your name|who (drove|sorted|is filling)|driver/i.test(q.title) && !A[q.id]) A[q.id] = D.me; }); });
     }
     function field(q) {
       var n = id + q.id, req = q.req ? "" : ' <span class="nf-req">(optional)</span>';
       var lab = "<span>" + esc(q.title) + req + "</span>" + (q.help ? "<small>" + rich(q.help) + "</small>" : "");
-      var v = A[q.id], opt = function (type, val, on) { return '<label class="vs-opt"><input type="' + type + '" name="' + n + '" value="' + esc(val) + '"' + (on ? " checked" : "") + "><span>" + esc(val) + "</span></label>"; };
+      var v = A[q.id], opt = function (type, val, on, shown) { return '<label class="vs-opt"><input type="' + type + '" name="' + n + '" value="' + esc(val) + '"' + (on ? " checked" : "") + "><span>" + esc(shown || val) + "</span></label>"; };
       switch (q.type) {
         case "note": return '<p class="nf-note"><b>' + esc(q.title) + "</b>" + (q.help ? "<br>" + rich(q.help) : "") + "</p>";
         case "text":
+          if (/pickup id/i.test(q.title) && D.pickupLabels && D.pickups && D.pickups.length) {
+            // A dropdown of the pickups, newest first, by date and donor. "Not on the list" opens the box to type an ID.
+            var typing = pkOther || (v && D.pickups.indexOf(v) < 0), seen = {};
+            D.pickups.forEach(function (x) { var l = D.pickupLabels[x] || x; seen[l] = (seen[l] || 0) + 1; });
+            var ev = D.events ? '<label class="vs-field"><span>Set aside for an event?</span><small>Most items are general stock. Pick an event only if this item is saved for it.</small>' +
+              '<select class="nf-sel" data-ev="1"><option value="">General stock, any event</option>' + D.events.map(function (e) { var k = e.date + "|" + e.name; return '<option value="' + esc(k) + '"' + (EV === k ? " selected" : "") + ">" + esc(e.label) + "</option>"; }).join("") + "</select></label>" : "";
+            return '<div class="vs-field">' + lab + '<select class="nf-sel" data-pk="' + q.id + '" aria-label="' + esc(q.title) + '"><option value="">Pick the pickup</option>' +
+              D.pickups.map(function (x) { var l = D.pickupLabels[x] || x; return '<option value="' + esc(x) + '"' + (!typing && v === x ? " selected" : "") + ">" + esc(seen[l] > 1 ? l + " (" + x + ")" : l) + "</option>"; }).join("") +
+              '<option value="__other"' + (typing ? " selected" : "") + ">Not on the list: type the pickup ID</option></select>" +
+              "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="60" placeholder="For example RMA-2026-11-19-01" aria-label="Pickup ID" value="' + esc(v || "") + '"' + (typing ? "" : " hidden") + "></div>" + ev;
+          }
           var list = /pickup id/i.test(q.title) && D.pickups && D.pickups.length ? ' list="' + n + 'l"' : "";
           return '<label class="vs-field">' + lab + "<input" + kind(q.title) + ' data-q="' + q.id + '" maxlength="500" value="' + esc(v || "") + '"' + list + ">" +
             (list ? '<datalist id="' + n + 'l">' + D.pickups.map(function (p) { return '<option value="' + esc(p) + '">'; }).join("") + "</datalist>" : "") + "</label>";
@@ -89,8 +118,14 @@
         case "date": return '<label class="vs-field">' + lab + '<input type="date" data-q="' + q.id + '" value="' + esc(v || "") + '"></label>';
         case "time": return '<label class="vs-field">' + lab + '<input type="time" data-q="' + q.id + '" value="' + esc(v || "") + '"></label>';
         case "list":
-          if (q.choices.length <= 6) return '<div class="vs-field" role="radiogroup" aria-label="' + esc(q.title) + '">' + lab + '<div class="vs-opts" data-qr="' + q.id + '">' + q.choices.map(function (c) { return opt("radio", c.v, v === c.v); }).join("") + "</div></div>";
-          return '<label class="vs-field">' + lab + '<select class="nf-sel" data-q="' + q.id + '"><option value="">Pick one</option>' + q.choices.map(function (c) { return '<option' + (v === c.v ? " selected" : "") + ">" + esc(c.v) + "</option>"; }).join("") + "</select></label>";
+          var ch = q.choices.map(function (c) { return { v: c.v, t: c.v }; }), cat = /subcategory/i.test(q.title) && catId() ? A[catId()] : "";
+          if (cat) {
+            // Subcategory shows only the ones under the picked category ("Home Goods — Cookware" shows as "Cookware").
+            var sub = ch.filter(function (c) { return c.v.indexOf(cat + " — ") === 0 || c.v.indexOf(cat + " - ") === 0; }).map(function (c) { return { v: c.v, t: c.v.slice(cat.length + 3) }; });
+            if (sub.length) ch = sub;
+          }
+          if (ch.length <= 6) return '<div class="vs-field" role="radiogroup" aria-label="' + esc(q.title) + '">' + lab + '<div class="vs-opts" data-qr="' + q.id + '">' + ch.map(function (c) { return opt("radio", c.v, v === c.v, c.t); }).join("") + "</div></div>";
+          return '<label class="vs-field">' + lab + '<select class="nf-sel" data-q="' + q.id + '"><option value="">Pick one</option>' + ch.map(function (c) { return '<option value="' + esc(c.v) + '"' + (v === c.v ? " selected" : "") + ">" + esc(c.t) + "</option>"; }).join("") + "</select></label>";
         case "radio":
           var isOther = v && !q.choices.some(function (c) { return c.v === v; });
           return '<div class="vs-field" role="radiogroup" aria-label="' + esc(q.title) + '">' + lab + '<div class="vs-opts" data-qr="' + q.id + '">' + q.choices.map(function (c) { return opt("radio", c.v, v === c.v); }).join("") +
@@ -123,7 +158,7 @@
         return;
       }
       var p = path(D, A, true);
-      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle || !(opts.title || D.title) ? "" : '<h3 class="vs-h">' + esc(opts.title || D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") +
+      root.innerHTML = '<form class="vs" novalidate>' + (opts.hideTitle || !(opts.title || D.title) ? "" : '<h3 class="vs-h">' + esc(opts.title || D.title) + "</h3>") + (D.help ? '<p class="vs-note">' + rich(D.help) + "</p>" : "") + (kept ? '<p class="vs-note"><b>Kept from your last item:</b> the pickup, who sorted, the location and the event. Change any that are different for this one.</p>' : "") +
         '<input class="vs-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">' +
         p.map(function (si) {
           var s = D.sections[si];
@@ -135,6 +170,18 @@
       form.addEventListener("change", function (e) {
         read();
         var t = e.target;
+        if (t.dataset && t.dataset.ev) { EV = t.value; return; }
+        if (t.dataset && t.dataset.pk) {
+          var inp = root.querySelector('[data-q="' + t.dataset.pk + '"]');
+          pkOther = t.value === "__other"; inp.value = pkOther ? "" : t.value; inp.hidden = !pkOther; read();
+          if (pkOther) inp.focus();
+          return;
+        }
+        if (t.dataset && t.dataset.q && t.dataset.q === catId()) {
+          // A new category: clear a subcategory from another category, and show only this one's.
+          D.sections.forEach(function (s) { s.items.forEach(function (q) { if (/subcategory/i.test(q.title) && A[q.id] && String(A[q.id]).indexOf(t.value + " ") !== 0) A[q.id] = ""; }); });
+          redraw(); return;
+        }
         if (t.dataset && t.dataset.qp && t.files && t.files.length) {
           var fl = Array.prototype.slice.call(t.files, 0, MAXP - photos.length);
           fl.reduce(function (pr, f) { return pr.then(function () { return shrink(f).then(function (d) { photos.push(d); }); }); }, Promise.resolve())
@@ -179,7 +226,7 @@
       }); });
       if (miss) {
         err.textContent = miss.type === "photo" ? "Add a photo." : 'Answer "' + miss.title + '".';
-        var el = root.querySelector('[data-q="' + miss.id + '"],[data-qr="' + miss.id + '"] input,[data-qc="' + miss.id + '"] input,[data-qg="' + miss.id + '"] input,[data-qp="' + miss.id + '"]');
+        var el = root.querySelector('[data-pk="' + miss.id + '"],[data-q="' + miss.id + '"],[data-qr="' + miss.id + '"] input,[data-qc="' + miss.id + '"] input,[data-qg="' + miss.id + '"] input,[data-qp="' + miss.id + '"]');
         if (el) { (el.type === "file" ? el.parentNode : el).scrollIntoView({ behavior: "smooth", block: "center" }); try { el.focus({ preventScroll: true }); } catch (e) {} }
         return;
       }
@@ -187,10 +234,12 @@
       var send = {}; path(D, A).forEach(function (si) { D.sections[si].items.forEach(function (q) { if (!empty(A[q.id])) send[q.id] = A[q.id]; }); });
       err.textContent = ""; sending = true;
       var b = form.querySelector('button[type="submit"]'); b.disabled = true; b.textContent = "Sending...";
-      opts.send(send, photos, form.elements.website.value).then(function (r) {
+      var ev = EV ? { date: EV.split("|")[0], name: EV.split("|").slice(1).join("|") } : null;
+      opts.send(send, photos, form.elements.website.value, ev).then(function (r) {
+        keepSave();
         sending = false;
         root.innerHTML = '<div class="vs vs-done"><h3 class="vs-h" tabindex="-1">Thank you.</h3><p>' + rich((r && r.done) || "It was sent.") + '</p><button type="button" class="vs-btn ghost" data-nf-again>Send another</button></div>';
-        root.querySelector("[data-nf-again]").onclick = function () { A = {}; photos = []; prefill(); draw(); };
+        root.querySelector("[data-nf-again]").onclick = function () { A = {}; photos = []; pkOther = false; prefill(); draw(); };
         var h = root.querySelector(".vs-h"); if (h) { h.focus(); h.scrollIntoView({ block: "start" }); }
         if (opts.onDone) opts.onDone(r);
       }, function (e) {

@@ -1745,7 +1745,7 @@ function openNF(name, f) {
     ${pub ? `<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" id="copyLink">Copy the link to send</button></div><p class="small" id="copyNote" style="overflow-wrap:anywhere;margin:0">${esc(link)}</p>` : ""}
     <div id="nfbox" style="margin-top:12px"></div>
     <div class="btns"><button class="btn ghost" type="button" data-close>Close</button></div>`);
-  window.ReUpForms.mount($("nfbox"), { team: true, hideTitle: true, fallback: f.url, load: () => run("formDefTeam", KEY, name), send: (a, photo) => run("formSendTeam", KEY, name, a, photo) });
+  window.ReUpForms.mount($("nfbox"), { team: true, hideTitle: true, fallback: f.url, load: () => run("formDefTeam", KEY, name), send: (a, photo, web, ev) => run("formSendTeam", KEY, name, a, photo, ev || null), keep: name === "sort" ? "nfKeep_sort" : "" });
   const c = $("copyLink");
   if (c) c.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(link); c.textContent = "Copied"; }
@@ -5613,7 +5613,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261120210000";
+  var BUILD = "20261120230000";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;
@@ -5645,6 +5645,6 @@ function vWireOrient(box) {
   document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
 })();
 </script>
-<script src="../forms.js?v=3"></script>
+<script src="../forms.js?v=4"></script>
 </body>
 </html>
