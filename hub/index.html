@@ -327,6 +327,9 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border
 .shots{display:grid;grid-template-columns:1fr 1fr;gap:6px;list-style:none;counter-reset:sh;margin:0;padding:0}
 .shots li{counter-increment:sh;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:700;font-size:14.5px}
 .shots li::before{content:counter(sh);font-family:var(--display);font-size:20px;line-height:1;color:var(--red);min-width:14px}
+.shotcks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.shotck{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:700;font-size:14.5px;cursor:pointer}
+.shotck input{width:20px;height:20px;flex:none;accent-color:var(--red)}
 .maptog{margin-top:10px;width:100%;font:inherit;font-weight:700;font-size:14.5px;padding:10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
 .maptog:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 .shoprow .prod{flex:0 0 150px;scroll-snap-align:start}
@@ -1222,6 +1225,9 @@ const MEETINGS = (BOOT.home && BOOT.home.meetings) || [];
 const FORMS = (BOOT.home && BOOT.home.forms) || [];
 let GOING = (BOOT.home && BOOT.home.going) || {};
 const RSVP_KINDS = ["Distribution", "Event", "Pickup", "Sorting"];
+/* The 8 event-day shots, in order. Shown as a static reminder in "On the day" and as a checklist in the
+   past event's wrap-up (evPastOpen). Keep both lists the same if the order ever changes. */
+const SHOTS = ["Empty setup", "Team wide", "Goods close", "Line or approach", "Handoff", "One conversation", "Partner", "End state"];
 const goingList = e => GOING[e.date + "|" + e.name] || [];
 const myGoing = e => (goingList(e).find(x => x.who === BOOT.name) || {}).a || "";
 const goingLine = e => {
@@ -1574,9 +1580,80 @@ function drawEvents() {
   const add = $("evadd"); if (add) add.addEventListener("click", () => edit(-1));
 }
 let evLoadTried = false;
+let evPastLoadTried = false;
 function drawEvPast() {
   const R = (IMPACT && Array.isArray(IMPACT.recent)) ? IMPACT.recent : [];
-  $("evpast").innerHTML = R.length ? `<h2>How past events went</h2><div class="list">${R.map(r => `<div class="irow"><div><b>${esc(r.name)}</b><span>${esc(dt(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} &middot; ${(+r.households).toLocaleString()} households, ${(+r.people).toLocaleString()} people${r.volunteers ? `, ${r.volunteers} volunteer${r.volunteers === 1 ? "" : "s"}` : ""}${r.hours ? `, ${r.hours} hours` : ""}</span></div></div>`).join("")}</div><p class="small" style="margin:6px 2px 0">From check-ins. This year's events, newest first.</p>` : "";
+  /* Tasks (for the note button) and volunteers (for phone numbers) load the first time Past is opened.
+     Work needs no leadership PIN; Volunteers does (same TOK gate as the "coming" tab above). */
+  if (!evPastLoadTried && ((BOOT.work && !WORK) || (TOK && BOOT.vol && !VOL))) {
+    evPastLoadTried = true;
+    Promise.all([BOOT.work && !WORK ? loadWork(true) : null, TOK && BOOT.vol && !VOL ? loadVol(true) : null])
+      .then(() => { if (evView === "past") drawEvPast(); }, () => {});
+  }
+  $("evpast").innerHTML = R.length ? `<h2>How past events went</h2><p class="small" style="margin:-4px 2px 10px">Tap one for the wrap-up.</p><div class="list">${R.map((r, i) => `<button type="button" class="irow" data-pastev="${i}"><div><b>${esc(r.name)}</b><span>${esc(dt(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }))} &middot; ${(+r.households).toLocaleString()} households, ${(+r.people).toLocaleString()} people${r.volunteers ? `, ${r.volunteers} volunteer${r.volunteers === 1 ? "" : "s"}` : ""}${r.hours ? `, ${r.hours} hours` : ""}</span></div></button>`).join("")}</div><p class="small" style="margin:6px 2px 0">From check-ins. This year's events, newest first.</p>` : "";
+  $("evpast").querySelectorAll("[data-pastev]").forEach(b => b.addEventListener("click", () => evPastOpen(+b.dataset.pastev)));
+}
+/* Event wrap-up (20 Nov 2026). Four of the six fields are already live (date, place, households served from
+   check-in, volunteer hours from check-in/out) and shown straight from IMPACT.recent and the Schedule -- the
+   same numbers Home and the website use, never a second report. The other two, what went out and partners
+   present, have nowhere live to come from yet (there is no packing list of what actually left storage), so
+   the lead posts them as a note on one of this event's own Work tasks, the same Updates every task already
+   has, rather than a new place nobody else sees. The 8-shot checklist is ticked on whichever phone has the
+   camera that day; it is not shared between phones, so it resets if someone else opens it. */
+function evPastTasks(name) {
+  const words = String(name).toLowerCase().match(/[a-z0-9']+/g) || [], key = words.filter(w => w.length > 2 && !EV_SKIP.test(w));
+  if (!key.length || !WORK) return [];
+  return (WORK.tasks || []).filter(t => !t.goal).filter(t => {
+    const txt = String(t.title).toLowerCase();
+    const hit = key.filter(w => new RegExp("\\b" + w.replace(/'/g, "") + "\\b").test(txt));
+    return hit.length >= Math.min(2, key.length) || hit.some(w => w.length >= 8);
+  }).sort(wSort);
+}
+function evPastOpen(i) {
+  const R = (IMPACT && Array.isArray(IMPACT.recent)) ? IMPACT.recent : [];
+  const r = R[i]; if (!r) return;
+  const evs = EVENTS.filter(x => x.date === r.date);
+  const ev = evs.find(x => String(x.name).toLowerCase() === String(r.name).toLowerCase()) || evs[0] || {};
+  const where = [ev.place, ev.address].filter(Boolean).join(", ");
+  const PK = "reupHubWrapPhotos_" + r.date;
+  let checked = {};
+  try { checked = JSON.parse(localStorage.getItem(PK) || "{}"); } catch (e) {}
+  const kv = (l, v) => '<div class="vkv"><span>' + esc(l) + '</span><b>' + v + '</b></div>';
+  const tasks = evPastTasks(r.name);
+  const going = (VOL ? vOn(r.date) : []).filter(p => vStatus(p, r.date) !== "cancelled");
+  const nums = going.map(p => p.phone).filter(Boolean);
+  const thanksMsg = "Hi, this is The ReUp Movement. Thank you for volunteering at " + r.name + " on " + vShort(r.date) + (where ? ", " + where : "") + ". We served " + (+r.households || 0).toLocaleString() + " households because you showed up. See you at the next one!";
+  openSheet(`<div class="k">Event wrap-up</div><h3 id="sheetTitle">${esc(r.name)}</h3>
+    <p class="small" style="margin:0 0 10px">${evDate(r.date)}${where ? " &middot; " + esc(where) : ""}</p>
+    <div class="tsec"><div class="tl">The six fields</div>
+      ${kv("Date", esc(evDate(r.date)))}
+      ${kv("Location", esc(where || "Not set on the Schedule"))}
+      ${kv("Households served", (+r.households || 0).toLocaleString() + ' <span class="small" style="font-weight:500">from check-in</span>')}
+      ${kv("Volunteer hours", (r.hours || 0) + ' <span class="small" style="font-weight:500">' + (r.volunteers || 0) + " volunteer" + (r.volunteers === 1 ? "" : "s") + ", from check-in and out</span>")}
+      ${kv("What went out, and how much", "Not tracked here yet. Post it as a note below.")}
+      ${kv("Partners present", "Not tracked here yet. Post it as a note below.")}
+    </div>
+    <div class="tsec"><div class="tl">Got the camera? 8 shots</div><div class="shotcks">${SHOTS.map((s, si) => '<label class="shotck"><input type="checkbox" data-shot="' + si + '"' + (checked[si] ? " checked" : "") + '><span>' + esc(s) + "</span></label>").join("")}</div>
+      <p class="small" style="margin:8px 0 0">For Carl. Checked off on this phone only, so it starts over on someone else's.</p></div>
+    ${nums.length ? `<div class="tsec"><div class="tl">Thank the volunteers</div><div class="abtns"><button type="button" class="tbtn" id="wrNums">Copy ${nums.length} phone number${nums.length === 1 ? "" : "s"}</button><button type="button" class="tbtn ghost" id="wrMsg">Copy the thank-you message</button></div></div>`
+      : VOL ? `<p class="small" style="margin-top:12px">No volunteer phone numbers on file for this date.</p>` : `<p class="small" style="margin-top:12px">Open Volunteers under More to get phone numbers for this date.</p>`}
+    ${tasks.length ? `<div class="tsec"><div class="tl">Add a note: what went out, partners present, or anything else</div>
+        <select class="ainput" id="wrTask" aria-label="Which task">${tasks.map(t => `<option value="${esc(t.id)}">${esc(t.title)}</option>`).join("")}</select>
+        <textarea class="tarea" id="wrNote" rows="2" placeholder="For example: Be Impactful and the YMCA staff were there. 40 bundles went out." style="margin-top:8px"></textarea>
+        <button type="button" class="tbtn" id="wrPost" style="margin-top:8px">Post the note</button></div>`
+      : `<p class="small" style="margin-top:12px">No task found on Work for this date to post a note on.</p>`}
+    <div class="btns" style="margin-top:14px"><button class="btn ghost" type="button" data-close>Close</button></div>`);
+  document.querySelectorAll("[data-shot]").forEach(cb => cb.addEventListener("change", () => {
+    checked[cb.dataset.shot] = cb.checked;
+    try { localStorage.setItem(PK, JSON.stringify(checked)); } catch (e) {}
+  }));
+  const wn = $("wrNums"); if (wn) wn.addEventListener("click", () => copyText(nums.join(", ")));
+  const wm = $("wrMsg"); if (wm) wm.addEventListener("click", () => copyText(thanksMsg));
+  const wp = $("wrPost"); if (wp) wp.addEventListener("click", () => {
+    const v = $("wrNote").value.trim(); if (!v) { toast("Write what happened first."); return; }
+    wQueue("workUpdate", [$("wrTask").value, v], "Posted. It's on that task's updates.");
+    $("wrNote").value = "";
+  });
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-evv]"); if (!b) return; evView = b.dataset.evv; drawEvents(); });
 function evTeamHTML(e, n) {
@@ -5536,7 +5613,7 @@ function vWireOrient(box) {
 /* Self-update: when a newer Hub is published, open pages switch to it on their own.
    It waits until nothing is saving and no task is open, so no tap or typing is lost. */
 (function () {
-  var BUILD = "20261112220000";
+  var BUILD = "20261120152700";
   function idle() {
     try {
       if (typeof wqRunning !== "undefined" && (wqRunning || (wq && wq.length))) return false;

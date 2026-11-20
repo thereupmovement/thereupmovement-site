@@ -424,6 +424,25 @@ volunteer goals per date on the Volunteers screen, the short-handed alert, and r
 sheet's own Reminders script. Turning it on would have sent volunteers double reminders, so it was deleted. If the
 per-role goals idea comes back, its code is still in server versions 75 and 76 (Project History in the editor).
 
+## Event wrap-up (20 Nov 2026)
+
+Tapping a past event under Events, Past opens a wrap-up sheet (`evPastOpen` in hub/index.html), no server
+change. Four of the six fields the Event Lead Guide asks for are already live and shown straight from the
+same numbers Home uses (`IMPACT.recent`, from `liveStats_`) and the Schedule: date, location, households
+served, and volunteer hours. The other two, what went out and partners present, have nothing live to read
+from yet (there is no record of what actually left storage per event, only pre-event "set aside"), so the
+lead posts them as a note on one of that event's own Work tasks (`evPastTasks` matches tasks by title the
+same way `evTasks` does for upcoming events, but also matches tasks already marked done) using the Updates
+every task already has (`workUpdate`) -- not a new place nobody else sees. Also on the sheet: the 8-shot
+photo checklist as tickable boxes (kept on that phone only, in `localStorage`, so it resets on someone
+else's phone) and a "Copy the thank-you message" / "Copy phone numbers" pair for whoever volunteered that
+date, built the same way as the pre-event reminder text.
+
+Still missing, so still worth building later: a real record of what left storage per event (a packing
+list with packed counts), which would let "What went out" fill in on its own the way households served
+does; and a shared (not per-phone) place for the photo checklist, if that turns out to matter once more
+than one phone is on photos at an event.
+
 ## Open handoff work
 
 - Move ownership of the Sheets, uploads folder and Apps Script project to ReUp's own Google account
