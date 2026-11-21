@@ -300,6 +300,9 @@ product already given out (newest row wins; Belize count-only and damaged rows a
 opens "We got more of this". `restock` in Code.gs copies that Item Log row to a new row at the bottom (same product,
 price, photos and pricing notes), then sets the new count, location, pickup ID, expiry, timestamp and sorter, and marks
 it Still in storage. The old row is not touched. It also writes one line on I6 Count Changes.
+Its pickup list is the same one Sort an item shows (`nfPickups_`: the Pickup Log plus Schedule pickups from the last
+60 days), sent with the Ops data as `pickList`, and `restock` accepts any pickup on that list (20 Nov 2026). Before
+that it offered only pickups on the Pickup Log, so a pickup sorted without "Log a pickup" never appeared.
 
 ## Turning work in, and the simpler Work tab (server version 53, 2 Nov 2026)
 
